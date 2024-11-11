@@ -1,0 +1,84 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="MyPlugin.info" />
+  
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="lib\**" />
+    <EmbeddedResource Remove="lib\**" />
+    <None Remove="lib\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="HarmonyX" Version="2.9.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2023.1.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\!Global Libraries\Damntry\Damntry BepInEx Globals\!Damntry Globals BepInEx.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry\Damntry Globals\!Damntry Globals.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>H:\!SteamLibrary\steamapps\common\Supermarket Together\Supermarket Together_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Build.Utilities.v4.0">
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Microsoft.Build.Utilities.v4.0.dll</HintPath>
+    </Reference>
+    <Reference Include="Mirror">
+      <HintPath>lib\Mirror.dll</HintPath>
+    </Reference>
+    <Reference Include="PlayMaker">
+      <HintPath>H:\!SteamLibrary\steamapps\common\Supermarket Together\Supermarket Together_Data\Managed\PlayMaker.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>H:\!SteamLibrary\steamapps\common\Supermarket Together\Supermarket Together_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>H:\!SteamLibrary\steamapps\common\Supermarket Together\Supermarket Together_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AIModule">
+      <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>H:\!SteamLibrary\steamapps\common\Supermarket Together\Supermarket Together_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="set copyTargetPath=H:\!SteamLibrary\steamapps\common\Supermarket Together\BepInEx\plugins\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll" />
+  </Target>
+</Project>

@@ -1,0 +1,66 @@
+<!-- These are the original property values exported into the .csproj file to do the build -->
+<Project>
+
+  <PropertyGroup>
+    <AssemblyName>SuperQoLity</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+    <PackageId>es.damntry.SuperQoLity</PackageId>
+    <Product>$(PackageId)</Product>
+    <Version>0.4.3</Version>
+    <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
+    <Authors>Damntry</Authors>
+    <Company>None</Company>
+  </PropertyGroup>
+
+  <!-- 
+  Build code below was taken from "BepInEx.PluginInfoProps.props", of the "BepInEx.PluginInfoProps" NuGet package 
+  Modified to use take values for GUID and Name from different properties (Used to be <AssemblyName> for GUID, and <Product> for name).
+  -->
+  <Target Name="AddGeneratedFile" BeforeTargets="BeforeCompile;CoreCompile" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.cs">
+    <PropertyGroup>
+      <BepInExPluginGuid Condition="'$(BepInExPluginGuid)' == ''">$(PackageId)</BepInExPluginGuid>
+      <BepInExPluginName Condition="'$(BepInExPluginName)' == ''">$(AssemblyName)</BepInExPluginName>
+      <BepInExPluginVersion Condition="'$(BepInExPluginVersion)' == ''">$(Version)</BepInExPluginVersion>
+      <GeneratedText>
+        <![CDATA[
+namespace $(RootNamespace)
+{
+    public static class MyPluginInfo
+    {
+        public const string PLUGIN_GUID = "$(BepInExPluginGuid)"%3B
+        public const string PLUGIN_NAME = "$(BepInExPluginName)"%3B
+        public const string PLUGIN_VERSION = "$(BepInExPluginVersion)"%3B
+    }
+}
+      ]]>
+      </GeneratedText>
+      <GeneratedFilePath>$(IntermediateOutputPath)MyPluginInfo.cs</GeneratedFilePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <Compile Include="$(GeneratedFilePath)" />
+      <FileWrites Include="$(GeneratedFilePath)" />
+    </ItemGroup>
+    <WriteLinesToFile Lines="$(GeneratedText)" File="$(GeneratedFilePath)" WriteOnlyWhenDifferent="true" Overwrite="true" />
+  </Target>
+
+  
+  <!-- This is to remind myself to change versions in case I build a new release milestone -->
+  <Target Name="WriteToFileXXX" AfterTargets="PostBuildEvent">
+
+    <PropertyGroup>
+      <LastVersionFilePath>.\LastVersionBuilt.txt</LastVersionFilePath>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="$(LastVersionFilePath)">
+      <Output
+          TaskParameter="Lines"
+          ItemName="VersionInFile"/>
+    </ReadLinesFromFile>
+    
+    <Warning Text="Version number hasnt changed since last build. This is usually normal, but dont forget to change it when its needed."
+              Condition="'@(VersionInFile)' == '$(Version)'" />
+
+    <WriteLinesToFile File="$(LastVersionFilePath)" Lines="$(Version)" Overwrite="True"/>
+  </Target>
+
+</Project>
