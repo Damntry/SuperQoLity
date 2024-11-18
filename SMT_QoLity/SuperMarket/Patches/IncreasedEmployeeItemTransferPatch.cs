@@ -5,6 +5,7 @@ using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Attributes;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
+using System.Reflection.Emit;
 
 namespace SuperQoLity.SuperMarket.Patches
 {
@@ -35,7 +36,7 @@ namespace SuperQoLity.SuperMarket.Patches
 		//		completely replacing. I could still do this below and from my NPC method call with reflection the original, now transpiled one, but
 		//		then I would have to be custom controlling the patching state because if this transpile fails, I need to call either a backup of this
 		//		local replacement function below, or the vanilla function which has different arguments.
-		//	I would need to move this function into its own patch functionk
+		//	I would need to move this function into its own patch function
 		
 		public static bool EmployeeAddsItemToRow(Data_Container __instance, int rowIndex, ref int boxNumberProducts, int maxProductsPerRow) {
 			int num2 = __instance.productInfoArray[rowIndex + 1];
@@ -57,16 +58,15 @@ namespace SuperQoLity.SuperMarket.Patches
 			return false;
 		}
 
+
 		[HarmonyDebug]
 		[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.EmployeeAddsItemToRow))]
-		[HarmonyBeforeInstance(IncreasedItemTransferPatch.Instance)]    
-								//TODO 3 - So this thing only works passing an Harmony id, which is relatively problematic since I dont want to expose it.
-								//			Otherwise you could take the harmonyId, and create a new harmony object that replicates the one from a different
-								//			patch instance, which is jorribol.
-								//			Create an harmonyId {get;}, but make it internal, and then create an alternative HarmonyBefore attribute that
-								//			will access this harmonyId since its going to be in the same assembly. Not 100% how its meant to work, but its fine. Izi.
+		[HarmonyBeforeInstance(typeof(IncreasedItemTransferPatch))]
 		[HarmonyTranspiler]
-		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
+			
+
+
 			return new CodeMatcher(instructions)
 						 .InstructionEnumeration();
 		}

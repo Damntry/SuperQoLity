@@ -3,7 +3,6 @@ using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 
 namespace SuperQoLity.SuperMarket.Patches.BetterSMT
@@ -21,13 +20,17 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Extra highlight functions failed. Disabled";
 
 
-		private class DisableBetterSMTChangeEquipmentPatch {
+
+		private class ReplaceBetterSMTChangeEquipmentPatch {
 
 			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "ChangeEquipmentPatch", [typeof(PlayerNetwork), typeof(int)])]
 			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId)]
 			[HarmonyPrefix]
 			//Yo dawg, I heard you like patches, so I patched the patch so it doesnt patch.
 			private static bool ChangeEquipmentBetterSMTPatch(PlayerNetwork __instance, int newEquippedItem) {
+				//In reality, both patches work. What happens is that my prefix patch replaces his
+				//	patch code, and when the original ChangeEquipment method is called, his patch
+				//	code is invoked, which is just my code now.
 				if (newEquippedItem == 0) {
 					HighlightingMethods.ClearHighlightedShelves();
 				}
@@ -36,7 +39,40 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 
 		}
 
+		/// <summary>
+		/// For post-Viviko BetterSMT versions (> 1.6.2), patches the BetterSMT method 
+		/// UpdateBoxContentsPatch itself, so it uses my updated highlight method instead.
+		/// </summary>
+		private class ReplaceBetterSMTUpdateBoxContentsPatch {
+
+			/// <summary>Harmony will only execute this class patch if Prepare returns true.</summary>
+			[HarmonyPrepare]
+			private static bool Prepare() =>
+				BetterSMT_Helper.BetterSMTInfo.LoadedVersion > BetterSMT_Helper.BetterSMTInfo.LastVivikoVersion;
+
+
+			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "UpdateBoxContentsPatch")]
+			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId)]
+			[HarmonyPrefix]
+			private static bool UpdateBoxContentsPatch(PlayerNetwork __instance, int productIndex) {
+				//Overwrite BetterSMT patch so it uses my code instead.
+				HighlightingMethods.HighlightShelvesByProduct(productIndex);
+
+				return false;
+			}
+
+		}
+
+		/// <summary>
+		/// For older Viviko BetterSMT versions (<= 1.6.2), patches the vanilla UpdateBoxContents
+		/// method so it uses my updated highlighting method instead.
+		/// </summary>
 		private class UpdateBoxContentsHighlight {
+
+			/// <summary>Harmony will only execute this class patch if Prepare returns true.</summary>
+			[HarmonyPrepare]
+			private static bool Prepare() =>
+				BetterSMT_Helper.BetterSMTInfo.LoadedVersion <= BetterSMT_Helper.BetterSMTInfo.LastVivikoVersion;
 
 			[HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.UpdateBoxContents))]
 			[HarmonyPostfix]

@@ -6,6 +6,8 @@ using Damntry.Utils.Reflection;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.ModUtils;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
+using System.Diagnostics.Contracts;
 
 namespace SuperQoLity.SuperMarket.Patches
 {
@@ -55,7 +57,7 @@ namespace SuperQoLity.SuperMarket.Patches
 			int state = component.state;
 			NavMeshAgent component2 = gameObject.GetComponent<NavMeshAgent>();
 			int taskPriority = component.taskPriority;
-
+			
 			if (state == -1) {
 				return false;
 			}
@@ -569,59 +571,101 @@ namespace SuperQoLity.SuperMarket.Patches
 
 		private static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
 			return FindStorageSlotLambda(__instance, true,
-				(storageId, slotId, productId, quantity, returnStorageSlot) => {
+				(storageId, slotId, productId, quantity) => {
 
-					if (productId == boxIDProduct && quantity > 0 && quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
-						returnStorageSlot.SetValues(storageId, slotId, productId, quantity);
-						return true;
+					if (productId == boxIDProduct && quantity > 0 && 
+							quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
+						return LoopStorageAction.SaveAndExit;
 					}
 
-					return false;
+					return LoopStorageAction.Nothing;
 				}
 			);
 		}
 
 		private static bool IsFreeStorageContainer(NPC_Manager __instance) {
 			return FindStorageSlotLambda(__instance, true,
-				(storageIndex, slotIndex, productId, quantity, returnStorageSlot) => {
+				(storageIndex, slotIndex, productId, quantity) => {
 					if (productId == -1) {
 						//Free storage slot, either unassigned or unlabeled.
-						returnStorageSlot.SetValues(storageIndex, slotIndex, productId, quantity);
-						return true;
+						return LoopStorageAction.SaveAndExit;
 					}
 
-					return false;
+					return LoopStorageAction.Nothing;
 				}
 			).FreeStorageFound;
 		}
 
 		private static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, int boxIDProduct) {
 			return FindStorageSlotLambda(__instance, true,
-				(storageIndex, slotIndex, productId, quantity, returnStorageSlot) => {
+				(storageIndex, slotIndex, productId, quantity) => {
 
 					if (boxIDProduct >= 0 && productId == boxIDProduct && quantity < 0) {
-						//Free assigned storage slot. Save it and return.
-						returnStorageSlot.SetValues(storageIndex, slotIndex, productId, quantity);
-						return true;
+						//Free assigned storage slot. Return it.
+						return LoopStorageAction.SaveAndExit;
 					} else if (productId == -1) {
 						//Save for later in case there is no assigned storage for this product.
-						returnStorageSlot.SetValues(storageIndex, slotIndex, productId, quantity);
+						return LoopStorageAction.Save;
 					}
 
-					return false;
+					return LoopStorageAction.Nothing;
 				}
 			);
 		}
+
+		public enum LoopStorageAction {
+			Nothing = 0,	//Do nothing special in this loop and keep going.
+			Save = 1,       //Save storage slot data and keep going.
+			SaveAndExit = 2 //Save storage slot data and return immediately.
+		}
+		public enum LoopAction {
+			Nothing = 0,    //Keep looping.
+			Nothing2 = 1,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
+			Exit = 2		//Stop and return immediately.
+		}
+
 
 		/// <summary>Defines the parameters available in the lambda to find storage slots.</summary>
 		/// <param name="storageIndex">Child index of the current storage shelf.</param>
 		/// <param name="slotIndex">Child index of current storage slot.</param>
 		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
 		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
-		/// <param name="returnStorageSlot">The value that will be returned once the method ends.
-		///		This value never changes by itself, and must be set manually using returnStorageSlot.SetValues(...).</param>
-		/// <returns>If the lambda returns true, the value in returnStorageSlot will be returned immediately. Otherwise it will keep looping.</returns>
-		public delegate bool StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity, StorageSlotInfo returnStorageSlot);
+		/// <returns>The LoopStorageAction to perform in the current loop. <see cref="LoopStorageAction"/></returns>
+		public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity);
+
+		/// <summary>Defines the parameters available in the lambda to iterate through storage slots.</summary>
+		/// <param name="storageIndex">Child index of the current storage shelf.</param>
+		/// <param name="slotIndex">Child index of current storage slot.</param>
+		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
+		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
+		/// <returns>The LoopAction to perform. <see cref="LoopAction"/></returns>
+		public delegate LoopAction StorageLoopFunction(int storageIndex, int slotIndex, int productId, int quantity);
+
+		/// <summary>
+		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
+		/// </summary>
+		/// <param name="__instance">NPC_Manager instance</param>
+		/// <param name="checkNPCStorageTarget">True to skip the storage slots that are currently being targeted by an employee NPC.</param>
+		/// <param name="storageSlotLambda">The StorageLoopFunction search lambda. See <see cref="StorageLoopFunction"/> for more information.</param>
+		/// <returns></returns>
+		private static void ForEachStorageSlotLambda(NPC_Manager __instance, bool checkNPCStorageTarget, StorageLoopFunction storageSlotLambda) {
+			for (int i = 0; i < __instance.storageOBJ.transform.childCount; i++) {
+				int[] productInfoArray = __instance.storageOBJ.transform.GetChild(i).GetComponent<Data_Container>().productInfoArray;
+				int num = productInfoArray.Length / 2;
+				for (int j = 0; j < num; j++) {
+					//Check if this storage slot is already in use by another NPC
+					if (checkNPCStorageTarget && NPC_TargetLogic.IsStorageSlotTargeted(i, j)) {
+						continue;
+					}
+					int storageProductId = productInfoArray[j * 2];
+					int quantity = productInfoArray[j * 2 + 1];
+
+					if (storageSlotLambda(i, j, storageProductId, quantity) == LoopAction.Exit) {
+						return;
+					}
+				}
+			}
+		}
 
 		/// <summary>
 		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
@@ -637,22 +681,18 @@ namespace SuperQoLity.SuperMarket.Patches
 				return freeStorageSlot;
 			}
 
-			for (int i = 0; i < __instance.storageOBJ.transform.childCount; i++) {
-				int[] productInfoArray = __instance.storageOBJ.transform.GetChild(i).GetComponent<Data_Container>().productInfoArray;
-				int num = productInfoArray.Length / 2;
-				for (int j = 0; j < num; j++) {
-					//Check if this storage slot is already in use by another NPC
-					if (checkNPCStorageTarget && NPC_TargetLogic.IsStorageSlotTargeted(i, j)) {
-						continue;
-					}
-					int storageProductId = productInfoArray[j * 2];
-					int quantity = productInfoArray[j * 2 + 1];
+			ForEachStorageSlotLambda(__instance, true,
+				(storageId, slotId, productId, quantity) => {
 
-					if (storageSlotLambda(i, j, storageProductId, quantity, freeStorageSlot)) {
-						return freeStorageSlot;
+					LoopStorageAction loopAction = storageSlotLambda(storageId, slotId, productId, quantity);
+
+					if (loopAction == LoopStorageAction.Save || loopAction == LoopStorageAction.SaveAndExit) {
+						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
 					}
-				}
-			}
+
+					//Their enum values are numerically equitative so it performs the correct action in ForEachStorageSlotLambda
+					return (LoopAction)loopAction;
+				});
 
 			return freeStorageSlot;
 		}
@@ -769,26 +809,19 @@ namespace SuperQoLity.SuperMarket.Patches
 			return closestGroundBox;
 		}
 
-		//TODO 7 - Modify this to use FindStorageSlotLambda
+		//TODO 1 - TEST THIS WORKS, after changing it to use FindStorageSlotLambda
 		private static List<int> GetProductIdListOfFreeStorage(NPC_Manager __instance) {
 			List<int> storableProductIds = new();
 
-			for (int j = 0; j < __instance.storageOBJ.transform.childCount; j++) {
-				Transform storage = __instance.storageOBJ.transform.GetChild(j);
-				int[] productInfoArray = storage.GetComponent<Data_Container>().productInfoArray;
-				int num = productInfoArray.Length / 2;
-				for (int k = 0; k < num; k++) {
-					if (NPC_TargetLogic.IsStorageSlotTargeted(j, k)) {
-						continue;
-					}
-					int productId = productInfoArray[k * 2];
-					int quantityStored = productInfoArray[k * 2 + 1];
+			ForEachStorageSlotLambda(__instance, true,
+				(storageIndex, slotIndex, productId, quantity) => {
 
-					if (quantityStored <= 0 && productId >= 0) {
+					if (quantity <= 0 && productId >= 0) {
 						storableProductIds.Add(productId);
 					}
+					return LoopAction.Nothing;
 				}
-			}
+			);
 
 			return storableProductIds;
 		}

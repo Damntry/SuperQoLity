@@ -7,6 +7,7 @@ using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using UnityEngine;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 
 namespace SuperQoLity.SuperMarket.Patches
 {
@@ -31,7 +32,7 @@ namespace SuperQoLity.SuperMarket.Patches
 		public override event Action<bool> OnPatchFinished;
 
 
-		private class LoadScenes {
+		public class LoadScenes {
 
 			[HarmonyPatch(typeof(GameCanvas), "Awake")]
 			[HarmonyPostfix]
@@ -39,10 +40,10 @@ namespace SuperQoLity.SuperMarket.Patches
 				bool notifObjOk = GameNotifications.Instance.TestNotificationObjects();
 
 				if (notifObjOk) {
-					Instance.PatchClassByType(typeof(GameLoadingCheck));
+					Container<GameLoadingFinished>.Instance.PatchClassByType(typeof(GameLoadingCheck));
 				} else {
 					//Notification objects are not working. Unpatch so we stop trying.
-					Instance.UnpatchInstance();
+					Container<GameLoadingFinished>.Instance.UnpatchInstance();
 				}
 			}
 
@@ -70,9 +71,12 @@ namespace SuperQoLity.SuperMarket.Patches
 				if (updateCooldown.IsRunning && updateCooldown.ElapsedMilliseconds < 500) {
 					return;
 				}
-				
+
+				GameLoadingFinished instance = Container<GameLoadingFinished>.Instance;
+
 				NotificationState state = NotificationState.Initial;
 				try {
+
 					//The moment transitionBCKobj is not null, and then its activeSelf becomes false, is when the
 					//	loading black fadeout has finished and it should allow me to show messages.
 					GameObject transitionBCKobj = GameObject.Find("MasterOBJ/MasterCanvas/TransitionBCK");
@@ -90,7 +94,7 @@ namespace SuperQoLity.SuperMarket.Patches
 						}
 
 						//Unpatch so we stop triggering on updates until next GameCanvas.Awake()
-						Instance.UnpatchInstanceMethod(typeof(GameData), "Update");
+						instance.UnpatchMethod(typeof(GameData), "Update");
 
 						updateCooldown.Stop();
 					} else {
@@ -106,14 +110,14 @@ namespace SuperQoLity.SuperMarket.Patches
 
 						//Something changed and it wont work anymore without a mod update. Unpatch everything and forget it exists.
 						//	This should be shown in game but since the notification system failed... well.
-						BepInExTimeLogger.Logger.LogTimeError(Instance.ErrorMessageOnAutoPatchFail, TimeLoggerBase.LogCategories.Notifs);
-						Instance.UnpatchInstance();
+						BepInExTimeLogger.Logger.LogTimeError(instance.ErrorMessageOnAutoPatchFail, TimeLoggerBase.LogCategories.Notifs);
+						instance.UnpatchInstance();
 					}
 
-					Instance.IsPatchActive = state == NotificationState.Success;
+					instance.IsPatchActive = state == NotificationState.Success;
 
-					if (Instance.OnPatchFinished != null && state == NotificationState.Success || state == NotificationState.Failed) {
-						Instance.OnPatchFinished(Instance.IsPatchActive);
+					if (instance.OnPatchFinished != null && state == NotificationState.Success || state == NotificationState.Failed) {
+						instance.OnPatchFinished(instance.IsPatchActive);
 					}
 				}
 

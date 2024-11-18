@@ -2,11 +2,10 @@
 using BepInEx;
 using BepInEx.Configuration;
 using Damntry.UtilsBepInEx.ConfigurationManager;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Interfaces;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using SuperQoLity.SuperMarket.Patches;
 using SuperQoLity.SuperMarket.Patches.BetterSMT;
 using UnityEngine;
-using static Damntry.UtilsBepInEx.ConfigurationManager.SettingAttributes.ConfigurationManagerAttributes;
 using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
@@ -83,7 +82,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "Adjust the amount of time an employee waits after it finishes a single step of a job, " +
 								"like picking up a box or filling up a product shelf.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.1f, 4f),
-				patchInstanceDependency: NPCTargetAssignmentPatch.Instance);
+				patchInstanceDependency: Container<NPCTargetAssignmentPatch>.Instance);
 
 			EmployeeIdleWait = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",
@@ -92,7 +91,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "Adjusts the frequency of employees checking for available jobs while idling.\n" +
 								"Lowering this value too much might cause performance issues on low end rigs if you have many idling employees.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.25f, 10f),
-				patchInstanceDependency: NPCTargetAssignmentPatch.Instance);
+				patchInstanceDependency: Container<NPCTargetAssignmentPatch>.Instance);
 
 			configManagerControl.AddQuasiNote(
 				sectionName: "Item Transfer Speed Module",
@@ -115,14 +114,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "Adjusts the amount of time an employee waits after it finishes a single job, like " +
 								"delivering a box or filling up a product shelf.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
-				patchInstanceDependency: IncreasedItemTransferPatch.Instance);
+				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
 
 			TransferMoreProductsOnlyClosedStore = configManagerControl.AddConfig(
 				sectionName: "Item Transfer Speed Module",
 				key: "Only while store is closed",
 				defaultValue: true,
 				description: "If enabled, extra item transfering only works while the supermarket is closed.",
-				patchInstanceDependency: IncreasedItemTransferPatch.Instance);
+				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
 
 
 			EnablePatchBetterSMT_General = configManagerControl.AddConfig(
@@ -130,10 +129,13 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				key: GetBetterSMTConfigMessage(true),
 				defaultValue: true,
 				description: "If enabled, patches related to the mod BetterSMT that dont have their own config entry, will be applied.",
-				disabled: BetterSMTLoaded.Value == BetterSMT_Status.NotLoaded);
+				disabled: BetterSMTLoadStatus.Value == BetterSMT_Status.NotLoaded);
 
-			//The way I implemented this extra highlighting, it doesnt really need BetterSMT to work.
-			//	But since the base highlighting was not my idea I disable this if BetterSMT is not loaded.
+			//The way I implement this extra highlight function, is overriding all of BetterSMT
+			//	highlighting logic, so highlighting doesnt even need BetterSMT to work.
+			//	(EDIT- Actually not completely true. I still use BetterSMT HighlightShelf(), but
+			//	only because I didnt want to discard his work because of a very small change)
+			//	But since the base highlighting was not my idea, I disable it if BetterSMT is not loaded.
 			//	If in the future BetterSMT is completely abandoned and Im still around, I can separate
 			//	this setting into its own section without having BetterSMT as a requirement, and
 			//	change the IsAutoPatchEnabled condition and the ShortErrorMessageOnAutoPatchFail text
@@ -144,7 +146,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: true,
 				description: "If enabled, in addition to BetterSMT highlighting the storage shelf itself, individual storage slots that " +
 				"have that product assigned will also be highlighted, empty or not.",
-				disabled: BetterSMTLoaded.Value == BetterSMT_Status.NotLoaded);
+				disabled: BetterSMTLoadStatus.Value == BetterSMT_Status.NotLoaded);
 
 
 			string colorSettingHelpMessage = $"\nRequires starting the game with the setting \"{EnablePatchBetterSMT_ExtraHighlightFunctions.Definition.Key}\" enabled.\n\n" +
@@ -156,28 +158,28 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				key: "Shelf Highlight Color",
 				defaultValue: Color.red,
 				description: "Color of product shelves when highlighted." + colorSettingHelpMessage,
-				patchInstanceDependency: HighlightStorageSlotsPatch.Instance);
+				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_ShelfLabelHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
 				key: "Shelf label Highlight Color",
 				defaultValue: Color.yellow,
 				description: "Color of shelf labels when highlighted." + colorSettingHelpMessage,
-				patchInstanceDependency: HighlightStorageSlotsPatch.Instance);
+				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_StorageHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
 				key: "Storage Highlight Color",
 				defaultValue: Color.blue,
 				description: "Color of storage shelves when highlighted." + colorSettingHelpMessage,
-				patchInstanceDependency: HighlightStorageSlotsPatch.Instance);
+				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_StorageSlotHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
 				key: "Storage Slot Highlight Color",
 				defaultValue: Color.cyan,
 				description: "Color of storage slot spaces when highlighted." + colorSettingHelpMessage,
-				patchInstanceDependency: HighlightStorageSlotsPatch.Instance);
+				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 
 			EnableModNotifications = configManagerControl.AddConfig(
@@ -186,8 +188,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: true,
 				description: "If enabled, you may receive custom notifications from this mod. Disable if they are " +
 								"causing problems or you dont want to see them.");
-
-			BetterSMTStatusLog(BetterSMTLoaded.Value);
 		}
 		
 
@@ -203,10 +203,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		private string GetBetterSMTConfigMessage(bool isMainModuleSetting) {
 			string loadedText = isMainModuleSetting ? $"Apply {BetterSMTInfo.Name} patches {RequiresRestartSymbol}" : $"Highlight Storage Slots {RequiresRestartSymbol}";
 
-			return BetterSMTLoaded.Value switch {
+			return BetterSMTLoadStatus.Value switch {
 				BetterSMT_Status.NotLoaded => $"{BetterSMTInfo.Name} is not loaded. Setting unused.",
 				BetterSMT_Status.DifferentVersion or BetterSMT_Status.LoadedOk => loadedText,
-				_ => throw new NotImplementedException($"The switch case {BetterSMTLoaded.Value} is not implemented."),
+				_ => throw new NotImplementedException($"The switch case {BetterSMTLoadStatus.Value} is not implemented."),
 			};
 		}
 
