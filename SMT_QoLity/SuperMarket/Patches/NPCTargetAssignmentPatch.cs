@@ -37,7 +37,7 @@ namespace SuperQoLity.SuperMarket.Patches
     ///		* New method GetClosestGroundBox that replaces the one to get a random box.
     /// </summary>
     [HarmonyPatch(typeof(NPC_Manager))]
-	public class NPCTargetAssignmentPatch : FullyAutoPatchedInstance<NPCTargetAssignmentPatch> {
+	public class NPCTargetAssignmentPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
 

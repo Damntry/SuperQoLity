@@ -17,7 +17,7 @@ namespace SuperQoLity.SuperMarket.Patches
     /// The end result is that we can modify this number of item to speed up transfers.
     /// </summary>
     [HarmonyPatch(typeof(Data_Container))]
-	public class IncreasedItemTransferPatch : FullyAutoPatchedInstance<IncreasedItemTransferPatch> {
+	public class IncreasedItemTransferPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
 

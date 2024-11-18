@@ -17,7 +17,7 @@ namespace SuperQoLity.SuperMarket.Patches
     /// Detects when the game finishes loading by checking when the black fade out transition ends.
     /// Currently used to activate pending message notifications that dont work earlier.
     /// </summary>
-    public class GameLoadingFinished : HybridPatchedInstance<GameLoadingFinished> {
+    public class GameLoadingFinished : HybridPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => GameNotifications.Instance.NotificationSystemEnabled;
 

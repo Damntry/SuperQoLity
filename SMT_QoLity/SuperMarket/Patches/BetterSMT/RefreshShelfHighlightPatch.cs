@@ -14,7 +14,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
     /// <summary>
     /// Adds a call to "highlightEffect.Refresh();" in the highlighting method, so storage slots dont stop highlighting when its box is extracted from storage.
     /// /summary>
-    public class RefreshShelfHighlightPatch : FullyAutoPatchedInstance<RefreshShelfHighlightPatch> {
+    public class RefreshShelfHighlightPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => BetterSMT_Helper.IsBetterSMTLoadedAndPatchEnabled.Value && !ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value;
 

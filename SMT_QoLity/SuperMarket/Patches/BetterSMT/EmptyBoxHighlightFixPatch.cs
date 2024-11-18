@@ -17,7 +17,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
     ///		since the latter is also called in the case that didnt work.
     /// </summary>
     [HarmonyPatch]
-	public class EmptyBoxHighlightFixPatch : FullyAutoPatchedInstance<EmptyBoxHighlightFixPatch> {
+	public class EmptyBoxHighlightFixPatch : FullyAutoPatchedInstance {
 
 		/*
 		 * This class is pretty much a partial clone of HighlightStorageSlotsPatch, except 

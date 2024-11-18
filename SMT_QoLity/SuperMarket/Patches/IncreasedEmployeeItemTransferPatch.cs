@@ -9,7 +9,7 @@ using SuperQoLity.SuperMarket.ModUtils;
 namespace SuperQoLity.SuperMarket.Patches
 {
 
-    internal class IncreasedEmployeeItemTransferPatch : FullyAutoPatchedInstance<IncreasedEmployeeItemTransferPatch> {
+    internal class IncreasedEmployeeItemTransferPatch : FullyAutoPatchedInstance {
 
 		//TODO 3 - This class only exists temporarily until I transpile the NPCManager.EmployeeNPCControl method.
 		//		Once that is done, I need to move this back to TransferMoreItemsPatch where it belongs, and

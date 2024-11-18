@@ -14,7 +14,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
     /// Additionally, it uses a custom implementation of highlighting based on 
     /// the one from BetterSMT, that allows customizing all highlight colors.
     /// </summary>
-    public class HighlightStorageSlotsPatch : FullyAutoPatchedInstance<HighlightStorageSlotsPatch> {
+    public class HighlightStorageSlotsPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => BetterSMT_Helper.IsBetterSMTLoadedAndPatchEnabled.Value && ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value;
 
