@@ -365,3 +365,4 @@ FodyWeavers.xsd
 #External libraries
 lib/
 /SMT_QoLity/TODO&Changes.txt
+/SMT_QoLity/LastVersionBuilt.txt
