@@ -28,6 +28,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<bool> EnableEmployeeChanges { get; private set; }
 		public ConfigEntry<float> EmployeeNextActionWait { get; private set; }
 		public ConfigEntry<float> EmployeeIdleWait { get; private set; }
+		public ConfigEntry<int> EmployeeJobFrequencyMultiplier { get; private set; }
 		public ConfigEntry<bool> EnableTransferProducts { get; private set; }
 		public ConfigEntry<int> NumTransferProducts { get; private set; }
 		public ConfigEntry<bool> TransferMoreProductsOnlyClosedStore { get; private set; }
@@ -38,6 +39,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<Color> PatchBetterSMT_StorageHighlightColor { get; private set; }
 		public ConfigEntry<Color> PatchBetterSMT_StorageSlotHighlightColor { get; private set; }
 		public ConfigEntry<bool> EnableModNotifications { get; private set; }
+		public ConfigEntry<bool> EnabledDebug { get; private set; }
+
 
 
 		private const string RequiresRestartSymbol = "(**)";
@@ -74,6 +77,19 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				key: $"Enable Employee Job Module {RequiresRestartSymbol}",
 				defaultValue: true,
 				description: "Enable patching of employee methods to allow related settings to show up. Disable if the module seems to cause problems.");
+
+			EmployeeJobFrequencyMultiplier = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: "Employee Job Module",
+				key: "Employee slowdown fix multiplier",
+				defaultValue: 1,
+				description: "The game has a limit of 50 employee \"actions\" per second. This means that if you have 50 employees (using mods), an employee " +
+								"can only do a single action every second, no matter if assigned to a job or not. The more employees you have, or the faster" +
+								"they are, the worse it gets.\nThis fix is a multiplier to the number of actions they can perform compared to base game, but there" +
+								"may be a noticeable performance hit depending on your potato system.\n" +
+								"Generally you should set this to the lowest possible value where you stop noticing any employee slowdowns, but if you have a" +
+								"decent CPU you can set it very high.",
+				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
+				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance);
 
 			EmployeeNextActionWait = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",
@@ -155,28 +171,28 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 			PatchBetterSMT_ShelfHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
-				key: "Shelf Highlight Color",
+				key: "Shelf highlight color",
 				defaultValue: Color.red,
 				description: "Color of product shelves when highlighted." + colorSettingHelpMessage,
 				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_ShelfLabelHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
-				key: "Shelf label Highlight Color",
+				key: "Shelf label highlight color",
 				defaultValue: Color.yellow,
 				description: "Color of shelf labels when highlighted." + colorSettingHelpMessage,
 				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_StorageHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
-				key: "Storage Highlight Color",
+				key: "Storage highlight color",
 				defaultValue: Color.blue,
 				description: "Color of storage shelves when highlighted." + colorSettingHelpMessage,
 				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
 
 			PatchBetterSMT_StorageSlotHighlightColor = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches: Highlight Colors",
-				key: "Storage Slot Highlight Color",
+				key: "Storage slot highlight color",
 				defaultValue: Color.cyan,
 				description: "Color of storage slot spaces when highlighted." + colorSettingHelpMessage,
 				patchInstanceDependency: Container<HighlightStorageSlotsPatch>.Instance);
@@ -188,6 +204,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: true,
 				description: "If enabled, you may receive custom notifications from this mod. Disable if they are " +
 								"causing problems or you dont want to see them.");
+
+
+			EnabledDebug = configManagerControl.AddConfig(
+				sectionName: "DEBUG",
+				key: $"Enable debug mode",
+				defaultValue: false,
+				description: "Dev stuff you dont want to know about.",
+				isAdvanced: true);
 		}
 		
 
@@ -201,7 +225,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 
 		private string GetBetterSMTConfigMessage(bool isMainModuleSetting) {
-			string loadedText = isMainModuleSetting ? $"Apply {BetterSMTInfo.Name} patches {RequiresRestartSymbol}" : $"Highlight Storage Slots {RequiresRestartSymbol}";
+			string loadedText = isMainModuleSetting ? $"Apply {BetterSMTInfo.Name} patches {RequiresRestartSymbol}" : $"Highlight storage slots {RequiresRestartSymbol}";
 
 			return BetterSMTLoadStatus.Value switch {
 				BetterSMT_Status.NotLoaded => $"{BetterSMTInfo.Name} is not loaded. Setting unused.",

@@ -7,6 +7,9 @@ using Damntry.Utils.Tasks;
 using TMPro;
 using UnityEngine;
 using static Damntry.Utils.Logging.TimeLoggerBase;
+using Damntry.Utils.Logging;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
+using SuperQoLity.SuperMarket.Patches;
 
 
 namespace SuperQoLity.SuperMarket.ModUtils {
@@ -43,6 +46,19 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			if (ModConfig.Instance.EnableModNotifications.Value) {
 				AddNotificationSupport();
 			}
+
+			GameWorldEventsPatch.OnGameWorldChange += (GameWorldEvent ev) => {
+				if (ev == GameWorldEvent.Start) {
+					if (GameNotifications.Instance.NotificationSystemEnabled) {
+						//Even if notification support wasnt added above, we still hook onto the
+						//	event since the user could enable notifications in the settings at any time.
+						TryEnableNotificationsInGame();
+					}
+				} else if (ev == GameWorldEvent.Quit) {
+					DisableShowingNotifications();
+				}
+			};
+
 			ModConfig.Instance.EnableModNotifications.SettingChanged += ModConfig.Instance.NotificationsSettingsChanged;
 		}
 
@@ -63,6 +79,28 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			return NotificationSystemEnabled = false;
 		}
 
+		public void TryEnableNotificationsInGame() {
+			bool notificationsOk = false;
+
+			try {
+				bool notifObjOk = TestNotificationObjects();
+				if (!notifObjOk) {
+					//Notification objects are not working. Return so the finally handles everything.
+					return;
+				}
+
+				//Enable showing notifications on screen
+				notificationsOk = EnableShowingNotifications();
+
+			} catch (Exception ex) {
+				BepInExTimeLogger.Logger.LogTimeExceptionWithMessage("Error while enabling game notifications.", ex, TimeLoggerBase.LogCategories.Notifs);
+			} finally {
+				if (!notificationsOk) {
+					TimeLoggerBase.RemoveGameNotificationSupport();
+				}
+			}
+		}
+
 		public bool EnableShowingNotifications() {
 			if (NotificationSystemEnabled) {
 				notificationTask.StartTaskAsync(() => notificationConsumer(), "Notification Consumer", false).FireAndForget(LogCategories.Notifs);
@@ -74,9 +112,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		}
 
-		//TODO 4 - This needs to be called when the game exits to main menu. Otherwise the 2º time you start a game, notifications 
-		//	while loading wont show, because the consumer was still working and iy was fake-showing messages as they came.
-		//	Once I do that, change the above StartTaskAsync call so I pass true on the 3º argument.
 		public void DisableShowingNotifications() {
 			notificationTask.StopTaskAndWaitAsync(10000).FireAndForgetCancels(LogCategories.Notifs);
 		}
@@ -178,7 +213,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			public string message { get; set; }
 			public LogTier logLevel { get; set; }
 		}
-
 
 	}
 }
