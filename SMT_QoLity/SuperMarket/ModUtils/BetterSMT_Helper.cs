@@ -22,7 +22,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		public struct BetterSMTInfo {
 			public const string GUID = "ViViKo.BetterSMT";
-			public const string GUID_New = "BetterSMT";
+			public const string GUID_NEW = "BetterSMT";
 			public const string HarmonyId = "ViViKo.BetterSMT";
 			public const string HarmonyId_New = "BetterSMT";
 			public const string Name = "BetterSMT";
@@ -98,7 +98,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		private static BetterSMT_Status ISBetterSMTLoaded() {
 			bool betterSMTLoaded = Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID, out PluginInfo betterSMTInfo) ||
-				Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID_New, out betterSMTInfo); ;
+				Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID_NEW, out betterSMTInfo); ;
 
 			if (betterSMTLoaded) {
 				//Check loaded version against the one we support.

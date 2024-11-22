@@ -32,7 +32,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 				//	patch code, and when the original ChangeEquipment method is called, his patch
 				//	code is invoked, which is just my code now.
 				if (newEquippedItem == 0) {
-					HighlightingMethods.ClearHighlightedShelves();
+					ShelfHighlighting.ClearHighlightedShelves();
 				}
 				return false;
 			}
@@ -56,7 +56,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 			[HarmonyPrefix]
 			private static bool UpdateBoxContentsPatch(PlayerNetwork __instance, int productIndex) {
 				//Overwrite BetterSMT patch so it uses my code instead.
-				HighlightingMethods.HighlightShelvesByProduct(productIndex);
+				ShelfHighlighting.HighlightShelvesByProduct(productIndex);
 
 				return false;
 			}
@@ -77,7 +77,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 			[HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.UpdateBoxContents))]
 			[HarmonyPostfix]
 			private static void UpdateBoxContentsPatch(PlayerNetwork __instance, int productIndex) {
-				HighlightingMethods.HighlightShelvesByProduct(productIndex);
+				ShelfHighlighting.HighlightShelvesByProduct(productIndex);
 			}
 
 		}
@@ -88,7 +88,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 			[HarmonyPostfix]
 			/// <summary>Storage object loaded</summary>
 			private static void BoxSpawnerPatch(Data_Container __instance) {
-				HighlightingMethods.AddHighlightMarkersToStorage(__instance.transform);
+				ShelfHighlighting.AddHighlightMarkersToStorage(__instance.transform);
 			}
 
 			[HarmonyPatch(typeof(NetworkSpawner), "UserCode_CmdSpawn__Int32__Vector3__Vector3")]
@@ -102,7 +102,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 					Transform buildableParent = __instance.levelPropsOBJ.transform.GetChild(index);
 					GameObject lastStorageObject = buildableParent.GetChild(buildableParent.childCount - 1).gameObject;
 
-					HighlightingMethods.AddHighlightMarkersToStorage(lastStorageObject.transform);
+					ShelfHighlighting.AddHighlightMarkersToStorage(lastStorageObject.transform);
 				}
 			}
 

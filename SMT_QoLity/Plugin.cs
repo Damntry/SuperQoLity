@@ -10,7 +10,7 @@ using Damntry.UtilsBepInEx.HarmonyPatching;
 namespace SuperQoLity {
 
 	//Soft dependency so we load after BetterSMT if it exists.
-	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID_New, BepInDependency.DependencyFlags.SoftDependency)]
+	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID_NEW, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {

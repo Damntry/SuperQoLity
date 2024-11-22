@@ -7,7 +7,7 @@ using SuperQoLity.SuperMarket.ModUtils;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers {
-	public class HighlightingMethods {
+	public class ShelfHighlighting {
 
 		public static readonly Lazy<MethodInfo> HighlightShelfMethod = new Lazy<MethodInfo>(() =>
 			AccessTools.Method($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch:HighlightShelf"));
