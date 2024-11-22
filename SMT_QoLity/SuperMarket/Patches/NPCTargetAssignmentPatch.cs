@@ -41,7 +41,7 @@ namespace SuperQoLity.SuperMarket.Patches
     [HarmonyPatch(typeof(NPC_Manager))]
 	public class NPCTargetAssignmentPatch : FullyAutoPatchedInstance {
 
-		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
+		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableEmployeeChanges.Value;
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - NPC patch failed. Employee Module inactive";
 
@@ -88,10 +88,10 @@ namespace SuperQoLity.SuperMarket.Patches
 						} else {
 							if (component.equippedItem > 0) {
 								Vector3 vector = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
-								GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector, component.boxProductID, component.boxNumberOfProducts);
+								GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 								component.EquipNPCItem(0);
-								component.boxProductID = 0;
-								component.boxNumberOfProducts = 0;
+								component.NetworkboxProductID = 0;
+								component.NetworkboxNumberOfProducts = 0;
 								component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 								component.state = -1;
 								return false;
@@ -107,10 +107,10 @@ namespace SuperQoLity.SuperMarket.Patches
 								case 1: {
 										if (component.equippedItem > 0) {
 											Vector3 vector2 = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
-											GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector2, component.boxProductID, component.boxNumberOfProducts);
+											GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector2, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 											component.EquipNPCItem(0);
-											component.boxProductID = 0;
-											component.boxNumberOfProducts = 0;
+											component.NetworkboxProductID = 0;
+											component.NetworkboxNumberOfProducts = 0;
 											component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 											component.state = -1;
 											return false;
@@ -216,10 +216,10 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 0:
 								if (component.equippedItem > 0) {
 									Vector3 vector3 = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
-									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector3, component.boxProductID, component.boxNumberOfProducts);
+									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector3, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 									component.EquipNPCItem(0);
-									component.boxProductID = 0;
-									component.boxNumberOfProducts = 0;
+									component.NetworkboxProductID = 0;
+									component.NetworkboxNumberOfProducts = 0;
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
 									return false;
@@ -236,7 +236,7 @@ namespace SuperQoLity.SuperMarket.Patches
 									component.MoveEmployeeTo(__instance.restSpotOBJ.transform.position + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)));
 									return false;
 								}
-								component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
+								component.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 								component.state = -1;
 								return false;
 							case 1:
@@ -252,8 +252,8 @@ namespace SuperQoLity.SuperMarket.Patches
 											dataContainer.EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, -1, -1);
 										}
 
-										component.boxProductID = storageSlotInfo.ExtraData.ProductId;
-										component.boxNumberOfProducts = storageSlotInfo.ExtraData.Quantity;
+										component.NetworkboxProductID = storageSlotInfo.ExtraData.ProductId;
+										component.NetworkboxNumberOfProducts = storageSlotInfo.ExtraData.Quantity;
 										component.EquipNPCItem(1);
 										GameObject targetShelf = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
 										component.MoveEmployeeToShelf(targetShelf.transform.Find("Standspot").transform.position);
@@ -294,6 +294,7 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 5: {
 									if (component.boxNumberOfProducts <= 0) {
+									if (component.NetworkboxNumberOfProducts <= 0) {
 										if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
 											component.MoveEmployeeTo(__instance.trashSpotOBJ);
 											component.state = 6;
@@ -309,7 +310,7 @@ namespace SuperQoLity.SuperMarket.Patches
 										component.MoveEmployeeTo(__instance.recycleSpot2OBJ);
 										component.state = 9;
 									} else {
-										StorageSlotInfo storageToMerge = GetStorageContainerWithBoxToMerge(__instance, component.boxProductID);
+										StorageSlotInfo storageToMerge = GetStorageContainerWithBoxToMerge(__instance, component.NetworkboxProductID);
 										if (storageToMerge.FreeStorageFound) {
 											//component.currentFreeStorageIndex = storageSlotInfo.SlotIndex;
 											Vector3 destination = __instance.storageOBJ.transform.GetChild(storageToMerge.StorageIndex).transform.Find("Standspot").transform.position;
@@ -317,7 +318,7 @@ namespace SuperQoLity.SuperMarket.Patches
 											component.state = 20;
 											return false;
 										}
-										StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.boxProductID);
+										StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.NetworkboxProductID);
 										if (freeStorageIndexes.FreeStorageFound) {
 											Vector3 destination = __instance.storageOBJ.transform.GetChild(freeStorageIndexes.StorageIndex).gameObject.transform.Find("Standspot").transform.position;
 											component.MoveEmployeeToStorage(destination, freeStorageIndexes);
@@ -331,8 +332,8 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 6:
 								component.EquipNPCItem(0);
-								component.boxProductID = 0;
-								component.boxNumberOfProducts = 0;
+								component.NetworkboxProductID = 0;
+								component.NetworkboxNumberOfProducts = 0;
 								component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 								component.state = -1;
 								return false;
@@ -348,7 +349,7 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 8: {
 									Vector3 vector4 = __instance.leftoverBoxesSpotOBJ.transform.position + new Vector3(Random.Range(-1f, 1f), 4f, Random.Range(-1f, 1f));
-									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector4, component.boxProductID, component.boxNumberOfProducts);
+									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector4, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 									component.state = 6;
 									return false;
 								}
@@ -363,6 +364,9 @@ namespace SuperQoLity.SuperMarket.Patches
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
 										ReflectionHelper.CallMethod(__instance, "EmployeeMergeBoxContents",
 											new object[] { component, storageSlotInfo.StorageIndex, storageSlotInfo.ExtraData.ProductId, storageSlotInfo.SlotIndex });
+										component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 5);
+										component.state = -1;
+										return false;
 									}
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
@@ -376,10 +380,10 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 0:
 								if (component.equippedItem > 0) {
 									Vector3 vector5 = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
-									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector5, component.boxProductID, component.boxNumberOfProducts);
+									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector5, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 									component.EquipNPCItem(0);
-									component.boxProductID = 0;
-									component.boxNumberOfProducts = 0;
+									component.NetworkboxProductID = 0;
+									component.NetworkboxNumberOfProducts = 0;
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
 									return false;
@@ -401,8 +405,8 @@ namespace SuperQoLity.SuperMarket.Patches
 										return false;
 									}
 									BoxData component5 = component.randomBox.GetComponent<BoxData>();
-									component.boxProductID = component5.productID;
-									component.boxNumberOfProducts = component5.numberOfProducts;
+									component.NetworkboxProductID = component5.productID;
+									component.NetworkboxNumberOfProducts = component5.numberOfProducts;
 									component.EquipNPCItem(1);
 									GameData.Instance.GetComponent<NetworkSpawner>().EmployeeDestroyBox(component.randomBox);
 									if (component5.numberOfProducts > 0) {
@@ -413,7 +417,7 @@ namespace SuperQoLity.SuperMarket.Patches
 									return false;
 								}
 							case 2: {
-									StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.boxProductID);
+									StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.NetworkboxProductID);
 									if (freeStorageIndexes.FreeStorageFound) {
 										component.MoveEmployeeToStorage(__instance.storageOBJ.transform.GetChild(freeStorageIndexes.StorageIndex).Find("Standspot").transform.position, freeStorageIndexes);
 										component.state = 3;
@@ -426,7 +430,7 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 3: {
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
 										__instance.storageOBJ.transform.GetChild(storageSlotInfo.StorageIndex).GetComponent<Data_Container>().
-											EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.boxProductID, component.boxNumberOfProducts);
+											EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 										component.state = 5;
 										return false;
 									}
@@ -437,14 +441,14 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 4: {
 									Vector3 vector6 = __instance.leftoverBoxesSpotOBJ.transform.position + new Vector3(Random.Range(-1f, 1f), 3f, Random.Range(-1f, 1f));
-									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector6, component.boxProductID, component.boxNumberOfProducts);
+									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector6, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 									component.state = 5;
 									return false;
 								}
 							case 5:
 								component.EquipNPCItem(0);
-								component.boxProductID = 0;
-								component.boxNumberOfProducts = 0;
+								component.NetworkboxProductID = 0;
+								component.NetworkboxNumberOfProducts = 0;
 								component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 								component.state = -1;
 								return false;
@@ -488,10 +492,10 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 0: {
 									if (component.equippedItem > 0) {
 										Vector3 vector7 = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
-										GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector7, component.boxProductID, component.boxNumberOfProducts);
+										GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector7, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 										component.EquipNPCItem(0);
-										component.boxProductID = 0;
-										component.boxNumberOfProducts = 0;
+										component.NetworkboxProductID = 0;
+										component.NetworkboxNumberOfProducts = 0;
 										component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 										component.state = -1;
 										return false;
