@@ -1,8 +1,8 @@
 ﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers {
-	public class StorageSearch {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
+	public class StorageSearchLambdas {
 
 		public enum LoopStorageAction {
 			Nothing = 0,    //Do nothing special in this loop and keep going.
@@ -49,7 +49,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 				int num = productInfoArray.Length / 2;
 				for (int j = 0; j < num; j++) {
 					//Check if this storage slot is already in use by another NPC
-					if (checkNPCStorageTarget && NPC_TargetLogic.IsStorageSlotTargeted(i, j)) {
+					if (checkNPCStorageTarget && EmployeeTargetReservation.IsStorageSlotTargeted(i, j)) {
 						continue;
 					}
 					int storageProductId = productInfoArray[j * 2];
@@ -113,7 +113,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 				int num = productInfoArray.Length / 2;
 				for (int j = 0; j < num; j++) {
 					//Check if this product shelf slot is already in use by another NPC
-					if (checkNPCProdShelfTarget && NPC_TargetLogic.IsProductShelfSlotTargeted(i, j)) {
+					if (checkNPCProdShelfTarget && EmployeeTargetReservation.IsProductShelfSlotTargeted(i, j)) {
 						continue;
 					}
 					int prodShelfProductId = productInfoArray[j * 2];

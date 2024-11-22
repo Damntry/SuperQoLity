@@ -5,10 +5,9 @@ using UnityEngine;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using Damntry.UtilsBepInEx.Logging;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
-{
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
-    public static class NPC_TargetLogic {
+	public static class EmployeeTargetReservation {
 
 		private enum TargetType {
 			Other,
@@ -43,13 +42,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
 
 		public static bool TryCheckValidTargetedStorage(this NPC_Info NPC, NPC_Manager __instance, out StorageSlotInfo storageSlotInfo) {
 			bool hasTarget = NpcStorageSlotTargets.TryGetValue(NPC, out storageSlotInfo);
-			
+
 			return hasTarget && ContentsMatchOrValid(__instance.storageOBJ, storageSlotInfo, TargetType.StorageSlot);
 		}
 
 		public static bool TryCheckValidTargetedProductShelf(this NPC_Info NPC, NPC_Manager __instance, out ProductShelfSlotInfo productShelfSlotInfo) {
 			bool hasTarget = NpcShelfProductSlotTargets.TryGetValue(NPC, out productShelfSlotInfo);
-			
+
 			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, productShelfSlotInfo, TargetType.ProdShelfSlot);
 		}
 
@@ -85,7 +84,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
 			return false;
 		}
 
-		
+
 
 		public static bool IsStorageSlotTargeted(int StorageIndex, int SlotIndex) {
 			return IsStorageSlotTargeted(new StorageSlotInfo(StorageIndex, SlotIndex));
@@ -145,6 +144,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
 			UpdateNPCItemMarkStatus(NPC, gameObjectTarget, shelfTarget, targetType);
 		}
 
+		public static void AddExtraStorageTarget(this NPC_Info NPC, StorageSlotInfo shelfTarget) {
+			UpdateTargetMarkStatus(NPC, null, shelfTarget, TargetType.StorageSlot);
+		}
+
+		public static void AddExtraProductShelfTarget(this NPC_Info NPC, ProductShelfSlotInfo shelfTarget) {
+			UpdateTargetMarkStatus(NPC, null, shelfTarget, TargetType.ProdShelfSlot);
+		}
+
 		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
 			DeleteNPCPreviousTarget(NPC);
 
@@ -156,9 +163,11 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
 		private static void DeleteNPCPreviousTarget(NPC_Info NPC) {
 			if (NpcBoxTargets.TryGetValue(NPC, out var NPCBoxPreviousTarget)) {
 				DeleteTarget(NPC, NPCBoxPreviousTarget, NpcBoxTargets, groundboxesTargeted, TargetType.GroundBox);
-			}if (NpcStorageSlotTargets.TryGetValue(NPC, out var NPCStoragePreviousTarget)) {
+			}
+			if (NpcStorageSlotTargets.TryGetValue(NPC, out var NPCStoragePreviousTarget)) {
 				DeleteTarget(NPC, NPCStoragePreviousTarget, NpcStorageSlotTargets, storageSlotsTargeted, TargetType.StorageSlot);
-			}if (NpcShelfProductSlotTargets.TryGetValue(NPC, out var NPCProdShelfPreviousTarget)) {
+			}
+			if (NpcShelfProductSlotTargets.TryGetValue(NPC, out var NPCProdShelfPreviousTarget)) {
 				DeleteTarget(NPC, NPCProdShelfPreviousTarget, NpcShelfProductSlotTargets, shelfProductSlotsTargeted, TargetType.ProdShelfSlot);
 			}
 		}
