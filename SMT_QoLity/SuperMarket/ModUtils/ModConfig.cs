@@ -21,7 +21,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		private static ModConfig instance;
 		private ModConfig() { }
 
-		private BaseUnityPlugin basePlugin;
 
 		private ConfigManagerController configManagerControl;
 
@@ -47,8 +46,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 
 		public void InitializeConfig(BaseUnityPlugin basePlugin) {
-			this.basePlugin = basePlugin;
-
 			configManagerControl = new ConfigManagerController(basePlugin.Config);
 
 			configManagerControl.AddGUIHiddenNote(
