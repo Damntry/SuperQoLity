@@ -4,6 +4,7 @@ using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using SuperQoLity.SuperMarket.ModUtils;
+using Damntry.UtilsBepInEx.HarmonyPatching;
 
 
 namespace SuperQoLity {
@@ -28,6 +29,7 @@ namespace SuperQoLity {
 
 
 	//Soft dependency so we load after BetterSMT if it exists.
+	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID_New, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {
@@ -60,16 +62,27 @@ namespace SuperQoLity {
 			signatureChecker.AddMethodSignature(typeof(GameData), "Update");
 
 			//Start patching process of enabled auto patch classes
-			bool allPatchsOK = AutoPatcher.StartAutoPatcher(signatureChecker);
+			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
-			//Start comparing method signatures 
-			signatureChecker.StartSignatureCheck();
+			//Compare method signatures and log results
+			StartMethodSignatureCheck().LogResultMessage(TimeLoggerBase.LogTier.Debug, false, true);
 
 			StupidMessageSendator2000_v16_MKII_CopyrightedName.SendWelcomeMessage(allPatchsOK);
 
 			BepInExTimeLogger.Logger.LogTime(TimeLoggerBase.LogTier.Message, $"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", TimeLoggerBase.LogCategories.Loading);
 		}
 
+		private CheckResult StartMethodSignatureCheck() {
+			MethodSignatureChecker mSigCheck = new MethodSignatureChecker(this.GetType());
+
+			mSigCheck.PopulateMethodSignaturesFromHarmonyPatches();
+
+			//Add manual patches and locally replaced methods.
+			mSigCheck.AddMethodSignature(typeof(NPC_Manager), "GetFreeStorageContainer", [typeof(int)]);
+			mSigCheck.AddMethodSignature(typeof(NPC_Manager), "CheckProductAvailability");
+
+			return mSigCheck.StartSignatureCheck();
+		}
 
 	}
 }
