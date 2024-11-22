@@ -24,7 +24,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 		private class ReplaceBetterSMTChangeEquipmentPatch {
 
 			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "ChangeEquipmentPatch", [typeof(PlayerNetwork), typeof(int)])]
-			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId)]
+			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId, BetterSMT_Helper.BetterSMTInfo.HarmonyId_New)]
 			[HarmonyPrefix]
 			//Yo dawg, I heard you like patches, so I patched the patch so it doesnt patch.
 			private static bool ChangeEquipmentBetterSMTPatch(PlayerNetwork __instance, int newEquippedItem) {
@@ -52,7 +52,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT
 
 
 			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "UpdateBoxContentsPatch")]
-			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId)]
+			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId, BetterSMT_Helper.BetterSMTInfo.HarmonyId_New)]
 			[HarmonyPrefix]
 			private static bool UpdateBoxContentsPatch(PlayerNetwork __instance, int productIndex) {
 				//Overwrite BetterSMT patch so it uses my code instead.

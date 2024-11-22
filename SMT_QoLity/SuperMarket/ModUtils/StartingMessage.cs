@@ -44,7 +44,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			superWelcomingMessages.Add("|~ #·?=@@)·´ç%... Fatal error while generating daily welcome quote. Please wait for a repair technician to fix it.");
 			superWelcomingMessages.Add("Just... one more welcome message... only one more... this will be the last one... for sure...");
 			superWelcomingMessages.Add("⚠🚨 AI DETECTED 🚨⚠. Please solve this Captcha to continue:      █████ [REDACTED]     █▚▌ ⬤   ▄█▀ ⬤ █▄ ▐▄█ ▀█▀ █ ⬤ █▚▌,  █▚▌ ⬤   █▬█ ⬤ ▐◣ █☰    █████ ");
-			superWelcomingMessages.Add("There is something wrong in this game. I cant put my finger on it, but sometimes I feel like my own employees are watching me... Oh, hey! Hello player! Welcome to Supermarket Together!!");
+			superWelcomingMessages.Add("There is something wrong in this game. I cant put my finger on it, but sometimes I feel like the employees are watchi... Oh, hey! Hello player! Welcome to Supermarket Together!!");
 			superWelcomingMessages.Add("I need every single shelf space filled with potatoes. Right now. Come on, make it happen!");
 			superWelcomingMessages.Add("No welcome message is a a good welcome message.         Too late.");
 			superWelcomingMessages.Add("Im going to need another Ibuprofen. \"This is not an Ibuprophen endorsement. " +

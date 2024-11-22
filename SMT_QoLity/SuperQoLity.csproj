@@ -35,7 +35,7 @@
   
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>lib\Laptop\Assembly-CSharp.dll</HintPath>
+      <HintPath>lib\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Build.Utilities.v4.0">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Microsoft.Build.Utilities.v4.0.dll</HintPath>
@@ -44,19 +44,19 @@
       <HintPath>lib\Mirror.dll</HintPath>
     </Reference>
     <Reference Include="PlayMaker">
-      <HintPath>lib\Laptop\PlayMaker.dll</HintPath>
+      <HintPath>lib\PlayMaker.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>lib\Laptop\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>lib\Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>lib\Laptop\UnityEngine.dll</HintPath>
+      <HintPath>lib\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.AIModule">
       <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>lib\Laptop\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
@@ -80,11 +80,11 @@
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
-      <!-- Main PC folder
       <SupermarketTogetherFolder>H:\!SteamLibrary\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
+      <!-- Laptop
+      <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
       -->
-      <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>      
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll" />
   </Target>
 </Project>

@@ -25,8 +25,8 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT.Legacy
 
         //[HarmonyDebug]
         [HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "HighlightShelf")]
-        [HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId)]
-        [HarmonyTranspiler]
+		[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId, BetterSMT_Helper.BetterSMTInfo.HarmonyId_New)]
+		[HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> HighlightShelfTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             List<CodeInstruction> instrList = instructions.ToList();

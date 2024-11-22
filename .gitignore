@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+#External libraries
+lib/
+/SMT_QoLity/TODO&Changes.txt

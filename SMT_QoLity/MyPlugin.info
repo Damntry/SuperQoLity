@@ -12,6 +12,12 @@
     <Company>None</Company>
   </PropertyGroup>
 
+  <!-- Full debug for old Unity runtimes, instead of the modern portable one.
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugType>Full</DebugType>
+  </PropertyGroup>
+  -->
+
   <!-- 
   Build code below was taken from "BepInEx.PluginInfoProps.props", of the "BepInEx.PluginInfoProps" NuGet package 
   Modified to use take values for GUID and Name from different properties (Used to be <AssemblyName> for GUID, and <Product> for name).

@@ -3,7 +3,7 @@ using BepInEx.Bootstrap;
 using BepInEx;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.Logging;
-using System.Text;
+
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -18,18 +18,20 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			//If extra highlights functions are enabled, we instead use my own patch with modified methods that already implement the fixes.
 			!ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value
 		);
-
+		
 
 		public struct BetterSMTInfo {
 			public const string GUID = "ViViKo.BetterSMT";
+			public const string GUID_New = "BetterSMT";
 			public const string HarmonyId = "ViViKo.BetterSMT";
+			public const string HarmonyId_New = "BetterSMT";
 			public const string Name = "BetterSMT";
 			public const string PatchesNamespace = "BetterSMT.Patches";
 			//Last Viviko version is also the last one that needed the highlight fixes.
 			public readonly static Version LastVivikoVersion = new Version(1, 6, 2);
 
 			//TODO 5 - This probably belongs in MyPlugin.info.
-			public readonly static Version SupportedVersion = new Version(1, 6, 3);
+			public readonly static Version SupportedVersion = new Version(1, 8, 1);
 
 			public static Version LoadedVersion;
 		}
@@ -95,7 +97,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		}
 
 		private static BetterSMT_Status ISBetterSMTLoaded() {
-			bool betterSMTLoaded = Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID, out PluginInfo betterSMTInfo);
+			bool betterSMTLoaded = Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID, out PluginInfo betterSMTInfo) ||
+				Chainloader.PluginInfos.TryGetValue(BetterSMTInfo.GUID_New, out betterSMTInfo); ;
 
 			if (betterSMTLoaded) {
 				//Check loaded version against the one we support.
