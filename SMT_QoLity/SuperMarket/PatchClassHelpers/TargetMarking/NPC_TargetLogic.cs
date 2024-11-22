@@ -2,25 +2,31 @@
 using System.Collections.Generic;
 using UnityEngine.AI;
 using UnityEngine;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using Damntry.UtilsBepInEx.Logging;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking
+{
 
-	public static class NPC_TargetLogic {
+    public static class NPC_TargetLogic {
 
 		private enum TargetType {
 			Other,
 			GroundBox,
 			StorageSlot,
-			ShelfSlot
+			ProdShelfSlot
 		}
 
 
-		//Ground boxes currently targeted by NPCs. To avoid multiple NPCs trying to do the same job.
+		//Lists of NPCs targets. The hashsets exist to improve target search performance.
 		private static Dictionary<NPC_Info, GameObject> NpcBoxTargets = new();
 		private static HashSet<GameObject> groundboxesTargeted = new();
 
 		private static Dictionary<NPC_Info, StorageSlotInfo> NpcStorageSlotTargets = new();
-		private static HashSet<StorageSlotInfo> storageSlotsTargeted = new();
+		private static HashSet<StorageSlotInfo> storageSlotsTargeted = new HashSet<StorageSlotInfo>(new TargetContainerSlotComparer());
+
+		private static Dictionary<NPC_Info, ProductShelfSlotInfo> NpcShelfProductSlotTargets = new();
+		private static HashSet<ProductShelfSlotInfo> shelfProductSlotsTargeted = new HashSet<ProductShelfSlotInfo>(new TargetContainerSlotComparer());
 
 
 		public static List<GameObject> GetListUntargetedBoxes(GameObject allGroundBoxes) {
@@ -37,25 +43,64 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		public static bool TryCheckValidTargetedStorage(this NPC_Info NPC, NPC_Manager __instance, out StorageSlotInfo storageSlotInfo) {
 			bool hasTarget = NpcStorageSlotTargets.TryGetValue(NPC, out storageSlotInfo);
+			
+			return hasTarget && ContentsMatchOrValid(__instance.storageOBJ, storageSlotInfo, TargetType.StorageSlot);
+		}
 
-			if (hasTarget) {
-				//Check that the target values still match the current content of the storage slot.
-				int[] productInfoArray = __instance.storageOBJ.transform.GetChild(storageSlotInfo.StorageIndex).GetComponent<Data_Container>().productInfoArray;
-				int productId = productInfoArray[storageSlotInfo.SlotIndex * 2];
-				int quantity = productInfoArray[storageSlotInfo.SlotIndex * 2 + 1];
+		public static bool TryCheckValidTargetedProductShelf(this NPC_Info NPC, NPC_Manager __instance, out ProductShelfSlotInfo productShelfSlotInfo) {
+			bool hasTarget = NpcShelfProductSlotTargets.TryGetValue(NPC, out productShelfSlotInfo);
+			
+			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, productShelfSlotInfo, TargetType.ProdShelfSlot);
+		}
 
-				if (productId == storageSlotInfo.ExtraData.ProductId && quantity >= storageSlotInfo.ExtraData.Quantity) {
-					return true;
+		public static bool IsStorageUntargetedAndContentsMatch(NPC_Manager instance, StorageSlotInfo storageSlotInfo) {
+			return !IsStorageSlotTargeted(storageSlotInfo) && ContentsMatchOrValid(instance.shelvesOBJ, storageSlotInfo, TargetType.StorageSlot);
+		}
+
+		public static bool IsProductShelfUntargetedAndContentsMatch(NPC_Manager instance, ProductShelfSlotInfo productShelfSlotInfo) {
+			return !IsProductShelfSlotTargeted(productShelfSlotInfo) && ContentsMatchOrValid(instance.shelvesOBJ, productShelfSlotInfo, TargetType.ProdShelfSlot);
+		}
+
+		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, SlotInfoBase slotInfoBase, TargetType targetType) {
+			//Check that the saved target values still match the current content of the product shelf/storage slot.
+			int[] productInfoArray = gameObjectShelf.transform.GetChild(slotInfoBase.ShelfIndex).GetComponent<Data_Container>().productInfoArray;
+
+			int productId = productInfoArray[slotInfoBase.SlotIndex * 2];
+			int shelfQuantity = productInfoArray[slotInfoBase.SlotIndex * 2 + 1];
+
+			if (productId == slotInfoBase.ExtraData.ProductId) {
+				if (targetType == TargetType.StorageSlot) {
+					if (shelfQuantity >= slotInfoBase.ExtraData.Quantity) {
+						return true;
+					}
+				} else if (targetType == TargetType.ProdShelfSlot) {
+					if (shelfQuantity <= slotInfoBase.ExtraData.Quantity) {
+						return true;
+					}
 				}
 			}
 
-			//If we reach this point, the most probable cause is that a human player took from the storage slot while the NPC was on route.
+			//If we reach this point, the most probable cause is that a human player took from the shelf slot while the NPC was on route.
 
 			return false;
 		}
 
+		
+
 		public static bool IsStorageSlotTargeted(int StorageIndex, int SlotIndex) {
-			return storageSlotsTargeted.Contains(new StorageSlotInfo(StorageIndex, SlotIndex));
+			return IsStorageSlotTargeted(new StorageSlotInfo(StorageIndex, SlotIndex));
+		}
+
+		public static bool IsProductShelfSlotTargeted(int ProdShelfIndex, int SlotIndex) {
+			return IsProductShelfSlotTargeted(new ProductShelfSlotInfo(ProdShelfIndex, SlotIndex));
+		}
+
+		public static bool IsStorageSlotTargeted(StorageSlotInfo storageSlotInfo) {
+			return storageSlotsTargeted.Contains(storageSlotInfo);
+		}
+
+		public static bool IsProductShelfSlotTargeted(ProductShelfSlotInfo productShelfSlotInfo) {
+			return shelfProductSlotsTargeted.Contains(productShelfSlotInfo);
 		}
 
 
@@ -67,8 +112,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			NPC.MoveEmployee(gameObjectTarget.transform.position, null, null, TargetType.Other);
 		}
 
-		public static void MoveEmployeeToShelf(this NPC_Info NPC, Vector3 destination) {
-			NPC.MoveEmployee(destination, null, null, TargetType.ShelfSlot);
+		public static void MoveEmployeeToShelf(this NPC_Info NPC, Vector3 destination, ProductShelfSlotInfo prodShelfTarget) {
+			NPC.MoveEmployee(destination, null, prodShelfTarget, TargetType.ProdShelfSlot);
 		}
 
 		public static void MoveEmployeeToStorage(this NPC_Info NPC, Vector3 destination, StorageSlotInfo storageTarget) {
@@ -92,18 +137,18 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static void MoveEmployee(this NPC_Info NPC, Vector3 destination, GameObject gameObjectTarget,
-				StorageSlotInfo storageTarget, TargetType targetType) {
+				SlotInfoBase shelfTarget, TargetType targetType) {
 			NavMeshAgent navMesh = NPC.gameObject.GetComponent<NavMeshAgent>();
 			navMesh.destination = destination;
 
 			//Update targeted status of objects related to this NPC.
-			UpdateNPCItemMarkStatus(NPC, gameObjectTarget, storageTarget, targetType);
+			UpdateNPCItemMarkStatus(NPC, gameObjectTarget, shelfTarget, targetType);
 		}
 
-		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, StorageSlotInfo storageTarget, TargetType targetType) {
+		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
 			DeleteNPCPreviousTarget(NPC);
 
-			UpdateTargetMarkStatus(NPC, gameObjectTarget, storageTarget, targetType);
+			UpdateTargetMarkStatus(NPC, gameObjectTarget, shelfTarget, targetType);
 		}
 
 		/// <summary>Checks if the NPC has a previous target, and deletes it.</summary>
@@ -111,8 +156,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		private static void DeleteNPCPreviousTarget(NPC_Info NPC) {
 			if (NpcBoxTargets.TryGetValue(NPC, out var NPCBoxPreviousTarget)) {
 				DeleteTarget(NPC, NPCBoxPreviousTarget, NpcBoxTargets, groundboxesTargeted, TargetType.GroundBox);
-			} else if (NpcStorageSlotTargets.TryGetValue(NPC, out var NPCStoragePreviousTarget)) {
+			}if (NpcStorageSlotTargets.TryGetValue(NPC, out var NPCStoragePreviousTarget)) {
 				DeleteTarget(NPC, NPCStoragePreviousTarget, NpcStorageSlotTargets, storageSlotsTargeted, TargetType.StorageSlot);
+			}if (NpcShelfProductSlotTargets.TryGetValue(NPC, out var NPCProdShelfPreviousTarget)) {
+				DeleteTarget(NPC, NPCProdShelfPreviousTarget, NpcShelfProductSlotTargets, shelfProductSlotsTargeted, TargetType.ProdShelfSlot);
 			}
 		}
 
@@ -128,13 +175,16 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			NPCTargets.Remove(NPC);
 		}
 
-		private static void UpdateTargetMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, StorageSlotInfo storageTarget, TargetType targetType) {
+		private static void UpdateTargetMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
 			switch (targetType) {
 				case TargetType.GroundBox:
-					AddTarget(NPC, gameObjectTarget, NpcBoxTargets, groundboxesTargeted, TargetType.GroundBox);
+					AddTarget(NPC, gameObjectTarget, NpcBoxTargets, groundboxesTargeted, targetType);
 					break;
 				case TargetType.StorageSlot:
-					AddTarget(NPC, storageTarget, NpcStorageSlotTargets, storageSlotsTargeted, TargetType.StorageSlot);
+					AddTarget(NPC, (StorageSlotInfo)shelfTarget, NpcStorageSlotTargets, storageSlotsTargeted, targetType);
+					break;
+				case TargetType.ProdShelfSlot:
+					AddTarget(NPC, (ProductShelfSlotInfo)shelfTarget, NpcShelfProductSlotTargets, shelfProductSlotsTargeted, targetType);
 					break;
 			}
 		}

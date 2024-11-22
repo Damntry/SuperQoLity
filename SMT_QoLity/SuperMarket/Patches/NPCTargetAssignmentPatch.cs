@@ -1,44 +1,68 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
+using Damntry.Utils.Reflection;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using Damntry.UtilsBepInEx.Logging;
 using HarmonyLib;
+using SuperQoLity.SuperMarket.ModUtils;
+using SuperQoLity.SuperMarket.PatchClassHelpers;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using UnityEngine;
 using UnityEngine.AI;
-using Damntry.Utils.Reflection;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
-using SuperQoLity.SuperMarket.ModUtils;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
-using System.Diagnostics.Contracts;
 
-namespace SuperQoLity.SuperMarket.Patches
-{
 
-    //TODO 2 - Implement shelf slots
+namespace SuperQoLity.SuperMarket.Patches {
+	//TODO 8 - Employees can pick up storage boxes from behind the wall. This happens in vanilla too, and I think
+	//	it started after an update, so maybe I just need to move, or replace, the storage shelves.
+	//	If that doesnt fix it either, I could ask around if it happens to them and fix it myself. Its just some
+	//	interaction distance thingy for sure, but reducing it does have other consequences. But the thing is
+	//	that they should be going for the "spotplace" or some name like that which sits in front of the storage..
+	//	maybe that spot got fucked, or the interaction radius is so big that even from behind they can reach?
+	//		I checked it out and even if I put it very far from the wall, they still go for the wall. Its like
+	//		the navmesh cant reach, and thats the closest spot it can find to the limit.
+	//		This is probably some fuckery with how I have more storage space than main area space or something.
+	//		For now I ll leave this todo here with lower priority, but in general I think I can safely ignore
+	//		this, unless I start hearing from other people having the same problem.
 
-    /// <summary>
-    /// Changes:
-    /// - Make employees acquire jobs, so its current target (a dropped box, or a storage/shelf slot) is "marked" and 
-    ///		other employees ignore it. Work gets distributed instead of everyone trying to do the same thing.
-    ///		
-    ///		* The vanilla functionality is that when an employee seeks for jobs of its type and finds a valid one, it sets 
-    ///			a destination towards the target or near it. Once reached, it checks that the target of the job is still there and valid,
-    ///			in which case it executes it. Then proceeds to the next step of whatever job is doing and does more or less the same once again.
-    ///			
-    ///			Changed it so:
-    ///				- Employees skips jobs whos target is already assigned to another employee.
-    ///				- Every existing call from employees that sets a destination, now instead uses our own method that clears
-    ///					whatever previous targets the employee had, so it frees any potentially unfinished jobs for other
-    ///					employees. Then, if the destination being set was for an assignable target (this is decided
-    ///					manually by us), then set that target as a marked job, for others to ignore, and save the job data.
-    ///					Once it reaches the job location, it gets the NPCs job data and checks that is still valid, in case human
-    ///					players changed something, and if valid, executes the job.
-    ///					Then proceeds to the next step of whatever job is doing and does more or less the same once again.
-    ///			
-    /// - Configurable wait time for employees after finishing a job or idling. 
-    ///		* Went through all StartWaitState usages to assign the appropiate config value.
-    ///	- When an employee searchs for a box on the floor, get the closest one instead of one random.
-    ///		* New method GetClosestGroundBox that replaces the one to get a random box.
-    /// </summary>
-    [HarmonyPatch(typeof(NPC_Manager))]
+	//TODO 2 - Future Improvement. When there are boxes to pick up, NPCs check if there is a valid storage slot
+	//		for it, but it doesnt reserve it until after they have the box and set the destination towards the storage.
+	//		This makes it so a bunch of NPCs go for boxes, pick it up, and the late ones might discover that all
+	//		storage slots have already been taken by the npcs that picked the box first.
+	//		I need to reserve the slot the moment I check that its free and valid.
+	//		This has implications since it now means they can reserve multiple targets at the same time (the box
+	//		and the storage) so I need to make sure the logic works in all these new cases plus the old ones.
+	//		Currently for safety, whenever an NPC starts moving to a new destination I was clearing all previous
+	//		targets, but now I ll have to add some new logic for cases where it should NOT remove some existing targets.
+	//	Same thing with CheckProductAvailability. I need to reserve both the storage and the product shelf.
+	//TODO 3 - When an NPC is moving towards a destination target, instead of just waiting until it arrives, check
+	//		periodically if the target is valid, so he doesnt try to do a job that a player has already made not possible.
+
+	/// <summary>
+	/// Changes:
+	/// - Make employees acquire jobs, so its current target (a dropped box, or a storage/shelf slot) is "marked" and 
+	///		other employees ignore it. Work gets distributed instead of everyone trying to do the same thing.
+	///		
+	///		* The vanilla functionality is that when an employee seeks for jobs of its type and finds a valid one, it sets 
+	///			a destination towards the target or near it. Once reached, it checks that the target of the job is still there and valid,
+	///			in which case it executes it. Then proceeds to the next step of whatever job is doing and does more or less the same once again.
+	///			
+	///			Changed it so:
+	///				- Employees skips jobs whos target is already assigned to another employee.
+	///				- Every existing call from employees that sets a destination, now instead uses our own method that clears
+	///					whatever previous targets the employee had, so it frees any potentially unfinished jobs for other
+	///					employees. Then, if the destination being set was for an assignable target (this is decided
+	///					manually by us), then set that target as a marked job, for others to ignore, and save the job data.
+	///					Once it reaches the job location, it gets the NPCs job data and checks that is still valid, in case human
+	///					players changed something, and if valid, executes the job.
+	///					Then proceeds to the next step of whatever job is doing and does more or less the same once again.
+	///			
+	/// - Configurable wait time for employees after finishing a job or idling. 
+	///		* Went through all StartWaitState usages to assign the appropiate config value.
+	///	- When an employee searchs for a box on the floor, get the closest one instead of one random.
+	///		* New method GetClosestGroundBox that replaces the one to get a random box.
+	/// </summary>
+	[HarmonyPatch(typeof(NPC_Manager))]
 	public class NPCTargetAssignmentPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableEmployeeChanges.Value;
@@ -46,21 +70,20 @@ namespace SuperQoLity.SuperMarket.Patches
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - NPC patch failed. Employee Module inactive";
 
 
-		//TODO 3 - Check how viable it would be to change this Prefix into a transpiler.
-		//	This is a big method that will 100% get changed in the original game, so try to think
-		//	of alternative ways of minimizing changes to make the transpiler easier and safer.
 		[HarmonyPatch("EmployeeNPCControl")]
 		[HarmonyPrefix]
-		private static bool EmployeeNPCControlPatch(NPC_Manager __instance, int employeeIndex) {
+		public static bool EmployeeNPCControlPatch(NPC_Manager __instance, int employeeIndex) {
 			GameObject gameObject = __instance.employeeParentOBJ.transform.GetChild(employeeIndex).gameObject;
 			NPC_Info component = gameObject.GetComponent<NPC_Info>();
 			int state = component.state;
 			NavMeshAgent component2 = gameObject.GetComponent<NavMeshAgent>();
+
 			int taskPriority = component.taskPriority;
-			
+
 			if (state == -1) {
 				return false;
 			}
+
 			if (taskPriority == 4 && state == 2) {
 				if (component.currentChasedThiefOBJ) {
 					if (component.currentChasedThiefOBJ.transform.position.x < -15f || component.currentChasedThiefOBJ.transform.position.x > 38f || component.currentChasedThiefOBJ.GetComponent<NPC_Info>().productsIDCarrying.Count == 0) {
@@ -76,8 +99,10 @@ namespace SuperQoLity.SuperMarket.Patches
 				} else {
 					component.state = 0;
 				}
-			}
+			}			
+
 			if (!component2.pathPending && component2.remainingDistance <= component2.stoppingDistance && (!component2.hasPath || component2.velocity.sqrMagnitude == 0f)) {
+
 				switch (taskPriority) {
 					case 0:
 						if (state != 0) {
@@ -96,6 +121,7 @@ namespace SuperQoLity.SuperMarket.Patches
 								component.state = -1;
 								return false;
 							}
+							
 							component.MoveEmployeeTo(__instance.restSpotOBJ.transform.position + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)));
 							component.state = 1;
 							return false;
@@ -214,7 +240,9 @@ namespace SuperQoLity.SuperMarket.Patches
 					case 2:
 						switch (state) {
 							case 0:
+								LOG.DEBUG("Restocker logic begin.");
 								if (component.equippedItem > 0) {
+									LOG.DEBUG($"Restocker #{component.NPCID}: Item already equipped, dropping.");
 									Vector3 vector3 = component.transform.position + component.transform.forward * 0.5f + new Vector3(0f, 1f, 0f);
 									GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(vector3, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 									component.EquipNPCItem(0);
@@ -224,8 +252,10 @@ namespace SuperQoLity.SuperMarket.Patches
 									component.state = -1;
 									return false;
 								}
+								LOG.DEBUG($"Restocker #{component.NPCID}: Checking product availability.");
 								component.productAvailableArray = CheckProductAvailability(__instance);
 								if (component.productAvailableArray[0] != -1) {
+									LOG.DEBUG($"Restocker #{component.NPCID}: Products available, moving to storage.");
 									int storageIndex = component.productAvailableArray[2];
 									Vector3 destination = __instance.storageOBJ.transform.GetChild(storageIndex).Find("Standspot").transform.position;
 									component.MoveEmployeeToStorage(destination, new StorageSlotInfo(storageIndex, component.productAvailableArray[7], component.productAvailableArray[5], component.productAvailableArray[10]));
@@ -242,8 +272,18 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 1:
 								return false;
 							case 2: {
-									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
-										Transform storageT = __instance.storageOBJ.transform.GetChild(storageSlotInfo.StorageIndex);
+									GameObject targetShelfObj = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
+									//Shelf content values come from the earlier call to CheckProductAvailability, before walking to the storage.
+									//		Now we check again that the contents are still valid to do restocking.
+									var shelfTargetInfo = new ProductShelfSlotInfo(component.productAvailableArray[0], component.productAvailableArray[6],
+										component.productAvailableArray[4], component.productAvailableArray[8]);
+									LOG.DEBUG($"Restocker #{component.NPCID}: Storage reached.");
+									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo) && 
+											NPC_TargetLogic.IsProductShelfUntargetedAndContentsMatch(__instance, shelfTargetInfo)) {
+
+										LOG.DEBUG($"Restocker #{component.NPCID}: Picking box.");
+
+										Transform storageT = __instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex);
 										Data_Container dataContainer = storageT.GetComponent<Data_Container>();
 
 										if (storageT.Find("CanvasSigns")) {
@@ -255,47 +295,68 @@ namespace SuperQoLity.SuperMarket.Patches
 										component.NetworkboxProductID = storageSlotInfo.ExtraData.ProductId;
 										component.NetworkboxNumberOfProducts = storageSlotInfo.ExtraData.Quantity;
 										component.EquipNPCItem(1);
-										GameObject targetShelf = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
-										component.MoveEmployeeToShelf(targetShelf.transform.Find("Standspot").transform.position);
+
+										component.MoveEmployeeToShelf(targetShelfObj.transform.Find("Standspot").transform.position, shelfTargetInfo);
 										component.state = 3;
 										return false;
 									}
-									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 5);
+									LOG.DEBUG($"Restocker #{component.NPCID}: No luck with the storage or product shelf. Get fucked.");
+									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
 									return false;
 								}
 							case 3:
 								if (__instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).GetComponent<Data_Container>().productInfoArray[component.productAvailableArray[1]] == component.productAvailableArray[4]) {
+									LOG.DEBUG($"Restocker #{component.NPCID}: Shelf reached has same product as box. So far so good.");
 									component.state = 4;
 									return false;
 								}
+								LOG.DEBUG($"Restocker #{component.NPCID}: Shelf reached has now different product than box.");
 								component.state = 5;
 								return false;
 							case 4: {
-									Data_Container component4 = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).GetComponent<Data_Container>();
-									int num4 = component4.productInfoArray[component.productAvailableArray[1] + 1];
-									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, "GetMaxProductsPerRow", new object[] { component.productAvailableArray[0], component.productAvailableArray[4] });
-									bool success = IncreasedEmployeeItemTransferPatch.EmployeeAddsItemToRow(component4, component.productAvailableArray[1], ref component.boxNumberOfProducts, maxProductsPerRow);
-									if (success) {
-										//TODO 3 - When I Transpile this, remember that I need to remove the line with:  "component.boxNumberOfProducts--;"
-										//		since its now dynamically decreased in the EmployeeAddsItemToRow method.
-										component.StartWaitState(__instance.employeeItemPlaceWait, 4);
-										component.state = -1;
-										return false;
+									if (component.TryCheckValidTargetedProductShelf(__instance, out ProductShelfSlotInfo prodShelfSlotInfo)) {
+										LOG.DEBUG($"Restocker #{component.NPCID}: Shelf reached fully valid.");
+										Data_Container component4 = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).GetComponent<Data_Container>();
+										int num4 = component4.productInfoArray[component.productAvailableArray[1] + 1];
+										int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, "GetMaxProductsPerRow", new object[] { component.productAvailableArray[0], component.productAvailableArray[4] });
+
+										if (component.NetworkboxNumberOfProducts > 0 && num4 < maxProductsPerRow) {
+											LOG.DEBUG($"Restocker #{component.NPCID}: Adding products to shelf row.");
+											IncreasedEmployeeItemTransferPatch.ArgBoxNumberProducts.Value = component.NetworkboxNumberOfProducts;
+											IncreasedEmployeeItemTransferPatch.ArgMaxProductsPerRow.Value = maxProductsPerRow;
+
+											ReflectionHelper.CallMethod(component4, nameof(Data_Container.EmployeeAddsItemToRow), new object[] { component.productAvailableArray[1] });
+
+											//Update boxNumberOfProducts now that ArgBoxNumberProducts has been changed in EmployeeAddsItemToRow
+											component.NetworkboxNumberOfProducts = IncreasedEmployeeItemTransferPatch.ArgBoxNumberProducts.Value;
+											component.StartWaitState(__instance.employeeItemPlaceWait, 4);
+											component.state = -1;
+											return false;
+										}
 									}
-									if (component.boxNumberOfProducts > 0 && ReflectionHelper.CallMethod<bool>(__instance, "CheckIfShelfWithSameProduct", new object[] { component.productAvailableArray[4], component, component.productAvailableArray[0] })) {
-										GameObject targetShelf = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
-										component.MoveEmployeeToShelf(targetShelf.transform.Find("Standspot").transform.position);
+
+									GameObject targetShelfObj = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
+									var targetShelfInfo = new ProductShelfSlotInfo(component.productAvailableArray[0], component.productAvailableArray[6],
+										component.productAvailableArray[4], component.productAvailableArray[8]);
+
+									//if (component.NetworkboxNumberOfProducts > 0 && ReflectionHelper.CallMethod<bool>(__instance, "CheckIfShelfWithSameProduct", new object[] { component.productAvailableArray[4], component, component.productAvailableArray[0] })) {
+									if (component.NetworkboxNumberOfProducts > 0 && CheckIfShelfWithSameProduct(__instance, targetShelfInfo.ExtraData.ProductId, component, out ProductShelfSlotInfo productShelfSlotInfo)) {
+										LOG.DEBUG($"Restocker #{component.NPCID}: Current shelf non fully valid. Found a different shelf to add products.");
+										component.MoveEmployeeToShelf(targetShelfObj.transform.Find("Standspot").transform.position, productShelfSlotInfo);
 										component.state = 3;
 										return false;
 									}
+									
 									component.state = 5;
 									return false;
 								}
 							case 5: {
-									if (component.boxNumberOfProducts <= 0) {
+									LOG.DEBUG($"Restocker #{component.NPCID}: Box in hand, and no place to put its items or box is empty. Deciding what to do.");
 									if (component.NetworkboxNumberOfProducts <= 0) {
+										LOG.DEBUG($"Restocker #{component.NPCID}: Box empty, trying to recycle.");
 										if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
+											LOG.DEBUG($"Restocker #{component.NPCID}: Move to trash instead.");
 											component.MoveEmployeeTo(__instance.trashSpotOBJ);
 											component.state = 6;
 											return false;
@@ -312,25 +373,29 @@ namespace SuperQoLity.SuperMarket.Patches
 									} else {
 										StorageSlotInfo storageToMerge = GetStorageContainerWithBoxToMerge(__instance, component.NetworkboxProductID);
 										if (storageToMerge.FreeStorageFound) {
+											LOG.DEBUG($"Restocker #{component.NPCID}: Moving to storage to merge box.");
 											//component.currentFreeStorageIndex = storageSlotInfo.SlotIndex;
-											Vector3 destination = __instance.storageOBJ.transform.GetChild(storageToMerge.StorageIndex).transform.Find("Standspot").transform.position;
+											Vector3 destination = __instance.storageOBJ.transform.GetChild(storageToMerge.ShelfIndex).transform.Find("Standspot").transform.position;
 											component.MoveEmployeeToStorage(destination, storageToMerge);
 											component.state = 20;
 											return false;
 										}
 										StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.NetworkboxProductID);
 										if (freeStorageIndexes.FreeStorageFound) {
-											Vector3 destination = __instance.storageOBJ.transform.GetChild(freeStorageIndexes.StorageIndex).gameObject.transform.Find("Standspot").transform.position;
+											LOG.DEBUG($"Restocker #{component.NPCID}: Moving to storage to place box.");
+											Vector3 destination = __instance.storageOBJ.transform.GetChild(freeStorageIndexes.ShelfIndex).gameObject.transform.Find("Standspot").transform.position;
 											component.MoveEmployeeToStorage(destination, freeStorageIndexes);
 											component.state = 7;
 											return false;
 										}
+										LOG.DEBUG($"Restocker #{component.NPCID}: Moving to left over boxes spot.");
 										component.MoveEmployeeTo(__instance.leftoverBoxesSpotOBJ);
 										component.state = 8;
 									}
 									return false;
 								}
 							case 6:
+								LOG.DEBUG($"Restocker #{component.NPCID}: Recycling box");
 								component.EquipNPCItem(0);
 								component.NetworkboxProductID = 0;
 								component.NetworkboxNumberOfProducts = 0;
@@ -338,11 +403,14 @@ namespace SuperQoLity.SuperMarket.Patches
 								component.state = -1;
 								return false;
 							case 7: {
+									LOG.DEBUG($"Restocker #{component.NPCID}: Placing box in storage");
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
-										__instance.storageOBJ.transform.GetChild(storageSlotInfo.StorageIndex).GetComponent<Data_Container>().EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.boxProductID, component.boxNumberOfProducts);
+										LOG.DEBUG($"Restocker #{component.NPCID}: Targeted storage is valid");
+										__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).GetComponent<Data_Container>().EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 										component.state = 6;
 										return false;
 									}
+									LOG.DEBUG($"Restocker #{component.NPCID}: Targeted storage is now not valid.");
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 5);
 									component.state = -1;
 									return false;
@@ -362,17 +430,21 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 20: {
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
+										LOG.DEBUG($"Restocker #{component.NPCID}: Merging storage box.");
 										ReflectionHelper.CallMethod(__instance, "EmployeeMergeBoxContents",
-											new object[] { component, storageSlotInfo.StorageIndex, storageSlotInfo.ExtraData.ProductId, storageSlotInfo.SlotIndex });
+											new object[] { component, storageSlotInfo.ShelfIndex, storageSlotInfo.ExtraData.ProductId, storageSlotInfo.SlotIndex });
 										component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 5);
 										component.state = -1;
 										return false;
 									}
+
+									LOG.DEBUG($"Restocker #{component.NPCID}: Couldnt merge storage box.");
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
 									return false;
 								}
 						}
+
 						component.state = 0;
 						return false;
 					case 3:
@@ -419,7 +491,7 @@ namespace SuperQoLity.SuperMarket.Patches
 							case 2: {
 									StorageSlotInfo freeStorageIndexes = GetFreeStorageContainer(__instance, component.NetworkboxProductID);
 									if (freeStorageIndexes.FreeStorageFound) {
-										component.MoveEmployeeToStorage(__instance.storageOBJ.transform.GetChild(freeStorageIndexes.StorageIndex).Find("Standspot").transform.position, freeStorageIndexes);
+										component.MoveEmployeeToStorage(__instance.storageOBJ.transform.GetChild(freeStorageIndexes.ShelfIndex).Find("Standspot").transform.position, freeStorageIndexes);
 										component.state = 3;
 										return false;
 									}
@@ -429,7 +501,7 @@ namespace SuperQoLity.SuperMarket.Patches
 								}
 							case 3: {
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
-										__instance.storageOBJ.transform.GetChild(storageSlotInfo.StorageIndex).GetComponent<Data_Container>().
+										__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).GetComponent<Data_Container>().
 											EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 										component.state = 5;
 										return false;
@@ -574,136 +646,52 @@ namespace SuperQoLity.SuperMarket.Patches
 
 
 		private static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
-			return FindStorageSlotLambda(__instance, true,
+			return StorageSearch.FindStorageSlotLambda(__instance, true,
 				(storageId, slotId, productId, quantity) => {
 
 					if (productId == boxIDProduct && quantity > 0 && 
 							quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
-						return LoopStorageAction.SaveAndExit;
+						return StorageSearch.LoopStorageAction.SaveAndExit;
 					}
 
-					return LoopStorageAction.Nothing;
+					return StorageSearch.LoopStorageAction.Nothing;
 				}
 			);
 		}
 
 		private static bool IsFreeStorageContainer(NPC_Manager __instance) {
-			return FindStorageSlotLambda(__instance, true,
+			return StorageSearch.FindStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 					if (productId == -1) {
 						//Free storage slot, either unassigned or unlabeled.
-						return LoopStorageAction.SaveAndExit;
+						return StorageSearch.LoopStorageAction.SaveAndExit;
 					}
 
-					return LoopStorageAction.Nothing;
+					return StorageSearch.LoopStorageAction.Nothing;
 				}
-			).FreeStorageFound;
+			)
+			.FreeStorageFound;
 		}
 
 		private static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, int boxIDProduct) {
-			return FindStorageSlotLambda(__instance, true,
+			return StorageSearch.FindStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 
 					if (boxIDProduct >= 0 && productId == boxIDProduct && quantity < 0) {
-						//Free assigned storage slot. Return it.
-						return LoopStorageAction.SaveAndExit;
+						//Free assigned storage slot. ReturnType it.
+						return StorageSearch.LoopStorageAction.SaveAndExit;
 					} else if (productId == -1) {
 						//Save for later in case there is no assigned storage for this product.
-						return LoopStorageAction.Save;
+						return StorageSearch.LoopStorageAction.Save;
 					}
 
-					return LoopStorageAction.Nothing;
+					return StorageSearch.LoopStorageAction.Nothing;
 				}
 			);
 		}
 
-		public enum LoopStorageAction {
-			Nothing = 0,	//Do nothing special in this loop and keep going.
-			Save = 1,       //Save storage slot data and keep going.
-			SaveAndExit = 2 //Save storage slot data and return immediately.
-		}
-		public enum LoopAction {
-			Nothing = 0,    //Keep looping.
-			Nothing2 = 1,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
-			Exit = 2		//Stop and return immediately.
-		}
-
-
-		/// <summary>Defines the parameters available in the lambda to find storage slots.</summary>
-		/// <param name="storageIndex">Child index of the current storage shelf.</param>
-		/// <param name="slotIndex">Child index of current storage slot.</param>
-		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
-		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
-		/// <returns>The LoopStorageAction to perform in the current loop. <see cref="LoopStorageAction"/></returns>
-		public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity);
-
-		/// <summary>Defines the parameters available in the lambda to iterate through storage slots.</summary>
-		/// <param name="storageIndex">Child index of the current storage shelf.</param>
-		/// <param name="slotIndex">Child index of current storage slot.</param>
-		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
-		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
-		/// <returns>The LoopAction to perform. <see cref="LoopAction"/></returns>
-		public delegate LoopAction StorageLoopFunction(int storageIndex, int slotIndex, int productId, int quantity);
-
-		/// <summary>
-		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
-		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
-		/// <param name="checkNPCStorageTarget">True to skip the storage slots that are currently being targeted by an employee NPC.</param>
-		/// <param name="storageSlotLambda">The StorageLoopFunction search lambda. See <see cref="StorageLoopFunction"/> for more information.</param>
-		/// <returns></returns>
-		private static void ForEachStorageSlotLambda(NPC_Manager __instance, bool checkNPCStorageTarget, StorageLoopFunction storageSlotLambda) {
-			for (int i = 0; i < __instance.storageOBJ.transform.childCount; i++) {
-				int[] productInfoArray = __instance.storageOBJ.transform.GetChild(i).GetComponent<Data_Container>().productInfoArray;
-				int num = productInfoArray.Length / 2;
-				for (int j = 0; j < num; j++) {
-					//Check if this storage slot is already in use by another NPC
-					if (checkNPCStorageTarget && NPC_TargetLogic.IsStorageSlotTargeted(i, j)) {
-						continue;
-					}
-					int storageProductId = productInfoArray[j * 2];
-					int quantity = productInfoArray[j * 2 + 1];
-
-					if (storageSlotLambda(i, j, storageProductId, quantity) == LoopAction.Exit) {
-						return;
-					}
-				}
-			}
-		}
-
-		/// <summary>
-		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
-		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
-		/// <param name="checkNPCStorageTarget">True to skip the storage slots that are currently being targeted by an employee NPC.</param>
-		/// <param name="storageSlotLambda">The StorageSlotFunction search lambda. See <see cref="StorageSlotFunction"/> for more information.</param>
-		/// <returns></returns>
-		private static StorageSlotInfo FindStorageSlotLambda(NPC_Manager __instance, bool checkNPCStorageTarget, StorageSlotFunction storageSlotLambda) {
-			StorageSlotInfo freeStorageSlot = StorageSlotInfo.Default;
-
-			if (__instance.storageOBJ.transform.childCount == 0) {
-				return freeStorageSlot;
-			}
-
-			ForEachStorageSlotLambda(__instance, true,
-				(storageId, slotId, productId, quantity) => {
-
-					LoopStorageAction loopAction = storageSlotLambda(storageId, slotId, productId, quantity);
-
-					if (loopAction == LoopStorageAction.Save || loopAction == LoopStorageAction.SaveAndExit) {
-						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
-					}
-
-					//Their enum values are numerically equitative so it performs the correct action in ForEachStorageSlotLambda
-					return (LoopAction)loopAction;
-				});
-
-			return freeStorageSlot;
-		}
-
-
 		//Copied from the original game. I only added the tarket marking, and slightly modified some superficial stuff to reduce the madness.
-		//TODO 4 - Convert to transpile
+		//TODO 6 - Convert CheckProductAvailability to transpile
 		private static int[] CheckProductAvailability(NPC_Manager __instance) {
 			int[] array = [-1, -1, -1, -1, -1, -1];
 
@@ -723,6 +711,10 @@ namespace SuperQoLity.SuperMarket.Patches
 					int num = productInfoArray.Length / 2;
 					for (int k = 0; k < num; k++) {
 						productsPrioritySecondary.Clear();
+						//Check if this storage slot is already in use by another NPC
+						if (NPC_TargetLogic.IsProductShelfSlotTargeted(j, k)) {
+							continue;
+						}
 						int shelfProductId = productInfoArray[k * 2];
 						if (shelfProductId >= 0) {
 							int shelfQuantity = productInfoArray[k * 2 + 1];
@@ -760,6 +752,42 @@ namespace SuperQoLity.SuperMarket.Patches
 			}
 			return array;
 		}
+
+		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, int productIDToCheck, NPC_Info npcInfoComponent, out ProductShelfSlotInfo productShelfSlotInfo) {
+			productShelfSlotInfo = null;
+			List<ProductShelfSlotInfo> productsPriority = new();
+			float[] productsThresholdArray = (float[])AccessTools.Field(typeof(NPC_Manager), "productsThreshholdArray").GetValue(__instance);
+
+			MethodInfo methodInfo = AccessTools.Method(typeof(NPC_Manager), "GetMaxProductsPerRow");
+
+			for (int i = 0; i < productsThresholdArray.Length; i++) {
+
+				StorageSearch.ForEachProductShelfSlotLambda(__instance, true,
+					(prodShelfIndex, slotIndex, productId, quantity) => {
+
+						if (productId == productIDToCheck) {
+							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, methodInfo, new object[] { prodShelfIndex, productIDToCheck });
+							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * productsThresholdArray[i]);
+							if (quantity == 0 || quantity < shelfQuantityThreshold) {
+								productsPriority.Add(new ProductShelfSlotInfo(prodShelfIndex, slotIndex, productId, quantity));
+							}
+						}
+
+						return StorageSearch.LoopAction.Nothing;
+					}
+				);
+
+				if (productsPriority.Count > 0) {
+					productShelfSlotInfo = productsPriority[Random.Range(0, productsPriority.Count)];
+					npcInfoComponent.productAvailableArray[0] = productShelfSlotInfo.ShelfIndex;
+					npcInfoComponent.productAvailableArray[1] = productShelfSlotInfo.ExtraData.ProductId;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 
 		private static GameObject GetClosestGroundBox(NPC_Manager __instance, GameObject employee) {
 
@@ -813,17 +841,16 @@ namespace SuperQoLity.SuperMarket.Patches
 			return closestGroundBox;
 		}
 
-		//TODO 1 - TEST THIS WORKS, after changing it to use FindStorageSlotLambda
 		private static List<int> GetProductIdListOfFreeStorage(NPC_Manager __instance) {
 			List<int> storableProductIds = new();
 
-			ForEachStorageSlotLambda(__instance, true,
+			StorageSearch.ForEachStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 
 					if (quantity <= 0 && productId >= 0) {
 						storableProductIds.Add(productId);
 					}
-					return LoopAction.Nothing;
+					return StorageSearch.LoopAction.Nothing;
 				}
 			);
 
