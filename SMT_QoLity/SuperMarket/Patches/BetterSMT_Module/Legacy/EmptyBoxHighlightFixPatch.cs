@@ -6,7 +6,7 @@ using Damntry.UtilsBepInEx.HarmonyPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 
 
-namespace SuperQoLity.SuperMarket.Patches.BetterSMT.Legacy {
+namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module.Legacy {
 
 	/// <summary>
 	/// Legacy fix for highlights not updating when holding an empty box and

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
 using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -9,11 +10,12 @@ using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using UnityEngine.AI;
 
 
-namespace SuperQoLity.SuperMarket.Patches {
+namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 	//TODO 8 - Employees can pick up storage boxes from behind the wall. This happens in vanilla too, and I think
 	//	it started after an update, so maybe I just need to move, or replace, the storage shelves.
 	//	If that doesnt fix it either, I could ask around if it happens to them and fix it myself. Its just some
@@ -54,7 +56,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 	///		* New method GetClosestGroundBox that replaces the one to get a random box.
 	/// </summary>
 	[HarmonyPatch(typeof(NPC_Manager))]
-	public class NPCTargetAssignmentPatch : FullyAutoPatchedInstance {
+	public class EmployeeJobAIPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableEmployeeChanges.Value;
 

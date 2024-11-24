@@ -8,7 +8,7 @@ using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 
-namespace SuperQoLity.SuperMarket.Patches.BetterSMT.Legacy
+namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module.Legacy 
 {
 
 	/// <summary>

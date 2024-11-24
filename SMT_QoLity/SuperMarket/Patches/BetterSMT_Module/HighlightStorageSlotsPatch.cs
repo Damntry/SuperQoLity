@@ -5,15 +5,14 @@ using SuperQoLity.SuperMarket.PatchClassHelpers;
 using UnityEngine;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 
-namespace SuperQoLity.SuperMarket.Patches.BetterSMT
-{
+namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 
-    /// <summary>
-    /// Adds highlighting of storage slots to the BetterSMT mod.
-    /// Additionally, it uses a custom implementation of highlighting based on 
-    /// the one from BetterSMT, that allows customizing all highlight colors.
-    /// </summary>
-    public class HighlightStorageSlotsPatch : FullyAutoPatchedInstance {
+	/// <summary>
+	/// Adds highlighting of storage slots to the BetterSMT mod.
+	/// Additionally, it uses a custom implementation of highlighting based on 
+	/// the one from BetterSMT, that allows customizing all highlight colors.
+	/// </summary>
+	public class HighlightStorageSlotsPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => BetterSMT_Helper.IsBetterSMTLoadedAndPatchEnabled.Value && ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value;
 

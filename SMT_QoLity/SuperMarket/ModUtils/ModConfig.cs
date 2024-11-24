@@ -3,8 +3,9 @@ using BepInEx;
 using BepInEx.Configuration;
 using Damntry.UtilsBepInEx.ConfigurationManager;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
-using SuperQoLity.SuperMarket.Patches;
-using SuperQoLity.SuperMarket.Patches.BetterSMT;
+using SuperQoLity.SuperMarket.Patches.BetterSMT_Module;
+using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
 
@@ -95,7 +96,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "Adjust the amount of time an employee waits after it finishes a single step of a job, " +
 								"like picking up a box or filling up a product shelf.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.1f, 4f),
-				patchInstanceDependency: Container<NPCTargetAssignmentPatch>.Instance);
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
 
 			EmployeeIdleWait = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",
@@ -104,7 +105,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "Adjusts the frequency of employees checking for available jobs while idling.\n" +
 								"Lowering this value too much might cause performance issues on low end rigs if you have many idling employees.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.25f, 10f),
-				patchInstanceDependency: Container<NPCTargetAssignmentPatch>.Instance);
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
 
 			configManagerControl.AddQuasiNote(
 				sectionName: "Item Transfer Speed Module",

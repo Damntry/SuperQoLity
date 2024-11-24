@@ -9,14 +9,13 @@ using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 
-namespace SuperQoLity.SuperMarket.Patches
-{
+namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
-    /// <summary>
-    /// Uses transpiling to modify the methods that control the number of items to transfer to and from shelves.
-    /// The end result is that we can modify this number of item to speed up transfers.
-    /// </summary>
-    [HarmonyPatch(typeof(Data_Container))]
+	/// <summary>
+	/// Uses transpiling to modify the methods that control the number of items to transfer to and from shelves.
+	/// The end result is that we can modify this number of item to speed up transfers.
+	/// </summary>
+	[HarmonyPatch(typeof(Data_Container))]
 	public class IncreasedItemTransferPatch : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
@@ -37,8 +36,8 @@ namespace SuperQoLity.SuperMarket.Patches
 		/// </summary>
 		public static int GetNumTransferItems(int giverItemCount, int receiverItemCount, int receiverMaxCapacity) {
 			int numMovedProducts = 1;
-			
-			if (ModConfig.Instance.EnableTransferProducts.Value && ModConfig.Instance.NumTransferProducts.Value != numMovedProducts && 
+
+			if (ModConfig.Instance.EnableTransferProducts.Value && ModConfig.Instance.NumTransferProducts.Value != numMovedProducts &&
 					(!ModConfig.Instance.TransferMoreProductsOnlyClosedStore.Value || !GameData.Instance.isSupermarketOpen)) {
 				int receiverEmptyCapacity = receiverMaxCapacity - receiverItemCount;
 				//Calculate quantity to transfer by taking the lower number of these 3 values:
@@ -83,7 +82,7 @@ namespace SuperQoLity.SuperMarket.Patches
 
 		*/
 
-		
+
 
 		//[HarmonyDebug]
 		[HarmonyPatch(nameof(Data_Container.AddItemToRow))]

@@ -7,8 +7,9 @@ using SuperQoLity.SuperMarket.ModUtils;
 using System.Reflection.Emit;
 using Damntry.UtilsBepInEx.IL;
 using Damntry.UtilsBepInEx.HarmonyPatching.Helpers;
+using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 
-namespace SuperQoLity.SuperMarket.Patches {
+namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
 	internal class IncreasedEmployeeItemTransferPatch : FullyAutoPatchedInstance {
 
@@ -40,7 +41,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 		//[HarmonyDebug]
 		[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.EmployeeAddsItemToRow))]
 		[HarmonyBeforeInstance(typeof(IncreasedItemTransferPatch))]
-		[HarmonyAfterInstance(typeof(NPCTargetAssignmentPatch))]
+		[HarmonyAfterInstance(typeof(EmployeeJobAIPatch))]
 		[HarmonyTranspiler]
 		private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
 			LocalBuilder localBnumTransfItems = generator.DeclareLocal(typeof(int));
@@ -63,20 +64,20 @@ namespace SuperQoLity.SuperMarket.Patches {
 			List<CodeInstruction> callGetNumTransferItemsInstrs = CallGetNumTransferItems(codeMatcher.Instruction, localBnumTransfItems.LocalIndex);
 
 			codeMatcher
-				.Insert(callGetNumTransferItemsInstrs)				//Insert the IL lines that calls the method to get the number of items we can transfer.
-				.Advance(callGetNumTransferItemsInstrs.Count + 1)	//Go back to the same relative position before adding the call, plus an extra line.
+				.Insert(callGetNumTransferItemsInstrs)              //Insert the IL lines that calls the method to get the number of items we can transfer.
+				.Advance(callGetNumTransferItemsInstrs.Count + 1)   //Go back to the same relative position before adding the call, plus an extra line.
 				.SetInstruction(loadLocalVarNumTransferItemsInstr);      //Replace the Ldc_I4_1 constant with the numTransferItems var
 
 			///New C#:
 			///		IncreasedEmployeeItemTransferPatch.ArgBoxNumberProducts.Value -= numTransferItems;
 			codeMatcher
-				.Advance(3)		//Move past the last line of the previous match.
+				.Advance(3)     //Move past the last line of the previous match.
 				.Insert(        //Add instructions
-				ArgBoxNumberProducts.LoadFieldArgHelper_IL,	//Load static field of the argument
-				new CodeInstruction(OpCodes.Dup),			//Duplicate previous
-				ArgBoxNumberProducts.GetterValue_IL,		//Call getter to consume the duplicated field of the argument, and put its argument value in the stack
+				ArgBoxNumberProducts.LoadFieldArgHelper_IL, //Load static field of the argument
+				new CodeInstruction(OpCodes.Dup),           //Duplicate previous
+				ArgBoxNumberProducts.GetterValue_IL,        //Call getter to consume the duplicated field of the argument, and put its argument value in the stack
 				loadLocalVarNumTransferItemsInstr,          //Load numTransferItems into the stack
-				new CodeInstruction(OpCodes.Sub),			//Substract both
+				new CodeInstruction(OpCodes.Sub),           //Substract both
 				ArgBoxNumberProducts.SetterValue_IL         //Call setter to consume both the remaining field of the argument, and the substraction result, to set as the argument value.
 				);
 
@@ -86,11 +87,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 			///		AchievementsManager.Instance.CmdAddAchievementPoint(1, numTransferItems);
 			MethodInfo achievementMethod = AccessTools.Method(typeof(AchievementsManager), nameof(AchievementsManager.CmdAddAchievementPoint));
 
-			codeMatcher.MatchForward(false,							//Match to the line where "1" is passed as second argument to the achievement method.
+			codeMatcher.MatchForward(false,                         //Match to the line where "1" is passed as second argument to the achievement method.
 					new CodeMatch(OpCodes.Ldc_I4_1),
 					new CodeMatch(inst => inst.Calls(achievementMethod)))
-				.SetInstruction(loadLocalVarNumTransferItemsInstr);	//Replace with our local var
-			
+				.SetInstruction(loadLocalVarNumTransferItemsInstr); //Replace with our local var
+
 
 			return codeMatcher.InstructionEnumeration();
 		}
@@ -99,12 +100,12 @@ namespace SuperQoLity.SuperMarket.Patches {
 			//C#:	int numTransferItems = IncreasedItemTransferPatch.GetNumTransferItems(boxNumberProducts, num2, maxProductsPerRow);
 			List<CodeInstruction> instrs = new();
 
-			instrs.Add(ArgBoxNumberProducts.LoadFieldArgHelper_IL);	//Load static field with the ArgumentHelper instance to later gets it value.
-			instrs.Add(ArgBoxNumberProducts.GetterValue_IL);	//Load what would have been the 2º argument (boxNumProducts), but its now a glorified global static.
+			instrs.Add(ArgBoxNumberProducts.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper instance to later gets it value.
+			instrs.Add(ArgBoxNumberProducts.GetterValue_IL);    //Load what would have been the 2º argument (boxNumProducts), but its now a glorified global static.
 			instrs.Add(loadLocalNum2);                          //Load num2 local var
 			instrs.Add(ArgMaxProductsPerRow.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper instance to later gets it value.
-			instrs.Add(ArgMaxProductsPerRow.GetterValue_IL);	//Load what would have been the 3º argument (maxProductsPerRow), but its now a glorified global static.
-			instrs.Add(Transpilers.EmitDelegate((int giverItemCount, int receiverItemCount, int receiverMaxCapacity) => 
+			instrs.Add(ArgMaxProductsPerRow.GetterValue_IL);    //Load what would have been the 3º argument (maxProductsPerRow), but its now a glorified global static.
+			instrs.Add(Transpilers.EmitDelegate((int giverItemCount, int receiverItemCount, int receiverMaxCapacity) =>
 				IncreasedItemTransferPatch.GetNumTransferItems(giverItemCount, receiverItemCount, receiverMaxCapacity)));
 
 			instrs.Add(CodeInstructionNew.StoreLocal(localVarItemTransferIndex));   //Save in the previously created local var the result of the method call
