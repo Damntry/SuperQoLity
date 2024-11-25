@@ -7,27 +7,26 @@ using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
+
 	public class GroundBoxFinder {
 
-		public static GameObject GetClosestGroundBox(NPC_Manager __instance, GameObject employee, out StorageSlotInfo storageSlot) {
-			storageSlot = null;
-
+		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, GameObject employee) {
 			//Filter list of ground boxes so we skip the ones already targeted by another NPC.
 			List<GameObject> untargetedGroundBoxes = EmployeeTargetReservation.GetListUntargetedBoxes(__instance.boxesOBJ);
 
 			//Check that there are any untargeted boxes lying around to begin with.
 			if (untargetedGroundBoxes.Count == 0) {
-				return null;
+				return GroundBoxStorageTarget.Default;
 			}
 
-			GroundBoxStorageTargets pickableGroundBoxes = null;
+			GroundBoxStorageList pickableGroundBoxes = null;
 			
 			//Check if there is space in storage for this box.
 			StorageSlotInfo freeUnassignedStorage = StorageSearchHelpers.IsFreeStorageContainer(__instance);
 
 			if (freeUnassignedStorage.FreeStorageFound) {
 				//Generate list of existing boxes on the ground
-				pickableGroundBoxes = new GroundBoxStorageTargets(untargetedGroundBoxes, freeUnassignedStorage);
+				pickableGroundBoxes = new GroundBoxStorageList(untargetedGroundBoxes, freeUnassignedStorage);
 			} else {
 				//The quick check of unassigned storage slots got nothing, now we need to do the more expensive logic.
 
@@ -45,7 +44,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 				pickableGroundBoxes = GetEmptyGroundBoxList(untargetedGroundBoxes);
 			}
 
-			return GetClosestGroundBox(pickableGroundBoxes, employee.transform.position, out storageSlot);
+			return GetClosestGroundBox(pickableGroundBoxes, employee.transform.position);
 		}
 
 		private static Dictionary<int, StorageSlotInfo> GetProductIdListOfFreeStorage(NPC_Manager __instance) {
@@ -67,8 +66,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return storableProducts;
 		}
 
-		private static GroundBoxStorageTargets GetStorableGroundBoxList(Dictionary<int, StorageSlotInfo> storableProducts, List<GameObject> untargetedGroundBoxes) {
-			GroundBoxStorageTargets storableGroundBoxes = new();
+		private static GroundBoxStorageList GetStorableGroundBoxList(Dictionary<int, StorageSlotInfo> storableProducts, List<GameObject> untargetedGroundBoxes) {
+			GroundBoxStorageList storableGroundBoxes = new();
 
 			foreach (GameObject gameObjectBox in untargetedGroundBoxes) {
 				int boxProductID = gameObjectBox.GetComponent<BoxData>().productID;
@@ -84,8 +83,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return storableGroundBoxes;
 		}
 
-		private static GroundBoxStorageTargets GetEmptyGroundBoxList(List<GameObject> untargetedGroundBoxes) {
-			GroundBoxStorageTargets emptyGroundBoxes = new();
+		private static GroundBoxStorageList GetEmptyGroundBoxList(List<GameObject> untargetedGroundBoxes) {
+			GroundBoxStorageList emptyGroundBoxes = new();
 
 			foreach (GameObject gameObjectBox in untargetedGroundBoxes) {
 				if (gameObjectBox.GetComponent<BoxData>().numberOfProducts == 0) {
@@ -96,33 +95,32 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return emptyGroundBoxes;
 		}
 
-		private static GameObject GetClosestGroundBox(GroundBoxStorageTargets groundBoxesTargets, Vector3 sourcePos, out StorageSlotInfo storageSlot) {
-			storageSlot = null;
-
+		private static GroundBoxStorageTarget GetClosestGroundBox(GroundBoxStorageList groundBoxesTargets, Vector3 sourcePos) {
 			if (!groundBoxesTargets.HasItems()) {
-				return null;
+				return GroundBoxStorageTarget.Default;
 			}
 
-			GameObject closestBox = null;
+
+			GroundBoxStorageTarget closestBoxTarget = null;
 			float closestDistanceSqr = float.MaxValue;
 
 			foreach (var groundBoxTarget in groundBoxesTargets.GetItems()) {
-				float sqrDistance = (groundBoxTarget.groundBox.transform.position - sourcePos).sqrMagnitude;
+				float sqrDistance = (groundBoxTarget.GroundBoxObject.transform.position - sourcePos).sqrMagnitude;
 				if (sqrDistance < closestDistanceSqr) {
 					closestDistanceSqr = sqrDistance;
-					closestBox = groundBoxTarget.groundBox;
-					storageSlot = groundBoxTarget.storageSlot;
+					closestBoxTarget = groundBoxTarget;
 				}
 			}
 
-			return closestBox;
+			return closestBoxTarget;
 		}
 
 
 		/// <summary>
-		/// Stores the relation between a groundbox and its storage target.
+		/// Stores the groundboxes and its storage target, if any.
+		/// Also allows to set a single storage slot as the target of all added groundboxes.
 		/// </summary>
-		private class GroundBoxStorageTargets {
+		private class GroundBoxStorageList {
 
 			private enum RelationshipMode {
 				SingleStorage,
@@ -132,32 +130,44 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			private RelationshipMode relMode;
 
 			/// <summary>For when there is one specific storage target for each box</summary>
-			private List<(GameObject, StorageSlotInfo)> groundBoxStorage;
+			private List<GroundBoxStorageTarget> groundBoxStorage;
 
 			/// <summary>For when there is single unassigned storage target for one or more boxes</summary>
 			private List<GameObject> groundBoxList;
 			private StorageSlotInfo unassignedStorageSlot;
 
-			public GroundBoxStorageTargets() {
+			public GroundBoxStorageList() {
 				groundBoxStorage = new();
 
 				relMode = RelationshipMode.StoragePerBox;
 			}
 
-			public GroundBoxStorageTargets(List<GameObject> groundBoxList, StorageSlotInfo unassignedStorageSlot) {
+			public GroundBoxStorageList(List<GameObject> groundBoxList, StorageSlotInfo unassignedStorageSlot) {
 				this.groundBoxList = groundBoxList;
 				this.unassignedStorageSlot = unassignedStorageSlot;
 
 				relMode = RelationshipMode.SingleStorage;
 			}
 
-			public void Add(GameObject groundBoxList, StorageSlotInfo storageSlot = null) {
+			public void Add(GameObject groundBox) {
 				if (relMode == RelationshipMode.SingleStorage) {
-					throw new InvalidOperationException($"You must initialize {nameof(GroundBoxStorageTargets)} using the empty constructor to use this method.");
+					throw new InvalidOperationException($"You must initialize {nameof(GroundBoxStorageList)} using the empty constructor to use this method.");
 				}
 
-				groundBoxStorage.Add((groundBoxList, storageSlot));
+				groundBoxStorage.Add(new GroundBoxStorageTarget(groundBox));
 			}
+
+			public void Add(GameObject groundBox, StorageSlotInfo storageSlot) {
+				if (storageSlot == null) {
+					throw new ArgumentNullException($"The parameter {nameof(storageSlot)} cant be null. Use \"Add(GameObject groundBox)\" instead if this is intended.");
+				}
+				if (relMode == RelationshipMode.SingleStorage) {
+					throw new InvalidOperationException($"You must initialize {nameof(GroundBoxStorageList)} using the empty constructor to use this method.");
+				}
+
+				groundBoxStorage.Add(new GroundBoxStorageTarget(groundBox, storageSlot));
+			}
+
 
 			public bool HasItems() {
 				return relMode switch {
@@ -167,10 +177,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 				};
 			}
 
-			public List<(GameObject groundBox, StorageSlotInfo storageSlot)> GetItems() {
+			public List<GroundBoxStorageTarget> GetItems() {
 				return relMode switch {
 					RelationshipMode.StoragePerBox => groundBoxStorage,
-					RelationshipMode.SingleStorage => groundBoxList.Select(box => (box, unassignedStorageSlot)).ToList(),
+					RelationshipMode.SingleStorage => groundBoxList.Select(box => new GroundBoxStorageTarget(box, unassignedStorageSlot)).ToList(),
 					_ => throw new InvalidOperationException($"Non implemented enum switch {relMode}")
 				};
 			}
@@ -178,4 +188,49 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 	}
+
+	public class GroundBoxStorageTarget {
+
+		public static GroundBoxStorageTarget Default {
+			get {
+				return new GroundBoxStorageTarget() { FoundGroundBox = false , HasStorageTarget = false};
+			}
+		}
+
+		private GroundBoxStorageTarget() { }
+
+		public GroundBoxStorageTarget(GameObject GroundBoxObject) {
+			if (GroundBoxObject == null) {
+				throw new ArgumentNullException(nameof(GroundBoxObject));
+			}
+
+			this.FoundGroundBox = true;
+			this.GroundBoxObject = GroundBoxObject;
+		}
+
+		public GroundBoxStorageTarget(GameObject GroundBoxObject, StorageSlotInfo StorageSlot) {
+			if (GroundBoxObject == null) {
+				throw new ArgumentNullException(nameof(GroundBoxObject));
+			}
+			if (StorageSlot == null) {
+				throw new ArgumentNullException(nameof(StorageSlot));
+			}
+
+			this.FoundGroundBox = true;
+			this.GroundBoxObject = GroundBoxObject;
+			this.HasStorageTarget = true;
+			this.StorageSlot = StorageSlot;
+		}
+
+
+		public bool FoundGroundBox { get; private set; }
+
+		public GameObject GroundBoxObject { get; private set; }
+
+		public bool HasStorageTarget { get; private set; }
+
+		public StorageSlotInfo StorageSlot { get; private set; }
+
+	}
+
 }

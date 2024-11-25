@@ -29,6 +29,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<float> EmployeeNextActionWait { get; private set; }
 		public ConfigEntry<float> EmployeeIdleWait { get; private set; }
 		public ConfigEntry<int> EmployeeJobFrequencyMultiplier { get; private set; }
+		public ConfigEntry<float> ClosedStoreEmployeeWalkSpeedMultiplier { get; private set; }
 		public ConfigEntry<bool> EnableTransferProducts { get; private set; }
 		public ConfigEntry<int> NumTransferProducts { get; private set; }
 		public ConfigEntry<bool> TransferMoreProductsOnlyClosedStore { get; private set; }
@@ -88,6 +89,16 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 								"decent CPU you can set it very high.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance);
+
+
+			ClosedStoreEmployeeWalkSpeedMultiplier = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: "Employee Job Module",
+				key: "Employee walk speed multiplier with store closed",
+				defaultValue: 1f,
+				description: "Applies a multiplier to the walk speed of employees while the store is closed, so they can wrap up left over work faster.\n" +
+							"This helps reduce time spent waiting while doing nothing.\nWorks in addition to BetterSMT mod employee speed perks.",
+				acceptableValueRange: new AcceptableValueRange<float>(1f, 4f),
+				patchInstanceDependency: Container<EmployeeWalkSpeedPatch>.Instance);
 
 			EmployeeNextActionWait = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",

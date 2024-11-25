@@ -46,7 +46,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		[HarmonyPrepare]
 		private static bool Prepare() {
-			GameWorldEventsPatch.OnGameWorldChange += (GameWorldEvent ev) => {
+			GameWorldEventsPatch.OnGameWorldChange += (ev) => {
 				if (ev == GameWorldEvent.Start) {
 					IsProcessTimeoutActive = true;
 				} else if (ev == GameWorldEvent.Quit) {
@@ -95,7 +95,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 																				//TODO 4 - Dont assume its the first var, and search for it.
 			processEmployeesInstr.Add(new CodeInstruction(OpCodes.Ldloc_0));    //Load childCount onto the stack
 			processEmployeesInstr.Add(Transpilers.EmitDelegate(                 //Call the function to consume the 2 previous arguments on the stack.
-				(NPC_Manager __instance, int childCount) => EmployeePerformancePatch.ProcessEmployeeJobs(__instance, childCount)));
+				(NPC_Manager __instance, int childCount) => ProcessEmployeeJobs(__instance, childCount)));
 
 			codeMatcher.Start().Advance(startPos).Insert(processEmployeesInstr);    //Insert the method call that replaces the old code functionality.
 
@@ -129,7 +129,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						BepInExTimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
 							$"being automatically limited by {MyPluginInfo.PLUGIN_NAME} to improve performance. " +
 							$"To fix this, try decreasing the value of the setting \"{ModConfig.Instance.EmployeeJobFrequencyMultiplier.Definition.Key}\".",
-							Damntry.Utils.Logging.TimeLoggerBase.LogCategories.PerfTest);
+							TimeLoggerBase.LogCategories.PerfTest);
 					}
 				}
 

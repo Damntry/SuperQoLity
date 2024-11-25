@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine.AI;
 using UnityEngine;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
-using Damntry.UtilsBepInEx.Logging;
+using System.Linq;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
@@ -18,14 +18,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 
 		//Lists of NPCs targets. The hashsets exist to improve target search performance.
-		private static Dictionary<NPC_Info, GameObject> NpcBoxTargets = new();
-		private static HashSet<GameObject> groundboxesTargeted = new();
+		private static readonly Dictionary<NPC_Info, GameObject> NpcBoxTargets = new();
+		private static readonly HashSet<GameObject> groundboxesTargeted = new();
 
-		private static Dictionary<NPC_Info, StorageSlotInfo> NpcStorageSlotTargets = new();
-		private static HashSet<StorageSlotInfo> storageSlotsTargeted = new HashSet<StorageSlotInfo>(new TargetContainerSlotComparer());
+		private static readonly Dictionary<NPC_Info, StorageSlotInfo> NpcStorageSlotTargets = new();
+		private static readonly HashSet<StorageSlotInfo> storageSlotsTargeted = new (new TargetContainerSlotComparer());
 
-		private static Dictionary<NPC_Info, ProductShelfSlotInfo> NpcShelfProductSlotTargets = new();
-		private static HashSet<ProductShelfSlotInfo> shelfProductSlotsTargeted = new HashSet<ProductShelfSlotInfo>(new TargetContainerSlotComparer());
+		private static readonly Dictionary<NPC_Info, ProductShelfSlotInfo> NpcShelfProductSlotTargets = new();
+		private static readonly HashSet<ProductShelfSlotInfo> shelfProductSlotsTargeted = new (new TargetContainerSlotComparer());
 
 
 		public static List<GameObject> GetListUntargetedBoxes(GameObject allGroundBoxes) {
@@ -40,25 +40,41 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return listUntargetedBoxes;
 		}
 
+		//TODO 2 - Eventually this info will become the new NPC watch panel. But instead of returning
+		//		a string, I ll return a new info class so the caller formats it however it wants.
+		public static string GetReservationStatusLog() {
+			string status = "\n";
+			if (NpcBoxTargets.Count != groundboxesTargeted.Count || NpcStorageSlotTargets.Count != storageSlotsTargeted.Count || 
+					NpcShelfProductSlotTargets.Count != shelfProductSlotsTargeted.Count) {
+				status = "RESERVATION MISMATCH BETWEEN DICTIONARY AND HASHSET\n";
+			}
+			return status += $"\t\t{"Ground boxes:", -15} {groundboxesTargeted.Count, 2} - {GetNpcReservations(NpcBoxTargets)}\n" +
+				$"\t\t{"Storage slots:", -15} {storageSlotsTargeted.Count, 2} - {GetNpcReservations(NpcStorageSlotTargets)}\n" +
+				$"\t\t{"Shelf slots:", -15} {shelfProductSlotsTargeted.Count, 2} - {GetNpcReservations(NpcShelfProductSlotTargets)}";
+		}
+
+		private static string GetNpcReservations<T>(Dictionary<NPC_Info, T> targets) {
+			//TODO 0 - Group by taskpriority of the employee and show it
+			return string.Join(", ", targets.Keys.Select(npc => $"#{npc.netId, 4}"));
+		}
+
+		public static void ClearNPCReservations(this NPC_Info NPC) {
+			DeleteNPCTargets(NPC);
+		}
+
 		public static bool TryCheckValidTargetedStorage(this NPC_Info NPC, NPC_Manager __instance, out StorageSlotInfo storageSlotInfo) {
 			bool hasTarget = NpcStorageSlotTargets.TryGetValue(NPC, out storageSlotInfo);
 
 			return hasTarget && ContentsMatchOrValid(__instance.storageOBJ, storageSlotInfo, TargetType.StorageSlot);
 		}
 
-		public static bool TryCheckValidTargetedProductShelf(this NPC_Info NPC, NPC_Manager __instance, out ProductShelfSlotInfo productShelfSlotInfo) {
+		public static bool TryCheckValidTargetedProductShelf(this NPC_Info NPC, NPC_Manager __instance, int maxProductsPerRow, out ProductShelfSlotInfo productShelfSlotInfo) {
 			bool hasTarget = NpcShelfProductSlotTargets.TryGetValue(NPC, out productShelfSlotInfo);
 
-			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, productShelfSlotInfo, TargetType.ProdShelfSlot);
+			ProductShelfSlotMatch shelfSlotMatch = new ProductShelfSlotMatch(productShelfSlotInfo, maxProductsPerRow);
+			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, shelfSlotMatch, TargetType.ProdShelfSlot);
 		}
-
-		public static bool IsStorageUntargetedAndContentsMatch(NPC_Manager instance, StorageSlotInfo storageSlotInfo) {
-			return !IsStorageSlotTargeted(storageSlotInfo) && ContentsMatchOrValid(instance.shelvesOBJ, storageSlotInfo, TargetType.StorageSlot);
-		}
-
-		public static bool IsProductShelfUntargetedAndContentsMatch(NPC_Manager instance, ProductShelfSlotInfo productShelfSlotInfo) {
-			return !IsProductShelfSlotTargeted(productShelfSlotInfo) && ContentsMatchOrValid(instance.shelvesOBJ, productShelfSlotInfo, TargetType.ProdShelfSlot);
-		}
+		
 
 		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, SlotInfoBase slotInfoBase, TargetType targetType) {
 			//Check that the saved target values still match the current content of the product shelf/storage slot.
@@ -69,19 +85,34 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 			if (productId == slotInfoBase.ExtraData.ProductId) {
 				if (targetType == TargetType.StorageSlot) {
-					if (shelfQuantity >= slotInfoBase.ExtraData.Quantity) {
-						return true;
-					}
+					return shelfQuantity >= slotInfoBase.ExtraData.Quantity;
 				} else if (targetType == TargetType.ProdShelfSlot) {
-					if (shelfQuantity <= slotInfoBase.ExtraData.Quantity) {
-						return true;
+					if (slotInfoBase is not ProductShelfSlotMatch) {
+						throw new InvalidOperationException($"The target slot shelf parameter ({nameof(slotInfoBase)}) must be an object of type {nameof(ProductShelfSlotMatch)}");
 					}
+
+					return shelfQuantity < ((ProductShelfSlotMatch)slotInfoBase).MaxProductsPerRow;
 				}
 			}
 
 			//If we reach this point, the most probable cause is that a human player took from the shelf slot while the NPC was on route.
 
 			return false;
+		}
+
+
+		private class ProductShelfSlotMatch : SlotInfoBase {
+
+
+			public ProductShelfSlotMatch(ProductShelfSlotInfo shelfSlotInfo, int maxProductsPerRow)
+				: base(shelfSlotInfo.ShelfIndex, shelfSlotInfo.SlotIndex, shelfSlotInfo.ExtraData.ProductId, shelfSlotInfo.ExtraData.Quantity) {
+
+				this.MaxProductsPerRow = maxProductsPerRow;
+			}
+
+
+			public int MaxProductsPerRow { get; private set; }
+
 		}
 
 
@@ -153,14 +184,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
-			DeleteNPCPreviousTarget(NPC);
+			DeleteNPCTargets(NPC);
 
 			UpdateTargetMarkStatus(NPC, gameObjectTarget, shelfTarget, targetType);
 		}
 
-		/// <summary>Checks if the NPC has a previous target, and deletes it.</summary>
+		/// <summary>Checks if the NPC has previous targets, and deletes them.</summary>
 		/// <exception cref="InvalidOperationException">Error when the NPC/target logic shouldnt be possible.</exception>
-		private static void DeleteNPCPreviousTarget(NPC_Info NPC) {
+		private static void DeleteNPCTargets(NPC_Info NPC) {
 			if (NpcBoxTargets.TryGetValue(NPC, out var NPCBoxPreviousTarget)) {
 				DeleteTarget(NPC, NPCBoxPreviousTarget, NpcBoxTargets, groundboxesTargeted, TargetType.GroundBox);
 			}
@@ -199,6 +230,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static void AddTarget<T>(NPC_Info NPC, T targetItem, Dictionary<NPC_Info, T> NPCTargets, HashSet<T> targetedItems, TargetType targetType) {
+			if (targetItem == null) {
+				throw new ArgumentNullException(nameof(targetItem));
+			}
 			if (NPCTargets.ContainsKey(NPC)) {
 				throw new InvalidOperationException($"NPC {NPC.NPCID} still has a {targetType} as target, but it should not have any by now.");
 			}

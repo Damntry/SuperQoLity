@@ -55,11 +55,20 @@
     <Reference Include="UnityEngine.AIModule">
       <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>lib\UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+      <HintPath>lib\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>lib\UnityEngine.UnityWebRequestModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   
@@ -76,6 +85,9 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Update="Sounds\Warp.mp3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
@@ -85,6 +97,6 @@
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
       -->
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;md &quot;%25copyTargetPath%25\Sounds&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll&#xD;&#xA;copy &quot;$(TargetDir)\Sounds\Warp.mp3&quot; &quot;%25copyTargetPath%25&quot;\Sounds\Warp.mp3" />
   </Target>
 </Project>
