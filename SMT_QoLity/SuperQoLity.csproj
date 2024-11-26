@@ -85,7 +85,7 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <None Update="Sounds\Warp.mp3">
+    <None Update="SoundEffects\Warp.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -97,6 +97,6 @@
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
       -->
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;md &quot;%25copyTargetPath%25\Sounds&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.dll&quot; &quot;%25copyTargetPath%25&quot;\Damntry.Globals.dll&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.BepInEx.dll&quot; &quot;%25copyTargetPath%25\&quot;Damntry.Globals.BepInEx.dll&#xD;&#xA;copy &quot;$(TargetDir)\Sounds\Warp.mp3&quot; &quot;%25copyTargetPath%25&quot;\Sounds\Warp.mp3" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPaths=SoundEffects&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;md &quot;%25copyTargetPath%25\%25SoundEffectsPaths%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.*&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;del &quot;%25copyTargetPath%25\Damntry.Globals.BepInEx.dll.config&quot; /s /q&#xD;&#xA;copy &quot;$(TargetDir)\%25SoundEffectsPaths%25\Warp.mp3&quot; &quot;%25copyTargetPath%25&quot;\%25SoundEffectsPaths%25\Warp.mp3" />
   </Target>
 </Project>

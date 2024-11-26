@@ -12,14 +12,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, GameObject employee) {
 			//Filter list of ground boxes so we skip the ones already targeted by another NPC.
-			List<GameObject> untargetedGroundBoxes = EmployeeTargetReservation.GetListUntargetedBoxes(__instance.boxesOBJ);
+			List<GameObject> untargetedGroundBoxes = EmployeeTargetReservation.GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
 
 			//Check that there are any untargeted boxes lying around to begin with.
 			if (untargetedGroundBoxes.Count == 0) {
 				return GroundBoxStorageTarget.Default;
 			}
 
-			GroundBoxStorageList pickableGroundBoxes = null;
+			GroundBoxStorageList pickableGroundBoxes = new();
 			
 			//Check if there is space in storage for this box.
 			StorageSlotInfo freeUnassignedStorage = StorageSearchHelpers.IsFreeStorageContainer(__instance);

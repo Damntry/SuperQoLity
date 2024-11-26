@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using Damntry.UtilsBepInEx.Logging;
 using UnityEngine.Networking;
 using UnityEngine;
+using Damntry.Utils.Reflection;
+using System.Diagnostics;
+using SuperQoLity.SuperMarket.ModUtils;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 
@@ -10,73 +13,83 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 
 		private static readonly Lazy<Task<AudioClip>> warpAudioClip = new(() => GetWarpAudioClip());
 
-		private GameObject audioGameObject;
+		private GameObject warpAudioGameObject;
 
+		/// <summary>Sound cooldown shared between all instances that can play this sound.</summary>
+		private static Stopwatch warpGlobalCooldownTimer = new Stopwatch();
 
-		public EmployeeWarpSound() {
-			audioGameObject = new GameObject("audioGameObject");
-		}
+		private Stopwatch warpLocalCooldownTimer = new Stopwatch();
 
+		private const int warpGlobalCooldownMillis = 100;
+
+		private const int warLocalCooldownMillis = 250;
+
+		//Since we dont know if this method will be called or not, to save performance we dont add this object 
+		//	to the employee when it spawns, but instead initialize everything once only when this method is called.
 		public static void PlayEmployeeWarpSound(NPC_Info employee) {
 			if (!employee.gameObject.TryGetComponent(out EmployeeWarpSound employeeWarpSound)) {
 				employeeWarpSound = employee.gameObject.AddComponent<EmployeeWarpSound>();
+				employeeWarpSound.Initialize(employee.gameObject.transform);
 			}
 
-			employeeWarpSound.PlayWarpSound();
+			_ = employeeWarpSound.PlayWarpSound();
+		}
+
+		public void Initialize(Transform employeeTransform) {
+			warpAudioGameObject = new GameObject("WarpAudioGameObject");
+			this.warpAudioGameObject.transform.SetParent(employeeTransform);
 		}
 
 		private static async Task<AudioClip> GetWarpAudioClip() {
-			LOG.DEBUG($"Getting warp audio clip from path.");
-			//TODO 1 - Get audio path from current assembly path
-			string warpAudioFilePath = "H:\\!SteamLibrary\\steamapps\\common\\Supermarket Together\\BepInEx\\plugins\\es.damntry.SuperQoLity\\Sounds\\Warp.mp3";
+			string warpAudioFilePath = AssemblyUtils.GetCombinedPathFromAssemblyFolder(typeof(EmployeeWarpSound), "SoundEffects\\Warp.mp3");
+
 			UnityWebRequest audioWebRequest = UnityWebRequestMultimedia.GetAudioClip(warpAudioFilePath, AudioType.MPEG);
-			LOG.DEBUG($"Audio clip obtained.");
 			await audioWebRequest.SendWebRequest();
-			LOG.DEBUG($"Sent web request.");
 
 			if (audioWebRequest.result == UnityWebRequest.Result.Success) {
-				LOG.DEBUG($"Audio clip optained from path.");
 				return DownloadHandlerAudioClip.GetContent(audioWebRequest);
 			} else {
 				throw new InvalidOperationException($"Request ended with result {audioWebRequest.result} and error: {audioWebRequest.error}.");
 			}
 		}
 
-		public async void PlayWarpSound() {
-			if (!audioGameObject.TryGetComponent(out AudioSource warpSound)) {
-				warpSound = audioGameObject.AddComponent<AudioSource>();
-				warpSound.clip = await warpAudioClip.Value;
-				warpSound.volume = 0.02f;   //TODO 3 - This is already the ceiling. Now I need to reduce based on the SFX in game volume.
-				warpSound.maxDistance = 500;	//500 default
+		//Async void since we dont want to keep the calling method waiting.
+		private async Task<bool> PlayWarpSound() {
+			//Get audio source, or create if it doesnt exist.
+			if (!warpAudioGameObject.TryGetComponent(out AudioSource warpSound)) {
+				warpSound = await AddAudioSourceComponent();
 			}
 
-			//TODO 4 - Make some system so it can play more than one at the same time, but not too many.
-			//		I think just allowing that it plays for X ms before I allow another one should be enough?
-			if (!warpSound.isPlaying) {
+			//TODO 4 - An alternative idea to the global cooldown, is a global limit on the number of Plays within X ms.
+			//		Should probably add both to be honest. A tiny global cooldown, and then the limit per period on top,
+			//		and I could use PeriodicTimeLimitedCounter for it.
+			if ((!warpLocalCooldownTimer.IsRunning || warpLocalCooldownTimer.Elapsed.TotalMilliseconds >= warpGlobalCooldownMillis) &&
+					(!EmployeeWarpSound.warpGlobalCooldownTimer.IsRunning || EmployeeWarpSound.warpGlobalCooldownTimer.Elapsed.TotalMilliseconds >= warLocalCooldownMillis)) {
+				warpLocalCooldownTimer.Restart();
+				warpGlobalCooldownTimer.Restart();
+
+				warpSound.volume = 0.10f * ModConfig.Instance.TeleportSoundVolume.Value;
+
 				warpSound.Play();
-			}
-		}
-
-
-		/*
-		private static AudioClip GetWarpAudioClip2() {
-			AudioClip audioClip = null;
-			//TODO 1 - Change to use current assembly path to search.
-			string warpAudioFilePath = "H:\\!SteamLibrary\\steamapps\\common\\Supermarket Together\\BepInEx\\plugins\\es.damntry.SuperQoLity\\Sounds\\Warp.mp3";
-
-			var warpAudioClipHandler = new DownloadHandlerAudioClip($"file://{warpAudioFilePath}", AudioType.MPEG);
-			warpAudioClipHandler.compressed = true;
-
-			using (UnityWebRequest wr = new UnityWebRequest($"file://{warpAudioFilePath}", "GET", warpAudioClipHandler, null)) {
-				yield return wr.SendWebRequest();
-				if (wr.responseCode == 200) {
-					audioClip = warpAudioClipHandler.audioClip;
-				}
+				return true;
 			}
 
-			return audioClip;
+			return false;
 		}
-		*/
+
+		private async Task<AudioSource> AddAudioSourceComponent() {
+			AudioSource warpSound = warpAudioGameObject.AddComponent<AudioSource>();
+			warpSound.clip = await warpAudioClip.Value;
+			warpSound.playOnAwake = false;
+			warpSound.priority = 256;       //Lowest priority
+			warpSound.spatialBlend = 1;     //Enable effect of the 3D engine on this audio
+											//warpSound.pitch = 1.1f;		//Playback speed. Default 1.
+			warpSound.rolloffMode = AudioRolloffMode.Linear;
+			warpSound.maxDistance = 19f;	//500 default
+			warpSound.minDistance = 1f;
+
+			return warpSound;
+		}
 
 	}
 

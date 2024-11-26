@@ -41,6 +41,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<Color> PatchBetterSMT_StorageSlotHighlightColor { get; private set; }
 		public ConfigEntry<bool> EnableModNotifications { get; private set; }
 		public ConfigEntry<bool> EnabledDebug { get; private set; }
+		public ConfigEntry<float> TeleportSoundVolume { get; private set; }
 
 
 
@@ -89,7 +90,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 								"decent CPU you can set it very high.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance);
-
 
 			ClosedStoreEmployeeWalkSpeedMultiplier = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",
@@ -221,6 +221,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: false,
 				description: "Dev stuff you dont want to know about.",
 				isAdvanced: true);
+
+			TeleportSoundVolume = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: "DEBUG",
+				key: "Teleport sound volume",
+				defaultValue: 0.5f,
+				description: "Volume of the teleport sound effect.",
+				acceptableValueRange: new AcceptableValueRange<float>(0, 1),
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
 		}
 		
 

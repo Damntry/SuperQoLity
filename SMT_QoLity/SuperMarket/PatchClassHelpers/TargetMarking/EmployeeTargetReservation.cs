@@ -4,6 +4,7 @@ using UnityEngine.AI;
 using UnityEngine;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using System.Linq;
+using Damntry.UtilsBepInEx.Logging;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
@@ -27,12 +28,23 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		private static readonly Dictionary<NPC_Info, ProductShelfSlotInfo> NpcShelfProductSlotTargets = new();
 		private static readonly HashSet<ProductShelfSlotInfo> shelfProductSlotsTargeted = new (new TargetContainerSlotComparer());
 
+		/// <summary>
+		/// Shit system to save the last destination set, only used for warping.
+		/// Sometimes a destination is only calculated partially, and the current final destination is only a rough
+		/// value that doesnt reflect the real final destination that will be calculated once the NPC gets closer
+		/// through the NavPath. This rough location can put the npc in a non valid spot when warping, so it gets stuck.
+		/// To avoid it we simply use the the original destination value from LastDestinationSet instead of the calculated one.
+		/// </summary>
+		public static Dictionary<NPC_Info, Vector3> LastDestinationSet { get; private set; } = new();
 
-		public static List<GameObject> GetListUntargetedBoxes(GameObject allGroundBoxes) {
+
+		public static List<GameObject> GetListUntargetedStationaryBoxes(GameObject allGroundBoxes) {
 			List<GameObject> listUntargetedBoxes = new List<GameObject>();
 
 			foreach (Transform box in allGroundBoxes.transform) {
-				if (!groundboxesTargeted.Contains(box.gameObject)) {
+				//Filter out boxes that are already reserved or moving. Sometimes boxes piled up jiggle
+				//and have a decent amount of velocity applied even though they barely even flicker visually.
+				if (!groundboxesTargeted.Contains(box.gameObject) && box.gameObject.GetComponent<Rigidbody>().velocity.sqrMagnitude < 1.5f) {
 					listUntargetedBoxes.Add(box.gameObject);
 				}
 			}
@@ -42,20 +54,36 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		//TODO 2 - Eventually this info will become the new NPC watch panel. But instead of returning
 		//		a string, I ll return a new info class so the caller formats it however it wants.
+		//Actually useful stats:
+		//	Employee total time idle while store open
+		//	% of time working per TaskPriority while store open
+		//	Number of boxes on the ground
+		//	Free unassigned storage slots
+		//	Free assigned storage slots
+		//	Average total prod. shelf refillment %
+		//	Lowest prod. shelf refillment count and its product
+		//	Product assigned to any product shelf, with the lowest total number of items in storage (including ground boxes, and carried by employees)
 		public static string GetReservationStatusLog() {
-			string status = "\n";
-			if (NpcBoxTargets.Count != groundboxesTargeted.Count || NpcStorageSlotTargets.Count != storageSlotsTargeted.Count || 
-					NpcShelfProductSlotTargets.Count != shelfProductSlotsTargeted.Count) {
-				status = "RESERVATION MISMATCH BETWEEN DICTIONARY AND HASHSET\n";
-			}
-			return status += $"\t\t{"Ground boxes:", -15} {groundboxesTargeted.Count, 2} - {GetNpcReservations(NpcBoxTargets)}\n" +
+			return $"\n\t\t{"Ground boxes:", -15} {groundboxesTargeted.Count, 2} - {GetNpcReservations(NpcBoxTargets)}\n" +
 				$"\t\t{"Storage slots:", -15} {storageSlotsTargeted.Count, 2} - {GetNpcReservations(NpcStorageSlotTargets)}\n" +
 				$"\t\t{"Shelf slots:", -15} {shelfProductSlotsTargeted.Count, 2} - {GetNpcReservations(NpcShelfProductSlotTargets)}";
 		}
 
 		private static string GetNpcReservations<T>(Dictionary<NPC_Info, T> targets) {
 			//TODO 0 - Group by taskpriority of the employee and show it
-			return string.Join(", ", targets.Keys.Select(npc => $"#{npc.netId, 4}"));
+			//Grouping is not working right, but it needs a remake to add new features so not worth fixing.
+			return string.Join("\n", 
+				targets.Keys
+					.GroupBy(npc => npc.taskPriority)
+					.OrderBy(npcTaskGroup => npcTaskGroup.Key)
+					.Select(npcTaskGroup => {
+						string npcTaskStr = "";
+						foreach (NPC_Info npc in npcTaskGroup) {
+							npcTaskStr = string.Join(", ", $"#{npc.netId, 4}");
+						}
+						return npcTaskStr;
+					})
+			);
 		}
 
 		public static void ClearNPCReservations(this NPC_Info NPC) {
@@ -70,9 +98,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		public static bool TryCheckValidTargetedProductShelf(this NPC_Info NPC, NPC_Manager __instance, int maxProductsPerRow, out ProductShelfSlotInfo productShelfSlotInfo) {
 			bool hasTarget = NpcShelfProductSlotTargets.TryGetValue(NPC, out productShelfSlotInfo);
-
-			ProductShelfSlotMatch shelfSlotMatch = new ProductShelfSlotMatch(productShelfSlotInfo, maxProductsPerRow);
-			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, shelfSlotMatch, TargetType.ProdShelfSlot);
+			
+			return hasTarget && ContentsMatchOrValid(__instance.shelvesOBJ, new ProductShelfSlotMatch(productShelfSlotInfo, maxProductsPerRow), TargetType.ProdShelfSlot);
 		}
 		
 
@@ -169,6 +196,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		private static void MoveEmployee(this NPC_Info NPC, Vector3 destination, GameObject gameObjectTarget,
 				SlotInfoBase shelfTarget, TargetType targetType) {
 			NavMeshAgent navMesh = NPC.gameObject.GetComponent<NavMeshAgent>();
+			
+			if (LastDestinationSet.ContainsKey(NPC)) {
+				LastDestinationSet[NPC] = destination;
+			} else {
+				LastDestinationSet.Add(NPC, destination);
+			}
+
 			navMesh.destination = destination;
 
 			//Update targeted status of objects related to this NPC.

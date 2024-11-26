@@ -15,8 +15,10 @@ namespace SuperQoLity {
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {
 
-		//TODO 4 - TEST IN MULTIPLAYER
+		//TODO 2 - Check if my mod is using too much memory comparing before and after. Maybe the library caching is too much? Now that
+		//		I can debug the game I should try a memory performance thingy.
 
+		//TODO 4 - Make it so building only copies the .pdb files if we are in Debug project configuration
 
 		public void Awake() {
 			//Init logger

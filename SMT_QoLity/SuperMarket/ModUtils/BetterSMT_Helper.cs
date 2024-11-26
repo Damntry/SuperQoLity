@@ -53,7 +53,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 					BepInExTimeLogger.Logger.LogTime(TimeLoggerBase.LogTier.Message, $"Mod {BetterSMTInfo.Name} seems to be missing. Skipping its patches.", TimeLoggerBase.LogCategories.Loading);
 					break;
 				case BetterSMT_Status.LoadedOk:
-					BepInExTimeLogger.Logger.LogTimeInfo($"Mod {BetterSMTInfo.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied.", TimeLoggerBase.LogCategories.Loading);
+					BepInExTimeLogger.Logger.LogTimeInfo($"Mod {BetterSMTInfo.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied if its setting is enabled.", TimeLoggerBase.LogCategories.Loading);
 					break;
 				default:
 					throw new NotImplementedException($"The switch case {BetterSMTLoadStatus.Value} is not implemented.");

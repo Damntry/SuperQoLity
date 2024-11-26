@@ -81,7 +81,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						component2.angularSpeed = angularSpeedBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 6000f));
 					}
 
-					//component2.Warp
 					/*
 					if (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1) {
 						component2.autoBraking = true;

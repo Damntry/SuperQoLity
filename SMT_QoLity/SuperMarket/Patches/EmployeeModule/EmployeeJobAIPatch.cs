@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+using BepInEx.Configuration;
 using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.Logging;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
 using SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
@@ -32,10 +33,13 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 	//TODO 3 - When an employee is moving towards a destination target, instead of just waiting until it arrives, check
 	//		periodically if the target is valid, so he doesnt try to do a job that a player has already made not possible.
 
-	//TODO 1 - Bug reported by AhogeMaster: Storage workers are fine at first, but then suddenly a storage worker reaches
-	//		a storage shelf, dupes the box, and the storage is not usable anymore by employees.
-	//	I think it should be fixed already. I still checked a bit but didnt come up with a case for this, and without
-	//		a logOutput there isnt much else I can do.
+	//TODO 2 - Should the restocker when going to fill a shelf, reserve the storage where its going to put the
+	//		box back? I guess this would only need to happen if the box has enough items so there are any left
+	//		when finished, but even then is it a good idea?
+	//	Advantages: If there is no free storage space, it avoids the restocker going to drop the box to the left
+	//		over box space, and the storage worker to unnecessarily put a box where the other one should have been.
+	//	Disadvantages: If the restocker fills another shelf, or the shelf gets emptied on the way by customers
+	//		or a player, and this results in the box ending up empty, the storage slot has been reserved for nothing.
 
 	/// <summary>
 	/// Changes:
@@ -77,6 +81,21 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		private static Stopwatch swTemp = Stopwatch.StartNew();
 
 
+		//TODO 4 - Pretty big change. I should trash EmployeeNPCControl and create a new system to handle employee jobs.
+		//	The employee gameObject should have a new Navigation component that handles its own movement in an Update, and
+		//	when on target, triggers an event.
+		//	A new Singleton JobScheduler GameObject would now take charge of moving employees around and to assign jobs.
+		//	It will hook into an employee Navigation to be notified when the worker is ready. Jobs functions would be async (single-threaded). 
+		//	In this scheduler we can setup job frequency to finetune however we want to meet performance goals. Some
+		//	types of jobs could be prioritized to get more scheduler time compared to less important ones.
+		//	The current reservation system in EmployeeTargetReservation would be split and moved into the Jobs and Navigation
+		//	systems accordingly.
+		//	Then the job step system would be reworked and split into different functions with common logic separated from it.
+		//	EmployeePerformancePatch would now simply remove the call to EmployeeNPCControl, since the scheduler will
+		//	activate and handle the jobs itself.
+		//	Basically this would make it so I keep my own Employee AI system, and whatever the dev releases after it, I would
+		//	have to implement manually or maybe adapt and extend, but any changes would now be much easier to make.
+
 		[HarmonyPatch("EmployeeNPCControl")]
 		[HarmonyPrefix]
 		public static bool EmployeeNPCControlPatch(NPC_Manager __instance, int employeeIndex) {
@@ -114,7 +133,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			}
 
 			if (IsEmployeeAtDestination(component2)) {
-
 				switch (taskPriority) {
 					case 0:
 						component.ClearNPCReservations();	//Hack so there is a safe way of clearing reservations if they get stuck for some reason.
@@ -294,11 +312,11 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 1:
 								return false;
 							case 2: {
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Storage reached.", logEmployeeActions);
 									GameObject targetShelfObj = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
 									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value,
 										[component.productAvailableArray[0], component.productAvailableArray[4]]);
 
-									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Storage reached.", logEmployeeActions);
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo) &&
 											//Check that for the next step we can still place items in the shelf.
 											component.TryCheckValidTargetedProductShelf(__instance, maxProductsPerRow, out ProductShelfSlotInfo shelfTargetInfo)) {
@@ -322,12 +340,13 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										component.state = 3;
 										return false;
 									}
-									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: No luck with the storage or product shelf. Get fucked.", logEmployeeActions);
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Either storage or shelf reservations didnt match.", logEmployeeActions);
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 									component.state = -1;
 									return false;
 								}
 							case 3:
+								LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Product shelf reached.", logEmployeeActions);
 								if (__instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).GetComponent<Data_Container>().productInfoArray[component.productAvailableArray[1]] == component.productAvailableArray[4]) {
 									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Shelf reached has same product as box. So far so good.", logEmployeeActions);
 									component.state = 4;
@@ -337,6 +356,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								component.state = 5;
 								return false;
 							case 4: {
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Checking if shelf is valid.", logEmployeeActions);
 									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value,
 										[component.productAvailableArray[0], component.productAvailableArray[4]]);
 
@@ -424,7 +444,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return false;
 								}
 							case 6:
-								LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Trashing box", logEmployeeActions);
+								LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Removing box in hand", logEmployeeActions);
 								component.EquipNPCItem(0);
 								component.NetworkboxProductID = 0;
 								component.NetworkboxNumberOfProducts = 0;
@@ -432,14 +452,14 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								component.state = -1;
 								return false;
 							case 7: {
-									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Placing box in storage", logEmployeeActions);
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Checking to place box in storage", logEmployeeActions);
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
-										LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Targeted storage is valid", logEmployeeActions);
+										LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Targeted storage is valid. Box added to shelf.", logEmployeeActions);
 										__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).GetComponent<Data_Container>().EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, component.NetworkboxProductID, component.NetworkboxNumberOfProducts);
 										component.state = 6;
 										return false;
 									}
-									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Targeted storage is now not valid.", logEmployeeActions);
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Targeted storage is not valid.", logEmployeeActions);
 									component.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 5);
 									component.state = -1;
 									return false;
@@ -529,6 +549,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return false;
 								}
 							case 2: {
+									LOG.DEBUG($"Storage #{GetUniqueId(component)}: Checking pre-reserved storage.", logEmployeeActions);
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo)) {
 										LOG.DEBUG($"Storage #{GetUniqueId(component)}: Moving to pre-reserved storage.", logEmployeeActions);
 										component.MoveEmployeeToStorage(__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).Find("Standspot").transform.position, storageSlotInfo);
@@ -695,38 +716,48 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						UnityEngine.Debug.Log("Impossible employee current task case. Check logs.");
 						break;
 				}
-			} else {
-				//TODO 1 - Make this into something you can enable with some hotkey? Or maybe just the max setting and fuck it?
-				/*
-				if (ModConfig.Instance.EnabledDebug.Value && !component2.pathPending) {
-					//TODO 2 - I should probably log if Warp returns false for whatever reason.
-					component2.Warp(component2.destination);
+			} else if (!component2.pathPending) {
+				//TODO 4 - Make this into an static extension to get the max.
+				AcceptableValueRange<float> acceptableVal = (AcceptableValueRange<float>)ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Description.AcceptableValues;
+
+				if (ModConfig.Instance.EnabledDebug.Value && ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value == acceptableVal.MaxValue) {
+
+					//See EmployeeTargetReservation.LastDestinationSet for an explanation on this
+					component2.Warp(EmployeeTargetReservation.LastDestinationSet[component]);
+
 					EmployeeWarpSound.PlayEmployeeWarpSound(component);
+
+					component.StartWaitState(0.5f, state);
+					component.state = -1;
 				}
-				*/
 			}
 
 			return false; //Skip running the original method since we did all the logic here already.
 		}
 
 		public static string GetUniqueId(NPC_Info NPC) {
-			return $"{NPC.netId})";
+			return NPC.netId.ToString();	//In the end this was enough as an unique npc identifier.
 		}
 
-		private static bool IsEmployeeAtDestination(NavMeshAgent employee) {
-			NPC_Info npc = employee.gameObject.GetComponent<NPC_Info>();
-			
+		private static bool IsEmployeeAtDestination(NavMeshAgent employeePathing) {
 			if (EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased) {
-				//Reduced requirements to avoid them bouncing around at higher speeds.
-				if (!employee.pathPending && employee.remainingDistance <= Math.Max(employee.stoppingDistance, 1) &&
-						(!employee.hasPath || employee.velocity.sqrMagnitude < (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 2))) {
-					employee.velocity = Vector3.zero;
+				//Reduced requirements to avoid employees bouncing around at higher speeds.
+				float stoppingDistance = Math.Max(employeePathing.stoppingDistance, 1);
+				if (!employeePathing.pathPending && employeePathing.remainingDistance <= stoppingDistance &&
+						(!employeePathing.hasPath || employeePathing.velocity.sqrMagnitude < (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 2))) {
+
+					//This only happens sometimes when warping.
+					if (employeePathing.pathStatus == NavMeshPathStatus.PathPartial) {
+						return false;
+					}
+
+					employeePathing.velocity = Vector3.zero;
 					return true;
 				}
 			} else {
 				//Base game logic
-				return !employee.pathPending && employee.remainingDistance <= employee.stoppingDistance &&
-					(!employee.hasPath || employee.velocity.sqrMagnitude == 0f);
+				return !employeePathing.pathPending && employeePathing.remainingDistance <= employeePathing.stoppingDistance &&
+					(!employeePathing.hasPath || employeePathing.velocity.sqrMagnitude == 0f);
 			}
 
 			return false;
