@@ -20,22 +20,22 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			}
 
 			GroundBoxStorageList pickableGroundBoxes = new();
-			
-			//Check if there is space in storage for this box.
-			StorageSlotInfo freeUnassignedStorage = StorageSearchHelpers.IsFreeStorageContainer(__instance);
 
-			if (freeUnassignedStorage.FreeStorageFound) {
-				//Generate list of existing boxes on the ground
-				pickableGroundBoxes = new GroundBoxStorageList(untargetedGroundBoxes, freeUnassignedStorage);
-			} else {
-				//The quick check of unassigned storage slots got nothing, now we need to do the more expensive logic.
+			//Get list of products for which there is an empty, but assigned, storage slot
+			var storableProducts = GetProductIdListOfFreeStorage(__instance);
 
-				//Get list of products for which there is an empty, but assigned, storage slot
-				var storableProducts = GetProductIdListOfFreeStorage(__instance);
+			if (storableProducts.Count > 0) {
+				//Get list of ground boxes for which there is an empty assigned storage slot of its product.
+				pickableGroundBoxes = GetStorableGroundBoxList(storableProducts, untargetedGroundBoxes);
+			}
 
-				if (storableProducts.Count > 0) {
-					//Get list of ground boxes for which there is an empty assigned storage slot of its product.
-					pickableGroundBoxes = GetStorableGroundBoxList(storableProducts, untargetedGroundBoxes);
+			if (!pickableGroundBoxes.HasItems()) {
+				//No assigned free slot. Check if there is unassigned or unlabeled space in storage.
+				StorageSlotInfo freeUnassignedStorage = StorageSearchHelpers.FreeUnassignedStorageContainer(__instance);
+
+				if (freeUnassignedStorage.FreeStorageFound) {
+					//Generate list of existing boxes on the ground
+					pickableGroundBoxes = new GroundBoxStorageList(untargetedGroundBoxes, freeUnassignedStorage);
 				}
 			}
 

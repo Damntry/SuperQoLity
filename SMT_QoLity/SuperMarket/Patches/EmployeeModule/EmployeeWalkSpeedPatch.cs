@@ -44,7 +44,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				});
 
 				ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.ConfigFile.SettingChanged += 
-					(object sender, SettingChangedEventArgs args) => delayTask.Start(2000);
+					(object sender, SettingChangedEventArgs args) => delayTask.Start(1500);
 			}
 		}
 
@@ -54,63 +54,49 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		public static bool IsEmployeeSpeedIncreased {  get; private set; }
 
-
 		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.UpdateEmployeeStats))]
+		[HarmonyPriority(Priority.Low)]
 		[HarmonyPostfix]
 		private static void UpdateEmployeeStatsPostFix(NPC_Manager __instance) {
 			foreach (object obj in __instance.employeeParentOBJ.transform) {
 				Transform transform = (Transform)obj;
-				NavMeshAgent component2 = transform.GetComponent<NavMeshAgent>();
+				NavMeshAgent npcNavMesh = transform.GetComponent<NavMeshAgent>();
 
 				if (GameData.Instance.isSupermarketOpen) {
-					component2.acceleration = accelerationBase;
-					component2.angularSpeed = angularSpeedBase;
 					IsEmployeeSpeedIncreased = false;
+					npcNavMesh.acceleration = accelerationBase;
+					npcNavMesh.angularSpeed = angularSpeedBase;
 				} else {
-					component2.speed *= ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value;
 					IsEmployeeSpeedIncreased = ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1;
+
+					//Multipliy over the value already set in UpdateEmployeeStats()
+					npcNavMesh.speed *= ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value;
 
 					if (accelerationBase == 0f || angularSpeedBase == 0f) {
-						accelerationBase = component2.acceleration;
-						angularSpeedBase = component2.angularSpeed;
-					}
-					if (accelerationBase == component2.acceleration) {
-						//TODO 1 - Make these 2 options below into an extra setting, in case something
-						//	changes in the future and it needs extra tunning, or performance depends on it.
-						component2.acceleration = accelerationBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.75f));
-						component2.angularSpeed = angularSpeedBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 6000f));
+						//Since acceleration and turn radius are not set in UpdateEmployeeStats, we cant just
+						//	multiply them, or every call to this method would increase them exponentially.
+						//	We save the current base value so we can support any mods that change it in
+						//	UpdateEmployeeStats or before, and then later below apply the multiplier over the base value.
+						//	This doesnt support if the values are being changed dynamically though.
+						accelerationBase = npcNavMesh.acceleration;
+						angularSpeedBase = npcNavMesh.angularSpeed;
 					}
 
-					/*
-					if (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1) {
-						component2.autoBraking = true;
+					//Avoid increasing these if we already did so. Eventually when I rework the AI, this
+					//	will become a property in the NPC object to flag if it is already applied.
+					if (accelerationBase == npcNavMesh.acceleration) {
+						//TODO 5 - Make these 2 options below into an extra advanced setting, in
+						//	case something changes in the future and it needs extra tunning.
+						npcNavMesh.acceleration = accelerationBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.80f));
+						npcNavMesh.angularSpeed = angularSpeedBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 25000f));
 					}
-					*/
 				}
+
+				//If false, it makes them stop on its tracks when they reach their destination, instead of
+				//	overshooting if their acceleration is not high enough. Though its a bit too sudden.
+				npcNavMesh.autoBraking = !IsEmployeeSpeedIncreased;
+
 			}
-			/*	For when I transpile UpdateEmployeeStats, I can just go back to use this I think. Just tweak the offsets.
-			
-				if (GameData.Instance.isSupermarketOpen) {
-					return;
-				}
-
-				foreach (object obj in __instance.employeeParentOBJ.transform) {
-					Transform transform = (Transform)obj;
-					NavMeshAgent component2 = transform.GetComponent<NavMeshAgent>();
-
-					component2.speed *= ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value;
-					IsEmployeeSpeedIncreased = ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1;
-					//TODO 1 - Make these 2 options below into an extra setting, in case something
-					//	changes in the future and it needs extra tunning, or performance depends on it.
-					component2.acceleration *= 1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.15f);
-					component2.angularSpeed *= 1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.15f);
-
-					//component2.Warp
-					//if (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1) {
-					//	component2.autoBraking = true;
-					//}
-				}
-			*/
 		}
 
 		/// <summary>
@@ -120,6 +106,14 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		[HarmonyPostfix]
 		private static void NetworkisSupermarketOpenPatch() {
 			updateEmployeeStatsMethod.Invoke(NPC_Manager.Instance, null);
+		}
+
+		public static bool IsWarpingEnabled() {
+			//TODO 4 - Make this into an static extension to get the min/max of an AcceptableValueBase, in Damntry.Globals.BepInEx.ConfigurationManager
+			AcceptableValueRange<float> acceptableVal = (AcceptableValueRange<float>)ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Description.AcceptableValues;
+
+			return EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased && ModConfig.Instance.EnabledDebug.Value
+				&& ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value == acceptableVal.MaxValue;
 		}
 
 	}

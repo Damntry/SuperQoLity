@@ -18,7 +18,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 			);
 		}
 
-		public static StorageSlotInfo IsFreeStorageContainer(NPC_Manager __instance) {
+		public static StorageSlotInfo FreeUnassignedStorageContainer(NPC_Manager __instance) {
 			return StorageSearchLambdas.FindStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 					if (productId == -1) {
@@ -36,7 +36,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 				(storageIndex, slotIndex, productId, quantity) => {
 
 					if (boxIDProduct >= 0 && productId == boxIDProduct && quantity < 0) {
-						//Free assigned storage slot. ReturnType it.
+						//Free assigned storage slot. Return it.
 						return StorageSearchLambdas.LoopStorageAction.SaveAndExit;
 					} else if (productId == -1) {
 						//Save for later in case there is no assigned storage for this product.

@@ -141,6 +141,11 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
 				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
 
+			//TODO 0 - I think Im going to change all the wording so NumTransferProducts is enabled only while the store is closed,
+			//	by default, and the setting TransferMoreProductsOnlyClosedStore changes to TransferMoreProductsWithOpenStore or
+			//	something like that, as it should have always been.
+			//	Now it makes even more sense that I have the speed module that only works while the store is closed, though that
+			//	one doesnt have an option to work with an open store because thats what BetterSMT is for.
 			TransferMoreProductsOnlyClosedStore = configManagerControl.AddConfig(
 				sectionName: "Item Transfer Speed Module",
 				key: "Only while store is closed",
@@ -227,6 +232,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				key: "Teleport sound volume",
 				defaultValue: 0.5f,
 				description: "Volume of the teleport sound effect.",
+				isAdvanced: true,
 				acceptableValueRange: new AcceptableValueRange<float>(0, 1),
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
 		}

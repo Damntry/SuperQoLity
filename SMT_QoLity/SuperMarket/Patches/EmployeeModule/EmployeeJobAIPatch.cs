@@ -135,7 +135,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			if (IsEmployeeAtDestination(component2)) {
 				switch (taskPriority) {
 					case 0:
-						component.ClearNPCReservations();	//Hack so there is a safe way of clearing reservations if they get stuck for some reason.
+						component.ClearNPCReservations();   //Hack so there is a safe way of clearing reservations if they get stuck for some reason.
 
 						if (state != 0) {
 							if (state != 1) {
@@ -401,7 +401,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return false;
 								}
 							case 5: {
-									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Box in hand, and no place to put its items or box is empty. Deciding what to do.", logEmployeeActions);
+									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Box in hand but cant restock anymore. Deciding what to do.", logEmployeeActions);
 									if (component.NetworkboxNumberOfProducts <= 0) {
 										LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Box empty, trying to recycle.", logEmployeeActions);
 										if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
@@ -716,20 +716,15 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						UnityEngine.Debug.Log("Impossible employee current task case. Check logs.");
 						break;
 				}
-			} else if (!component2.pathPending) {
-				//TODO 4 - Make this into an static extension to get the max.
-				AcceptableValueRange<float> acceptableVal = (AcceptableValueRange<float>)ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Description.AcceptableValues;
+			} else if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && !component2.pathPending) {
 
-				if (ModConfig.Instance.EnabledDebug.Value && ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value == acceptableVal.MaxValue) {
+				//See EmployeeTargetReservation.LastDestinationSet for an explanation on this
+				component2.Warp(EmployeeTargetReservation.LastDestinationSet[component]);
 
-					//See EmployeeTargetReservation.LastDestinationSet for an explanation on this
-					component2.Warp(EmployeeTargetReservation.LastDestinationSet[component]);
+				EmployeeWarpSound.PlayEmployeeWarpSound(component);
 
-					EmployeeWarpSound.PlayEmployeeWarpSound(component);
-
-					component.StartWaitState(0.5f, state);
-					component.state = -1;
-				}
+				component.StartWaitState(0.5f, state);
+				component.state = -1;
 			}
 
 			return false; //Skip running the original method since we did all the logic here already.
@@ -740,16 +735,25 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 
 		private static bool IsEmployeeAtDestination(NavMeshAgent employeePathing) {
+			//TODO 1 - Temporary log
+			if (employeePathing.pathStatus == NavMeshPathStatus.PathInvalid) {
+				LOG.DEBUG($"Employee {employeePathing.gameObject.GetComponent<NPC_Info>().netId} " + $" has invalid path status with warping disabled");
+			}
+
 			if (EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased) {
-				//Reduced requirements to avoid employees bouncing around at higher speeds.
+
+				if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && 
+						(employeePathing.pathStatus == NavMeshPathStatus.PathInvalid || employeePathing.pathStatus == NavMeshPathStatus.PathPartial)) {
+					//PathInvalid may happen when warping employees are spawning, or very rarely when they warp to a box that just spawned
+					//	at max height. I dont want to limit how high they can go so I ll just patch it like this for now.
+					//As for PathPartial, see EmployeeTargetReservation.LastDestinationSet for an explanation.
+					return false;
+				}
+
+				//Reduced "arrive" requirements to avoid employees bouncing around when at high speeds.
 				float stoppingDistance = Math.Max(employeePathing.stoppingDistance, 1);
 				if (!employeePathing.pathPending && employeePathing.remainingDistance <= stoppingDistance &&
 						(!employeePathing.hasPath || employeePathing.velocity.sqrMagnitude < (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 2))) {
-
-					//This only happens sometimes when warping.
-					if (employeePathing.pathStatus == NavMeshPathStatus.PathPartial) {
-						return false;
-					}
 
 					employeePathing.velocity = Vector3.zero;
 					return true;
@@ -762,6 +766,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 			return false;
 		}
+
+
+		//TODO 0 - Move these 2 methods to StorageSearchHelper, and rename its folder and class so its named after generic shelves instead of storage.
 
 		//Copied from the original game. I only added the tarket marking, and slightly modified some superficial stuff to reduce the madness.
 		//TODO 6 - Convert CheckProductAvailability to transpile
