@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using UnityEngine;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 
-	public class GroundBoxFinder {
+	public class GroundBoxSearch {
 
 		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, GameObject employee) {
 			//Filter list of ground boxes so we skip the ones already targeted by another NPC.
-			List<GameObject> untargetedGroundBoxes = EmployeeTargetReservation.GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
+			List<GameObject> untargetedGroundBoxes = GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
 
 			//Check that there are any untargeted boxes lying around to begin with.
 			if (untargetedGroundBoxes.Count == 0) {
@@ -31,7 +31,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 			if (!pickableGroundBoxes.HasItems()) {
 				//No assigned free slot. Check if there is unassigned or unlabeled space in storage.
-				StorageSlotInfo freeUnassignedStorage = StorageSearchHelpers.FreeUnassignedStorageContainer(__instance);
+				StorageSlotInfo freeUnassignedStorage = ContainerSearchHelpers.FreeUnassignedStorageContainer(__instance);
 
 				if (freeUnassignedStorage.FreeStorageFound) {
 					//Generate list of existing boxes on the ground
@@ -47,11 +47,25 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return GetClosestGroundBox(pickableGroundBoxes, employee.transform.position);
 		}
 
+		private static List<GameObject> GetListUntargetedStationaryBoxes(GameObject allGroundBoxes) {
+			List<GameObject> listUntargetedBoxes = new List<GameObject>();
+
+			foreach (Transform box in allGroundBoxes.transform) {
+				//Filter out boxes that are already reserved or moving. Sometimes boxes piled up jiggle
+				//and have a decent amount of velocity applied even though they barely even flicker visually.
+				if (!EmployeeTargetReservation.IsGroundBoxTargeted(box.gameObject) && box.gameObject.GetComponent<Rigidbody>().velocity.sqrMagnitude < 1.5f) {
+					listUntargetedBoxes.Add(box.gameObject);
+				}
+			}
+
+			return listUntargetedBoxes;
+		}
+
 		private static Dictionary<int, StorageSlotInfo> GetProductIdListOfFreeStorage(NPC_Manager __instance) {
 			//Dictionary so we keep a single storage slot for each product id found
 			Dictionary<int, StorageSlotInfo> storableProducts = new();
 
-			StorageSearchLambdas.ForEachStorageSlotLambda(__instance, true,
+			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 
 					if (quantity <= 0 && productId >= 0) {
@@ -59,7 +73,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 							storableProducts.Add(productId, new StorageSlotInfo(storageIndex, slotIndex, productId, quantity));
 						}
 					}
-					return StorageSearchLambdas.LoopAction.Nothing;
+					return ContainerSearchLambdas.LoopAction.Nothing;
 				}
 			);
 

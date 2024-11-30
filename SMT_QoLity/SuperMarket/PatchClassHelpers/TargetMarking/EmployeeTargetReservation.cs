@@ -38,20 +38,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		public static Dictionary<NPC_Info, Vector3> LastDestinationSet { get; private set; } = new();
 
 
-		public static List<GameObject> GetListUntargetedStationaryBoxes(GameObject allGroundBoxes) {
-			List<GameObject> listUntargetedBoxes = new List<GameObject>();
-
-			foreach (Transform box in allGroundBoxes.transform) {
-				//Filter out boxes that are already reserved or moving. Sometimes boxes piled up jiggle
-				//and have a decent amount of velocity applied even though they barely even flicker visually.
-				if (!groundboxesTargeted.Contains(box.gameObject) && box.gameObject.GetComponent<Rigidbody>().velocity.sqrMagnitude < 1.5f) {
-					listUntargetedBoxes.Add(box.gameObject);
-				}
-			}
-
-			return listUntargetedBoxes;
-		}
-
 		//TODO 2 - Eventually this info will become the new NPC watch panel. But instead of returning
 		//		a string, I ll return a new info class so the caller formats it however it wants.
 		//Actually useful stats:
@@ -142,7 +128,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		}
 
-
+		
+		public static bool IsGroundBoxTargeted(GameObject boxObj) {
+			return groundboxesTargeted.Contains(boxObj);
+		}
 
 		public static bool IsStorageSlotTargeted(int StorageIndex, int SlotIndex) {
 			return IsStorageSlotTargeted(new StorageSlotInfo(StorageIndex, SlotIndex));

@@ -1,9 +1,8 @@
 ﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
-using HutongGames.PlayMaker.Actions;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
-	public class StorageSearchLambdas {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
+	public class ContainerSearchLambdas {
 
 		public enum LoopStorageAction {
 			/// <summary>Do nothing special in this loop and keep going.</summary>

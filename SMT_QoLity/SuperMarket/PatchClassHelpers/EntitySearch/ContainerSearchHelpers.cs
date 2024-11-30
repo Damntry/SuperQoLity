@@ -1,11 +1,16 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
+using Damntry.Utils.Reflection;
+using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using UnityEngine;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
-	public class StorageSearchHelpers {
+	public class ContainerSearchHelpers {
 
 		public enum FreeStoragePriorityEnum {
 			[Description("1.Assigned storage > 2.Any other storage")]
@@ -18,15 +23,15 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 
 
 		public static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
-			return StorageSearchLambdas.FindStorageSlotLambda(__instance, true,
+			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
 				(storageId, slotId, productId, quantity) => {
 
 					if (productId == boxIDProduct && quantity > 0 &&
 							quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
-						return StorageSearchLambdas.LoopStorageAction.SaveAndExit;
+						return ContainerSearchLambdas.LoopStorageAction.SaveAndExit;
 					}
 
-					return StorageSearchLambdas.LoopStorageAction.Nothing;
+					return ContainerSearchLambdas.LoopStorageAction.Nothing;
 				}
 			);
 		}
@@ -36,7 +41,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 		}
 
 		public static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, int boxIDProduct) {
-			return StorageSearchLambdas.FindStorageSlotLambda(__instance, true,
+			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
 				(storageIndex, slotIndex, productId, quantity) => {
 
 					//Ìf boxIDProduct is zero or positive, it means finding free storage with the same assigned item id is the max
@@ -48,19 +53,19 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 						//Search an storage slot with this assigned boxIDProduct
 						if (productId == boxIDProduct && quantity < 0) {
 							//Empty assigned storage slot. Return directly.
-							return StorageSearchLambdas.LoopStorageAction.SaveAndExit;
+							return ContainerSearchLambdas.LoopStorageAction.SaveAndExit;
 						}
 					} else if (productId == -1) {
 						//Search for either an empty unassigned labeled storage, or an unlabeled
 						//	storage, prioritizing whichever the user choose in the settings.
 						if (IsStorageTypePrioritized(__instance, storageIndex)) {
-							return boxIDProduct >= 0 ? StorageSearchLambdas.LoopStorageAction.SaveHighPrio : StorageSearchLambdas.LoopStorageAction.SaveAndExit;
+							return boxIDProduct >= 0 ? ContainerSearchLambdas.LoopStorageAction.SaveHighPrio : ContainerSearchLambdas.LoopStorageAction.SaveAndExit;
 						} else {
-							return StorageSearchLambdas.LoopStorageAction.SaveLowPrio;
+							return ContainerSearchLambdas.LoopStorageAction.SaveLowPrio;
 						}
 					}
 
-					return StorageSearchLambdas.LoopStorageAction.Nothing;
+					return ContainerSearchLambdas.LoopStorageAction.Nothing;
 				}
 			);
 		}

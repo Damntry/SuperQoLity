@@ -8,7 +8,7 @@ using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
-using static SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch.StorageSearchHelpers;
+using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearchHelpers;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 

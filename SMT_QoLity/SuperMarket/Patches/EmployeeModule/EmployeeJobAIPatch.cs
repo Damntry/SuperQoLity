@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using BepInEx.Configuration;
 using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.Logging;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
-using SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
@@ -76,7 +75,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - employee patch failed. Employee Module inactive";
 
 
-		private static Lazy<MethodInfo> getMaxProductsPerRowMethod = new Lazy<MethodInfo>(() => 
+		public static Lazy<MethodInfo> GetMaxProductsPerRowMethod = new Lazy<MethodInfo>(() => 
 			AccessTools.Method(typeof(NPC_Manager), "GetMaxProductsPerRow", [typeof(int), typeof(int)]));
 
 		private const bool logEmployeeActions = true;
@@ -326,7 +325,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 2: {
 									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Storage reached.", logEmployeeActions);
 									GameObject targetShelfObj = __instance.shelvesOBJ.transform.GetChild(component.productAvailableArray[0]).gameObject;
-									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value,
+									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, GetMaxProductsPerRowMethod.Value,
 										[component.productAvailableArray[0], component.productAvailableArray[4]]);
 
 									if (component.TryCheckValidTargetedStorage(__instance, out StorageSlotInfo storageSlotInfo) &&
@@ -369,7 +368,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return false;
 							case 4: {
 									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Checking if shelf is valid.", logEmployeeActions);
-									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value,
+									int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, GetMaxProductsPerRowMethod.Value,
 										[component.productAvailableArray[0], component.productAvailableArray[4]]);
 
 									if (component.TryCheckValidTargetedProductShelf(__instance, maxProductsPerRow, out ProductShelfSlotInfo prodShelfSlotInfo)) {
@@ -432,7 +431,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										component.MoveEmployeeTo(__instance.recycleSpot2OBJ);
 										component.state = 9;
 									} else {
-										StorageSlotInfo storageToMerge = StorageSearchHelpers.GetStorageContainerWithBoxToMerge(__instance, component.NetworkboxProductID);
+										StorageSlotInfo storageToMerge = ContainerSearchHelpers.GetStorageContainerWithBoxToMerge(__instance, component.NetworkboxProductID);
 										if (storageToMerge.FreeStorageFound) {
 											LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Moving to storage to merge box.", logEmployeeActions);
 											//component.currentFreeStorageIndex = storageSlotInfo.SlotIndex;
@@ -441,7 +440,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 											component.state = 20;
 											return false;
 										}
-										StorageSlotInfo freeStorageIndexes = StorageSearchHelpers.GetFreeStorageContainer(__instance, component.NetworkboxProductID);
+										StorageSlotInfo freeStorageIndexes = ContainerSearchHelpers.GetFreeStorageContainer(__instance, component.NetworkboxProductID);
 										if (freeStorageIndexes.FreeStorageFound) {
 											LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Moving to storage to place box.", logEmployeeActions);
 											Vector3 destination = __instance.storageOBJ.transform.GetChild(freeStorageIndexes.ShelfIndex).gameObject.transform.Find("Standspot").transform.position;
@@ -526,7 +525,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									component.state = -1;
 									return false;
 								}
-								var closestGroundBox = GroundBoxFinder.GetClosestGroundBox(__instance, gameObject);
+								var closestGroundBox = GroundBoxSearch.GetClosestGroundBox(__instance, gameObject);
 								if (closestGroundBox.FoundGroundBox) {
 									LOG.DEBUG($"Storage #{GetUniqueId(component)}: Going to pick up box.", logEmployeeActions);
 									component.randomBox = closestGroundBox.GroundBoxObject;
@@ -780,12 +779,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 
 
-		//TODO 0 - Move GroundBoxFinder to StorageSearch, then move these 2 methods to StorageSearchHelper, and
-		//	rename the folder and class so its named about searching box/generic shelves, instead of just storage.
-
-		//Copied from the original game. I only added the tarket marking, and slightly modified some superficial stuff to reduce the madness.
-		//TODO 6 - Convert CheckProductAvailability to transpile
-		private static int[] CheckProductAvailability(NPC_Manager __instance) {
+		//Copied from the original game. I added the tarket marking, and modified some stuff to reduce the madness.
+		public static int[] CheckProductAvailability(NPC_Manager __instance) {
 			int[] array = [-1, -1, -1, -1, -1, -1];
 
 			if (__instance.storageOBJ.transform.childCount == 0 || __instance.shelvesOBJ.transform.childCount == 0) {
@@ -811,7 +806,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						int shelfProductId = productInfoArray[k * 2];
 						if (shelfProductId >= 0) {
 							int shelfQuantity = productInfoArray[k * 2 + 1];
-							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value, [j, shelfProductId]);
+							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, EmployeeJobAIPatch.GetMaxProductsPerRowMethod.Value, [j, shelfProductId]);
 							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * productsThresholdArray[i]);
 							if (shelfQuantity == 0 || shelfQuantity < shelfQuantityThreshold) {
 								for (int l = 0; l < __instance.storageOBJ.transform.childCount; l++) {
@@ -853,18 +848,18 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 			for (int i = 0; i < productsThresholdArray.Length; i++) {
 
-				StorageSearchLambdas.ForEachProductShelfSlotLambda(__instance, true,
+				ContainerSearchLambdas.ForEachProductShelfSlotLambda(__instance, true,
 					(prodShelfIndex, slotIndex, productId, quantity) => {
 
 						if (productId == productIDToCheck) {
-							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, getMaxProductsPerRowMethod.Value, new object[] { prodShelfIndex, productIDToCheck });
+							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, EmployeeJobAIPatch.GetMaxProductsPerRowMethod.Value, new object[] { prodShelfIndex, productIDToCheck });
 							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * productsThresholdArray[i]);
 							if (quantity == 0 || quantity < shelfQuantityThreshold) {
 								productsPriority.Add(new ProductShelfSlotInfo(prodShelfIndex, slotIndex, productId, quantity));
 							}
 						}
 
-						return StorageSearchLambdas.LoopAction.Nothing;
+						return ContainerSearchLambdas.LoopAction.Nothing;
 					}
 				);
 
