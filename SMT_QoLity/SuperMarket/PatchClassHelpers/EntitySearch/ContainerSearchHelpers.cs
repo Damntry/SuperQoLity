@@ -21,6 +21,103 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			Unlabeled
 		}
 
+		//Copied from the original game. I added the tarket marking, and modified some stuff to reduce the madness.
+		public static int[] CheckProductAvailability(NPC_Manager __instance) {
+			int[] array = [-1, -1, -1, -1, -1, -1];
+
+			if (__instance.storageOBJ.transform.childCount == 0 || __instance.shelvesOBJ.transform.childCount == 0) {
+				return array;
+			}
+
+			List<int[]> productsPriority = new();
+			List<int[]> productsPrioritySecondary = new();
+
+			float[] productsThresholdArray = (float[])AccessTools.Field(typeof(NPC_Manager), "productsThreshholdArray").GetValue(__instance);
+
+			for (int i = 0; i < productsThresholdArray.Length; i++) {
+				productsPriority.Clear();
+				for (int j = 0; j < __instance.shelvesOBJ.transform.childCount; j++) {
+					int[] productInfoArray = __instance.shelvesOBJ.transform.GetChild(j).GetComponent<Data_Container>().productInfoArray;
+					int num = productInfoArray.Length / 2;
+					for (int k = 0; k < num; k++) {
+						productsPrioritySecondary.Clear();
+						//Check if this storage slot is already in use by another employee
+						if (EmployeeTargetReservation.IsProductShelfSlotTargeted(j, k)) {
+							continue;
+						}
+						int shelfProductId = productInfoArray[k * 2];
+						if (shelfProductId >= 0) {
+							int shelfQuantity = productInfoArray[k * 2 + 1];
+							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, EmployeeJobAIPatch.GetMaxProductsPerRowMethod.Value, [j, shelfProductId]);
+							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * productsThresholdArray[i]);
+							if (shelfQuantity == 0 || shelfQuantity < shelfQuantityThreshold) {
+								for (int l = 0; l < __instance.storageOBJ.transform.childCount; l++) {
+									int[] productInfoArray2 = __instance.storageOBJ.transform.GetChild(l).GetComponent<Data_Container>().productInfoArray;
+									int num5 = productInfoArray2.Length / 2;
+									for (int m = 0; m < num5; m++) {
+										//Check if this storage slot is already in use by another employee
+										if (EmployeeTargetReservation.IsStorageSlotTargeted(l, m)) {
+											continue;
+										}
+										int storageProductId = productInfoArray2[m * 2];
+										int storageQuantity = productInfoArray2[m * 2 + 1];
+										if (storageProductId >= 0 && storageProductId == shelfProductId && storageQuantity > 0) {
+											productsPrioritySecondary.Add(new int[] { j, k * 2, l, m * 2, shelfProductId, storageProductId, k, m, shelfQuantity, shelfQuantityThreshold, storageQuantity });
+										}
+									}
+								}
+							}
+							if (productsPrioritySecondary.Count > 0) {
+								productsPriority.Add(productsPrioritySecondary[UnityEngine.Random.Range(0, productsPrioritySecondary.Count)]);
+							}
+						}
+					}
+				}
+				if (productsPriority.Count > 0) {
+					break;
+				}
+			}
+			if (productsPriority.Count > 0) {
+				return productsPriority[UnityEngine.Random.Range(0, productsPriority.Count)];
+			}
+			return array;
+		}
+
+		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, int productIDToCheck, NPC_Info npcInfoComponent, out ProductShelfSlotInfo productShelfSlotInfo) {
+			productShelfSlotInfo = null;
+			List<ProductShelfSlotInfo> productsPriority = new();
+			float[] productsThresholdArray = (float[])AccessTools.Field(typeof(NPC_Manager), "productsThreshholdArray").GetValue(__instance);
+
+			for (int i = 0; i < productsThresholdArray.Length; i++) {
+
+				ContainerSearchLambdas.ForEachProductShelfSlotLambda(__instance, true,
+					(prodShelfIndex, slotIndex, productId, quantity) => {
+
+						if (productId == productIDToCheck) {
+							int maxProductsPerRow = ReflectionHelper.CallMethod<int>(__instance, EmployeeJobAIPatch.GetMaxProductsPerRowMethod.Value, new object[] { prodShelfIndex, productIDToCheck });
+							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * productsThresholdArray[i]);
+							if (quantity == 0 || quantity < shelfQuantityThreshold) {
+								productsPriority.Add(new ProductShelfSlotInfo(prodShelfIndex, slotIndex, productId, quantity));
+							}
+						}
+
+						return ContainerSearchLambdas.LoopAction.Nothing;
+					}
+				);
+
+				if (productsPriority.Count > 0) {
+					productShelfSlotInfo = productsPriority[UnityEngine.Random.Range(0, productsPriority.Count)];
+					npcInfoComponent.productAvailableArray[0] = productShelfSlotInfo.ShelfIndex;
+					npcInfoComponent.productAvailableArray[1] = productShelfSlotInfo.SlotIndex * 2;
+					npcInfoComponent.productAvailableArray[4] = productShelfSlotInfo.ExtraData.ProductId;
+					npcInfoComponent.productAvailableArray[6] = productShelfSlotInfo.SlotIndex;
+					npcInfoComponent.productAvailableArray[6] = productShelfSlotInfo.ExtraData.Quantity;
+					return true;
+				}
+			}
+
+			return false;
+		}
 
 		public static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
 			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
