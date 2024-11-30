@@ -8,6 +8,7 @@ using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
+using static SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch.StorageSearchHelpers;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -25,11 +26,13 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		private ConfigManagerController configManagerControl;
 
+
 		public ConfigEntry<bool> EnableEmployeeChanges { get; private set; }
 		public ConfigEntry<float> EmployeeNextActionWait { get; private set; }
 		public ConfigEntry<float> EmployeeIdleWait { get; private set; }
 		public ConfigEntry<int> EmployeeJobFrequencyMultiplier { get; private set; }
 		public ConfigEntry<float> ClosedStoreEmployeeWalkSpeedMultiplier { get; private set; }
+		public ConfigEntry<FreeStoragePriorityEnum> FreeStoragePriority { get; private set; }
 		public ConfigEntry<bool> EnableTransferProducts { get; private set; }
 		public ConfigEntry<int> NumTransferProducts { get; private set; }
 		public ConfigEntry<bool> TransferMoreProductsOnlyClosedStore { get; private set; }
@@ -59,7 +62,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 								"In any case, the way I handle settings was intended to work with the plugin \"Bepinex.ConfigurationManager\" in mind, and I highly recommend using it " +
 								"as it allows you to change values on the fly, show settings in its proper order, color preview, and some extra " +
 								"features like hiding settings of disabled modules.\n" +
-								"Otherwise, editing the config file works fine, but it might be more confusing since there could be settings that do nothing.\n" +
+								"Otherwise, editing the config file works fine, but it might be more confusing since its not very user friendly in some cases.\n" +
 								"You can download the latest \"Bepinex.ConfigurationManager\" BepInEx5 version (BepInEx5_v18.3 as of writing this) from its GitHub Releases page.");
 			//About the above comment of showing settings in its proper order in the config file itself:
 			//	Prefixing numbers in sections and settings fixes this, and to this day its the only way of doing it.
@@ -104,7 +107,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				sectionName: "Employee Job Module",
 				key: "Wait time after a job step is finished",
 				defaultValue: 1.5f,
-				description: "Adjust the amount of time an employee waits after it finishes a single step of a job, " +
+				description: "Adjust the amount of time in seconds that an employee waits after it finishes a single step of a job, " +
 								"like picking up a box or filling up a product shelf.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.1f, 4f),
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
@@ -113,10 +116,21 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				sectionName: "Employee Job Module",
 				key: "Job check frequency while idle",
 				defaultValue: 2f,
-				description: "Adjusts the frequency of employees checking for available jobs while idling.\n" +
+				description: "Adjusts the frequency in seconds of employees checking for available jobs while idling.\n" +
 								"Lowering this value too much might cause performance issues on low end rigs if you have many idling employees.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.25f, 10f),
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
+
+			FreeStoragePriority = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: "Employee Job Module",
+				key: "Storage type priority",
+				defaultValue: FreeStoragePriorityEnum.Default_Any,
+				description: "Default behaviour is that when any employee wants to place a box into storage, first it looks for an empty storage " +
+				"slot that has the same item assigned as the box, and if there are none, then it looks for an empty unassigned storage slot, no " +
+				"matter if its from an unlabeled storage shelf or not.\nWith this setting you can change what type of storage is prioritized over " +
+				"the other in this final search step.",
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance);
+
 
 			configManagerControl.AddQuasiNote(
 				sectionName: "Item Transfer Speed Module",

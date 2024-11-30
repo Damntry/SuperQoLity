@@ -41,6 +41,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 	//	Disadvantages: If the restocker fills another shelf, or the shelf gets emptied on the way by customers
 	//		or a player, and this results in the box ending up empty, the storage slot has been reserved for nothing.
 
+	//TODO 1 - I dont know what changed but NPCs seem to bounce and overshoot the target a bit too much again?
+	//		I should try and leave it a bit more decent before release.
+
 	/// <summary>
 	/// Changes:
 	/// - Make employees acquire jobs, so its current target (a dropped box, or a storage/shelf slot) is "marked" and 
@@ -79,6 +82,15 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		private const bool logEmployeeActions = true;
 
 		private static Stopwatch swTemp = Stopwatch.StartNew();
+
+		//TODO 0 - ADD TO FUTURE FEATURES: Key binds for employee assignments.
+		//	Timekeeper: So like at end of day I can hit V and it assigns all employees to restocking, then
+		//	a default keybind like, 3 cashiers, 15 restocking, 2 security.
+		//	I could add %, plus fill cashier spots and stuff, I dont know, I ll need to think this through.
+
+		//TODO Another possible future idea. Change settings (some) in game using canvas or whatever it is like
+		//		a normal game interface? Could do it in the escape key like an external framework for mods to
+		//		add their settings.
 
 
 		//TODO 4 - Pretty big change. I should trash EmployeeNPCControl and create a new system to handle employee jobs.
@@ -768,7 +780,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 
 
-		//TODO 0 - Move these 2 methods to StorageSearchHelper, and rename its folder and class so its named after generic shelves instead of storage.
+		//TODO 0 - Move GroundBoxFinder to StorageSearch, then move these 2 methods to StorageSearchHelper, and
+		//	rename the folder and class so its named about searching box/generic shelves, instead of just storage.
 
 		//Copied from the original game. I only added the tarket marking, and slightly modified some superficial stuff to reduce the madness.
 		//TODO 6 - Convert CheckProductAvailability to transpile

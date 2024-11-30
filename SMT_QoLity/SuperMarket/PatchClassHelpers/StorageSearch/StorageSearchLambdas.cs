@@ -1,18 +1,31 @@
 ﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
+using HutongGames.PlayMaker.Actions;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 	public class StorageSearchLambdas {
 
 		public enum LoopStorageAction {
-			Nothing = 0,    //Do nothing special in this loop and keep going.
-			Save = 1,       //Save storage slot data and keep going.
-			SaveAndExit = 2 //Save storage slot data and return immediately.
+			/// <summary>Do nothing special in this loop and keep going.</summary>
+			Nothing = 0,
+			/// <summary>
+			/// Save storage slot data with low priority and keep going.
+			/// It will be returned if the loop ends with no other value saved."/>
+			/// </summary>
+			SaveLowPrio = 1,
+			/// <summary>
+			/// Save storage slot data with high priority and keep going.
+			/// It will be returned if the loop ends.
+			/// </summary>
+			SaveHighPrio = 2,
+			/// <summary>Save storage slot data and return it immediately.</summary>
+			SaveAndExit = 3
 		}
 		public enum LoopAction {
 			Nothing = 0,    //Keep looping.
 			Nothing2 = 1,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
-			Exit = 2        //Stop and return immediately.
+			Nothing3 = 2,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
+			Exit = 3        //Stop and return immediately.
 		}
 
 
@@ -61,7 +74,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 				}
 			}
 		}
-
+		
 		/// <summary>
 		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
 		/// </summary>
@@ -81,7 +94,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.StorageSearch {
 
 					LoopStorageAction loopStorageAction = storageSlotLambda(storageId, slotId, productId, quantity);
 
-					if (loopStorageAction == LoopStorageAction.Save || loopStorageAction == LoopStorageAction.SaveAndExit) {
+					if (loopStorageAction == LoopStorageAction.SaveHighPrio || loopStorageAction == LoopStorageAction.SaveAndExit) {
+						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
+					} else if (loopStorageAction == LoopStorageAction.SaveLowPrio && !freeStorageSlot.FreeStorageFound) {
+						//Save only if it was empty
 						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
 					}
 
