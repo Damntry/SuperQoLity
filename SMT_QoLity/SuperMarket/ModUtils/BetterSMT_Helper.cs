@@ -11,14 +11,11 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		public static Lazy<BetterSMT_Status> BetterSMTLoadStatus { get; private set; } = new Lazy<BetterSMT_Status>(() => ISBetterSMTLoaded());
 
-		public static Lazy<bool> IsBetterSMTLoadedAndPatchEnabled { get; private set; } = new Lazy<bool>(() => CheckBetterSMTLoadedAndPatchEnabled());
-
-		public static Lazy<bool> IsEnableBetterSMTHightlightFixes { get; private set; } = new Lazy<bool>(
-			() => IsBetterSMTLoadedAndPatchEnabled.Value && BetterSMTInfo.LoadedVersion <= BetterSMTInfo.LastVivikoVersion &&
-			//If extra highlights functions are enabled, we instead use my own patch with modified methods that already implement the fixes.
-			!ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value
-		);
-		
+		public static bool IsBetterSMTLoadedAndEnabled {
+			get {
+				return BetterSMTLoadStatus.Value != BetterSMT_Status.NotLoaded;
+			}
+		}
 
 		public struct BetterSMTInfo {
 			public const string GUID = "ViViKo.BetterSMT";
@@ -30,8 +27,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			//Last Viviko version is also the last one that needed the highlight fixes.
 			public readonly static Version LastVivikoVersion = new Version(1, 6, 2);
 
-			//TODO 5 - This probably belongs in MyPlugin.info.
-			public readonly static Version SupportedVersion = new Version(1, 8, 1);
+			//TODO 2 - This probably belongs in MyPlugin.info. Use the opportunity to move into the AssemblyInfo.tt way of the Globals
+			public readonly static Version SupportedVersion = new Version(1, 8, 4);
 
 			public static Version LoadedVersion;
 		}
@@ -81,19 +78,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 			message += $"could cause problems and bugs in-game. If you encounter any errors, you can " +
 							$"disable these patches in the \"{MyPluginInfo.PLUGIN_NAME}\" -> " +
-							$"\"{ModConfig.Instance.EnablePatchBetterSMT_General.Definition.Section}\" " +
+							$"\"{ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Definition.Section}\" " +
 							$"section of the config.";
 
 			return message;
-		}
-
-		private static bool CheckBetterSMTLoadedAndPatchEnabled() {
-			if (!ModConfig.Instance.EnablePatchBetterSMT_General.Value) {
-				BepInExTimeLogger.Logger.LogTimeInfo($"{BetterSMTInfo.Name} mod patches are disabled in {MyPluginInfo.PLUGIN_NAME} config. Skipping.", TimeLoggerBase.LogCategories.Loading);
-				return false;
-			}
-
-			return BetterSMTLoadStatus.Value != BetterSMT_Status.NotLoaded;
 		}
 
 		private static BetterSMT_Status ISBetterSMTLoaded() {

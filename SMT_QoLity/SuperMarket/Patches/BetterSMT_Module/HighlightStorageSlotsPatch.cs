@@ -14,7 +14,10 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 	/// </summary>
 	public class HighlightStorageSlotsPatch : FullyAutoPatchedInstance {
 
-		public override bool IsAutoPatchEnabled => BetterSMT_Helper.IsBetterSMTLoadedAndPatchEnabled.Value && ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value;
+		//TODO 4 - When there are many shelves to highlight (and a hundred or more of others too), it takes a few ms to highlight, but clearing
+		//	the highlights takes a second or so. Improve the performance and send Mitche the changes too.
+
+		public override bool IsAutoPatchEnabled => BetterSMT_Helper.IsBetterSMTLoadedAndEnabled && ModConfig.Instance.EnablePatchBetterSMT_ExtraHighlightFunctions.Value;
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Extra highlight functions failed. Disabled";
 
@@ -22,7 +25,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 
 		private class ReplaceBetterSMTChangeEquipmentPatch {
 
-			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "ChangeEquipmentPatch", [typeof(PlayerNetwork), typeof(int)])]
+			[HarmonyPatchStringTypes($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch", "ChangeEquipmentPatch", [typeof(int)])]
 			[HarmonyBefore(BetterSMT_Helper.BetterSMTInfo.HarmonyId, BetterSMT_Helper.BetterSMTInfo.HarmonyId_New)]
 			[HarmonyPrefix]
 			//Yo dawg, I heard you like patches, so I patched the patch so it doesnt patch.

@@ -1,6 +1,7 @@
 ﻿using System;
 using BepInEx;
 using BepInEx.Configuration;
+using Damntry.Utils.ExtensionMethods;
 using Damntry.UtilsBepInEx.ConfigurationManager;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using SuperQoLity.SuperMarket.Patches.BetterSMT_Module;
@@ -9,6 +10,7 @@ using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
 using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearchHelpers;
+using static SuperQoLity.SuperMarket.Patches.TransferItemsModule.IncreasedItemTransferPatch;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -34,9 +36,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<float> ClosedStoreEmployeeWalkSpeedMultiplier { get; private set; }
 		public ConfigEntry<FreeStoragePriorityEnum> FreeStoragePriority { get; private set; }
 		public ConfigEntry<bool> EnableTransferProducts { get; private set; }
+		public ConfigEntry<PlayerEmployeeItemTransferMode> ItemTransferMode { get; private set; }
 		public ConfigEntry<int> NumTransferProducts { get; private set; }
-		public ConfigEntry<bool> TransferMoreProductsOnlyClosedStore { get; private set; }
-		public ConfigEntry<bool> EnablePatchBetterSMT_General { get; private set; }
 		public ConfigEntry<bool> EnablePatchBetterSMT_ExtraHighlightFunctions { get; private set; }
 		public ConfigEntry<Color> PatchBetterSMT_ShelfHighlightColor { get; private set; }
 		public ConfigEntry<Color> PatchBetterSMT_ShelfLabelHighlightColor { get; private set; }
@@ -46,7 +47,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<bool> EnabledDebug { get; private set; }
 		public ConfigEntry<float> TeleportSoundVolume { get; private set; }
 
-
+		//TODO 1 - I should make clear what options are relevant only for the host, and for what options should the client have the mod too.
 
 		private const string RequiresRestartSymbol = "(**)";
 
@@ -85,21 +86,21 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				sectionName: "Employee Job Module",
 				key: "Employee slowdown fix multiplier",
 				defaultValue: 1,
-				description: "The game has a limit of 50 employee \"actions\" per second. This means that if you have 50 employees (using mods), an employee " +
-								"can only do a single action every second, no matter if assigned to a job or not. The more employees you have, or the faster" +
-								"they are, the worse it gets.\nThis fix is a multiplier to the number of actions they can perform compared to base game, but there" +
-								"may be a noticeable performance hit depending on your potato system.\n" +
-								"Generally you should set this to the lowest possible value where you stop noticing any employee slowdowns, but if you have a" +
-								"decent CPU you can set it very high.",
+				description: "The game has a limit of 50 employee \"actions\" per second. This means that if you have 50 employees (using mods), an " +
+								"employee can only do a single action every second, no matter if assigned to a job or not. The more employees you " +
+								"have, or the faster they move, the worse and more noticeable it gets.\nThis fix is a multiplier to the number of " +
+								"actions they can perform compared to base game, but there may be a noticeable performance hit depending on your potato system.\n" +
+								"Generally you should set this to the lowest possible value where you stop noticing any employee slowdowns, but if you " +
+								"have a decent CPU you can set it very high.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance);
 
 			ClosedStoreEmployeeWalkSpeedMultiplier = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Employee Job Module",
-				key: "Employee walk speed multiplier with store closed",
+				key: "Employee walk speed mult. (closed store)",
 				defaultValue: 1f,
 				description: "Applies a multiplier to the walk speed of employees while the store is closed, so they can wrap up left over work faster.\n" +
-							"This helps reduce time spent waiting while doing nothing.\nWorks in addition to BetterSMT mod employee speed perks.",
+							"This helps reduce time spent waiting at the beginning or end of the day.\nWorks in addition to BetterSMT mod employee speed perks.",
 				acceptableValueRange: new AcceptableValueRange<float>(1f, 4f),
 				patchInstanceDependency: Container<EmployeeWalkSpeedPatch>.Instance);
 
@@ -146,34 +147,26 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: true,
 				description: "Enable patching of item transfer methods to allow related settings to show up. Disable if the module seems to cause problems.");
 
+			ItemTransferMode = configManagerControl.AddConfig(
+				sectionName: "Item Transfer Speed Module",
+				key: "Product shelf item transfer mode",
+				defaultValue: PlayerEmployeeItemTransferMode.Disabled,
+				description: "Sets the mode in which item transfer works with players and employees, depending if the supermarket is closed or not.\n" +
+							"A store counts as closed both at the beginning of the day, and at the end after closing time.\n" +
+							"Item transfer increases the number of items to place each click. You can set transfer quantity below.",
+				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
+
 			NumTransferProducts = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: "Item Transfer Speed Module",
-				key: "Number of items to transfer to/from product shelves each action",
+				key: "Product shelf item transfer quantity",
 				defaultValue: 1,
-				description: "Adjusts the amount of time an employee waits after it finishes a single job, like " +
-								"delivering a box or filling up a product shelf.",
+				description: "The number of items you place or take from a product shelf every time you click (or hold click) on it.\n" +
+							$"The setting \"{ItemTransferMode.Definition.Key}\" must be something other than " +
+							$"{PlayerEmployeeItemTransferMode.Disabled.GetDescription()} for this to work." +
+							"This is not compatible with High Latency Mode and will not be active if that mode is enabled.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
 				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
 
-			//TODO 0 - I think Im going to change all the wording so NumTransferProducts is enabled only while the store is closed,
-			//	by default, and the setting TransferMoreProductsOnlyClosedStore changes to TransferMoreProductsWithOpenStore or
-			//	something like that, as it should have always been.
-			//	Now it makes even more sense that I have the speed module that only works while the store is closed, though that
-			//	one doesnt have an option to work with an open store because thats what BetterSMT is for.
-			TransferMoreProductsOnlyClosedStore = configManagerControl.AddConfig(
-				sectionName: "Item Transfer Speed Module",
-				key: "Only while store is closed",
-				defaultValue: true,
-				description: "If enabled, extra item transfering only works while the supermarket is closed.",
-				patchInstanceDependency: Container<IncreasedItemTransferPatch>.Instance);
-
-
-			EnablePatchBetterSMT_General = configManagerControl.AddConfig(
-				sectionName: "BetterSMT Patches",
-				key: GetBetterSMTConfigMessage(true),
-				defaultValue: true,
-				description: "If enabled, patches related to the mod BetterSMT that dont have their own config entry, will be applied.",
-				disabled: BetterSMTLoadStatus.Value == BetterSMT_Status.NotLoaded);
 
 			//The way I implement this extra highlight function, is overriding all of BetterSMT
 			//	highlighting logic, so highlighting doesnt even need BetterSMT to work.
@@ -186,7 +179,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			//	in HighlightStorageSlotsPatch.
 			EnablePatchBetterSMT_ExtraHighlightFunctions = configManagerControl.AddConfig(
 				sectionName: "BetterSMT Patches",
-				key: GetBetterSMTConfigMessage(false),
+				key: GetBetterSMTConfigMessage(),
 				defaultValue: true,
 				description: "If enabled, in addition to BetterSMT highlighting the storage shelf itself, individual storage slots that " +
 				"have that product assigned will also be highlighted, empty or not.",
@@ -235,14 +228,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 
 			EnabledDebug = configManagerControl.AddConfig(
-				sectionName: "DEBUG",
+				sectionName: "z DEBUG z",
 				key: $"Enable debug mode",
 				defaultValue: false,
 				description: "Dev stuff you dont want to know about.",
 				isAdvanced: true);
 
 			TeleportSoundVolume = configManagerControl.AddConfigWithAcceptableValues(
-				sectionName: "DEBUG",
+				sectionName: "z DEBUG z",
 				key: "Teleport sound volume",
 				defaultValue: 0.5f,
 				description: "Volume of the teleport sound effect.",
@@ -261,12 +254,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		}
 
 
-		private string GetBetterSMTConfigMessage(bool isMainModuleSetting) {
-			string loadedText = isMainModuleSetting ? $"Apply {BetterSMTInfo.Name} patches {RequiresRestartSymbol}" : $"Highlight storage slots {RequiresRestartSymbol}";
-
+		private string GetBetterSMTConfigMessage() {
 			return BetterSMTLoadStatus.Value switch {
 				BetterSMT_Status.NotLoaded => $"{BetterSMTInfo.Name} is not loaded. Setting unused.",
-				BetterSMT_Status.DifferentVersion or BetterSMT_Status.LoadedOk => loadedText,
+				BetterSMT_Status.DifferentVersion or BetterSMT_Status.LoadedOk => $"Highlight storage slots {RequiresRestartSymbol}",
 				_ => throw new NotImplementedException($"The switch case {BetterSMTLoadStatus.Value} is not implemented."),
 			};
 		}

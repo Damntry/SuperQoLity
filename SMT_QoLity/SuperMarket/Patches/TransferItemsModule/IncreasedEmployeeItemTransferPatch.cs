@@ -8,6 +8,8 @@ using System.Reflection.Emit;
 using Damntry.UtilsBepInEx.IL;
 using Damntry.UtilsBepInEx.HarmonyPatching.Helpers;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using static SuperQoLity.SuperMarket.Patches.TransferItemsModule.IncreasedItemTransferPatch;
+
 
 namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
@@ -37,7 +39,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
 		public static ArgumentHelper<int> ArgMaxProductsPerRow = new(typeof(IncreasedEmployeeItemTransferPatch), nameof(ArgMaxProductsPerRow), -1);
 
-
+		//TODO 3 - Throw meaningfull errors when it cant match instructions.
 		//[HarmonyDebug]
 		[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.EmployeeAddsItemToRow))]
 		[HarmonyBeforeInstance(typeof(IncreasedItemTransferPatch))]
@@ -105,8 +107,9 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			instrs.Add(loadLocalNum2);                          //Load num2 local var
 			instrs.Add(ArgMaxProductsPerRow.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper instance to later gets it value.
 			instrs.Add(ArgMaxProductsPerRow.GetterValue_IL);    //Load what would have been the 3º argument (maxProductsPerRow), but its now a glorified global static.
-			instrs.Add(Transpilers.EmitDelegate((int giverItemCount, int receiverItemCount, int receiverMaxCapacity) =>
-				IncreasedItemTransferPatch.GetNumTransferItems(giverItemCount, receiverItemCount, receiverMaxCapacity)));
+			instrs.Add(new CodeInstruction(OpCodes.Ldc_I4, (int)CharacterType.Employee));	//Load the corresponding integer value of the enum as 4º parameter
+			instrs.Add(Transpilers.EmitDelegate((int p1, int p2, int p3, CharacterType p4) =>
+				IncreasedItemTransferPatch.GetNumTransferItems(p1, p2, p3, p4)));
 
 			instrs.Add(CodeInstructionNew.StoreLocal(localVarItemTransferIndex));   //Save in the previously created local var the result of the method call
 

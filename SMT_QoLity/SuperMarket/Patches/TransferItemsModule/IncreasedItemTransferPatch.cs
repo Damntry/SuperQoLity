@@ -8,6 +8,8 @@ using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using System.ComponentModel;
+using static SuperQoLity.SuperMarket.Patches.EmployeeModule.EmployeeJobAIPatch;
 
 namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
@@ -20,7 +22,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
 
-		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Container patch failed. Item Transfer Module disabled";
+		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Transfer patch failed. Item Transfer Module inactive";
 
 
 		private enum RowActionType {
@@ -28,17 +30,35 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			Remove
 		}
 
+		public enum CharacterType {
+			Player,
+			Employee
+		}
+
+		public enum PlayerEmployeeItemTransferMode {
+			[Description("Disabled")]
+			Disabled,
+			[Description("Players and employees (Closed store)")]
+			PlayersAndEmployeesWithStoreClosed,
+			[Description("Players (Always) | Employees (Closed store)")]
+			PlayersAlways_EmployeesStoreClosed,
+			[Description("Players and employees (Always)")]
+			PlayersAndEmployeesAlways
+		}
+
+
 		/// <summary>
 		/// Gets the total number of products to move from the equipped box into the shelf, or viceversa.
 		/// Parameter meanings change depending on the direction of transfer:
 		/// From Box to Shelf: (boxItemCount, shelfItemCount, shelfMaxCapacity)
 		/// From Shelf to Box: (shelfItemCount, boxItemCount, boxMaxCapacity)
 		/// </summary>
-		public static int GetNumTransferItems(int giverItemCount, int receiverItemCount, int receiverMaxCapacity) {
+		public static int GetNumTransferItems(int giverItemCount, int receiverItemCount, int receiverMaxCapacity, CharacterType charType) {
 			int numMovedProducts = 1;
 
-			if (ModConfig.Instance.EnableTransferProducts.Value && ModConfig.Instance.NumTransferProducts.Value != numMovedProducts &&
-					(!ModConfig.Instance.TransferMoreProductsOnlyClosedStore.Value || !GameData.Instance.isSupermarketOpen)) {
+			if (ModConfig.Instance.EnableTransferProducts.Value && ModConfig.Instance.NumTransferProducts.Value != numMovedProducts 
+					&& IsItemTransferEnabledFor(charType)) {
+
 				int receiverEmptyCapacity = receiverMaxCapacity - receiverItemCount;
 				//Calculate quantity to transfer by taking the lower number of these 3 values:
 				//	- Number of products to transfer from the config.
@@ -50,38 +70,23 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			return numMovedProducts;
 		}
 
-		/* TODO 1 - BREAKING ERROR
-		
-		While I was testing getting things in and out of a box with increased transfer products. I got this error:
+		public static bool IsItemTransferEnabledFor(CharacterType charType) {
+			if (ModConfig.Instance.ItemTransferMode.Value == PlayerEmployeeItemTransferMode.Disabled) {
+				return false;
+			}
 
-		[Error  : Unity Log] Disconnecting connection: connection(0) because handling a message of type Mirror.RpcMessage caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: UnityEngine.UnityException: Transform child out of bounds
-		  at (wrapper managed-to-native) UnityEngine.Transform.GetChild_Injected(intptr,int)
-		  at UnityEngine.Transform.GetChild (System.Int32 index) [0x00006] in <04caeab4847d44b79ab96b12952cb81a>:0
-		  at Data_Container.ItemSpawner () [0x00254] in <1ec1c12e4f004bc8aa470c37717b5c7b>:0
-		  at Data_Container.UserCode_RpcUpdateObjectOnClients__Int32__Int32__Int32 (System.Int32 index, System.Int32 PID, System.Int32 PNUMBER) [0x0001c] in <1ec1c12e4f004bc8aa470c37717b5c7b>:0
-		  at Data_Container.InvokeUserCode_RpcUpdateObjectOnClients__Int32__Int32__Int32 (Mirror.NetworkBehaviour obj, Mirror.NetworkReader reader, Mirror.NetworkConnectionToClient senderConnection) [0x0002e] in <1ec1c12e4f004bc8aa470c37717b5c7b>:0
-		  at Mirror.RemoteCalls.RemoteProcedureCalls.Invoke (System.UInt16 functionHash, Mirror.RemoteCalls.RemoteCallType remoteCallType, Mirror.NetworkReader reader, Mirror.NetworkBehaviour component, Mirror.NetworkConnectionToClient senderConnection) [0x00019] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
-		  at Mirror.NetworkIdentity.HandleRemoteCall (System.Byte componentIndex, System.UInt16 functionHash, Mirror.RemoteCalls.RemoteCallType remoteCallType, Mirror.NetworkReader reader, Mirror.NetworkConnectionToClient senderConnection) [0x00065] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
-		  at Mirror.NetworkClient.OnRPCMessage (Mirror.RpcMessage message) [0x00020] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
-		  at (wrapper delegate-invoke) System.Action`1[Mirror.RpcMessage].invoke_void_T(Mirror.RpcMessage)
-		  at Mirror.NetworkClient+<>c__DisplayClass61_0`1[T].<RegisterHandler>g__HandlerWrapped|0 (Mirror.NetworkConnection _, T value) [0x00000] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
-		  at Mirror.NetworkMessages+<>c__DisplayClass9_0`2[T,C].<WrapHandler>g__Wrapped|0 (C conn, T msg, System.Int32 _) [0x00000] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
-		  at Mirror.NetworkMessages+<>c__DisplayClass8_0`2[T,C].<WrapHandler>b__0 (Mirror.NetworkConnection conn, Mirror.NetworkReader reader, System.Int32 channelId) [0x000ac] in <06b4f157fbc44d6ebda84ac3ed72fcf2>:0
+			if (charType == CharacterType.Player) {
+				//Only 1 mode needs the store closed for the player.
+				return !GameData.Instance.isSupermarketOpen ||
+					ModConfig.Instance.ItemTransferMode.Value != PlayerEmployeeItemTransferMode.PlayersAndEmployeesWithStoreClosed;
+			} else if (charType == CharacterType.Employee) {
+				//Only 1 mode works with the store open for the employee
+				return !GameData.Instance.isSupermarketOpen ||
+					ModConfig.Instance.ItemTransferMode.Value == PlayerEmployeeItemTransferMode.PlayersAndEmployeesAlways;
+			}
 
-			I had a pretty large config number, something like 25? And I was quickly getting things in and out 
-				of a box just fine while changing between items, in a few shelves. Then I ended up in front of the fridge with
-				sodas doing the same and I quickly look down to the bottom shelf slot of sodas, (with the box empty maybe? 
-				No idea because I was also testing trying to surpass limits) and tried to take something from it
-				and this happened.
-			So first of all, try getting sodas from that specific shelf, in case its bugged somehow. 
-				Otherwise this is going to be a fun one.
-			Maybe its just a desync from poor code? and the problem is simply working with too much quantities.
-			Less probable, but it could also be that Im introducing lag to the method and even if I were moving one
-				item at a time, it could desync? If I manage to make it happen with 1 item, switch back to vanilla
-				and try to reproduce. Maybe its just a shitty game bug, though I might be making it worse?
-
-		*/
-
+			throw new InvalidOperationException($"{charType} is not a supported value in this method.");
+		}
 
 
 		//[HarmonyDebug]
@@ -98,6 +103,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			return TranspilerChangeProductTransferCount(instructions, generator, RowActionType.Remove);
 		}
 
+		//TODO 5 - Change all of these methods to use CodeMatcher instead.
 		private static IEnumerable<CodeInstruction> TranspilerChangeProductTransferCount(IEnumerable<CodeInstruction> instructions, ILGenerator generator, RowActionType rowActionType) {
 			List<CodeInstruction> instrList = instructions.ToList();
 
@@ -204,8 +210,12 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 				throw new TranspilerDefaultMsgException($"Initial RowActionType: {rowActionType}");
 			}
 
+			//Load the common, corresponding integer value of the enum into the stack as 4º parameter
+			GetNumTransferItemsInstr.Add(new CodeInstruction(OpCodes.Ldc_I4_S, (int)CharacterType.Player));
+
 			//Call GetNumTransferItems to put its return value on the stack
-			GetNumTransferItemsInstr.Add(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(IncreasedItemTransferPatch), nameof(GetNumTransferItems))));
+			GetNumTransferItemsInstr.Add(Transpilers.EmitDelegate((int p1, int p2, int p3, CharacterType p4) =>
+				IncreasedItemTransferPatch.GetNumTransferItems(p1, p2, p3, p4)));
 
 			return GetNumTransferItemsInstr;
 		}
