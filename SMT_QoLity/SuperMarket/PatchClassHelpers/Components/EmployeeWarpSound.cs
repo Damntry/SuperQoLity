@@ -4,8 +4,8 @@ using Damntry.UtilsBepInEx.Logging;
 using UnityEngine.Networking;
 using UnityEngine;
 using Damntry.Utils.Reflection;
-using System.Diagnostics;
 using SuperQoLity.SuperMarket.ModUtils;
+using Damntry.UtilsUnity.Timers;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 
@@ -16,9 +16,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 		private GameObject warpAudioGameObject;
 
 		/// <summary>Sound cooldown shared between all instances that can play this sound.</summary>
-		private static Stopwatch warpGlobalCooldownTimer = new Stopwatch();
+		private static UnityTimeStopwatch warpGlobalCooldownTimer = new UnityTimeStopwatch();
 
-		private Stopwatch warpLocalCooldownTimer = new Stopwatch();
+		private UnityTimeStopwatch warpLocalCooldownTimer = new UnityTimeStopwatch();
 
 		private const int warpGlobalCooldownMillis = 100;
 
@@ -63,8 +63,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 			//TODO 4 - An alternative idea to the global cooldown, is a global limit on the number of Plays within X ms.
 			//		Should probably add both to be honest. A tiny global cooldown, and then the limit per period on top,
 			//		and I could use PeriodicTimeLimitedCounter for it.
-			if ((!warpLocalCooldownTimer.IsRunning || warpLocalCooldownTimer.Elapsed.TotalMilliseconds >= warpGlobalCooldownMillis) &&
-					(!EmployeeWarpSound.warpGlobalCooldownTimer.IsRunning || EmployeeWarpSound.warpGlobalCooldownTimer.Elapsed.TotalMilliseconds >= warLocalCooldownMillis)) {
+			if ((!warpLocalCooldownTimer.IsRunning || warpLocalCooldownTimer.ElapsedMillisecondsPrecise >= warpGlobalCooldownMillis) &&
+					(!EmployeeWarpSound.warpGlobalCooldownTimer.IsRunning || EmployeeWarpSound.warpGlobalCooldownTimer.ElapsedMillisecondsPrecise >= warLocalCooldownMillis)) {
 				warpLocalCooldownTimer.Restart();
 				warpGlobalCooldownTimer.Restart();
 

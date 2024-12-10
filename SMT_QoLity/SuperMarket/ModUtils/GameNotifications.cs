@@ -4,12 +4,13 @@ using System.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
 using Damntry.UtilsBepInEx.Logging;
 using Damntry.Utils.Tasks;
+using Damntry.Utils.Logging;
+using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using TMPro;
 using UnityEngine;
-using static Damntry.Utils.Logging.TimeLoggerBase;
-using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using SuperQoLity.SuperMarket.Patches;
+using static Damntry.Utils.Logging.TimeLoggerBase;
+using Cysharp.Threading.Tasks;
 
 
 namespace SuperQoLity.SuperMarket.ModUtils {
@@ -30,13 +31,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		public bool NotificationSystemEnabled { get; private set; }
 
-		private CancellableSingleTask notificationTask;
+		//Use UniTaskDelay so notifications pause while the game is in the Escape menu.
+		private CancellableSingleTask<UniTaskDelay> notificationTask;
 
 		private object queueLock;
 
 
 		private GameNotifications() {
-			notificationTask = new CancellableSingleTask();
+			notificationTask = new CancellableSingleTask<UniTaskDelay>();
 			NotificationSystemEnabled = false;
 			queueLock = new object();
 		}
@@ -155,9 +157,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				if (oldestNotification != null) {
 					ShowNotification(oldestNotification);
 				}
-				
 
-				await Task.Delay(notificationFrequencyMilli, notificationTask.CancellationToken);
+				await UniTask.Delay(notificationFrequencyMilli, cancellationToken: notificationTask.CancellationToken);
 			}
 		}
 

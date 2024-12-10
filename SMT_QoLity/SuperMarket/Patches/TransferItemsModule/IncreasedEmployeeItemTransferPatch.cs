@@ -39,7 +39,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
 		public static ArgumentHelper<int> ArgMaxProductsPerRow = new(typeof(IncreasedEmployeeItemTransferPatch), nameof(ArgMaxProductsPerRow), -1);
 
-		//TODO 3 - Throw meaningfull errors when it cant match instructions.
+		//TODO 3 - Throw meaningful errors when it cant match instructions.
 		//[HarmonyDebug]
 		[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.EmployeeAddsItemToRow))]
 		[HarmonyBeforeInstance(typeof(IncreasedItemTransferPatch))]

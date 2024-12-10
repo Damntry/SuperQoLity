@@ -3,7 +3,7 @@
   <Import Project="MyPlugin.info" />
   
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net481</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -29,8 +29,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\!Global Libraries\Damntry\Damntry BepInEx Globals\!Damntry Globals BepInEx.csproj" />
-    <ProjectReference Include="..\..\!Global Libraries\Damntry\Damntry Globals\!Damntry Globals.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals\Damntry Globals.csproj" />
   </ItemGroup>
   
   <ItemGroup>
@@ -45,6 +46,9 @@
     </Reference>
     <Reference Include="PlayMaker">
       <HintPath>lib\PlayMaker.dll</HintPath>
+    </Reference>
+    <Reference Include="UniTask">
+      <HintPath>lib\UniTask.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>lib\Unity.TextMeshPro.dll</HintPath>
@@ -90,6 +94,10 @@
     </None>
   </ItemGroup>
   
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+  
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
       <SupermarketTogetherFolder>H:\!SteamLibrary\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
@@ -97,6 +105,6 @@
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
       -->
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPaths=SoundEffects&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;md &quot;%25copyTargetPath%25\%25SoundEffectsPaths%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals.*&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;del &quot;%25copyTargetPath%25\Damntry.Globals.BepInEx.dll.config&quot; /s /q&#xD;&#xA;copy &quot;$(TargetDir)\%25SoundEffectsPaths%25\Warp.mp3&quot; &quot;%25copyTargetPath%25&quot;\%25SoundEffectsPaths%25\Warp.mp3" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPaths=SoundEffects&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;md &quot;%25copyTargetPath%25\%25SoundEffectsPaths%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetDir)\%25SoundEffectsPaths%25\Warp.mp3&quot; &quot;%25copyTargetPath%25&quot;\%25SoundEffectsPaths%25\Warp.mp3" />
   </Target>
 </Project>

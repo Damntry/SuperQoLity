@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection.Emit;
 using Damntry.Utils.Logging;
 using Damntry.Utils.Timers;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.Logging;
+using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 
@@ -39,24 +39,30 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		//	with the multiplier, without them completely destroying their game.
 		private const double MaxEmployeeProcessingTimeMillis = 5d;
 
-		private static Lazy<PeriodicTimeLimitedCounter> periodicCounter = new Lazy<PeriodicTimeLimitedCounter>(() =>
-			new PeriodicTimeLimitedCounter(true, 30, 30000, true));
+		private static Lazy<PeriodicTimeLimitedCounter<UnityTimeStopwatch>> periodicCounter = new Lazy<PeriodicTimeLimitedCounter<UnityTimeStopwatch>>(() =>
+			new PeriodicTimeLimitedCounter<UnityTimeStopwatch>(true, 30, 30000, true));
 
-		private static bool IsProcessTimeoutActive;
+		private static bool IsTimeoutWarningActive;
 
+		/// <summary>
+		/// FixedUpdate is active while the game is loading, but we dont want to send performance warnings
+		/// to the user since the cpu is doing plenty of work and long process times are normal. With this
+		/// we activate the warning only while the game is in the game world.
+		/// </summary>
 		[HarmonyPrepare]
 		private static bool Prepare() {
 			GameWorldEventsPatch.OnGameWorldChange += (ev) => {
 				if (ev == GameWorldEvent.Start) {
-					IsProcessTimeoutActive = true;
+					IsTimeoutWarningActive = true;
 				} else if (ev == GameWorldEvent.Quit) {
-					IsProcessTimeoutActive = false;
+					IsTimeoutWarningActive = false;
 				}
 			};
 
 			return true;
 		}
 
+		//TODO 3 - Throw meaningful errors when it cant match instructions
 		[HarmonyPatch(typeof(NPC_Manager), "FixedUpdate")]
 		[HarmonyAfterInstance(typeof(EmployeeJobAIPatch))]
 		[HarmonyTranspiler]
@@ -104,7 +110,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 
 		private static void ProcessEmployeeJobs(NPC_Manager __instance, int childCount) {
-			Stopwatch processTime = Stopwatch.StartNew();
+			UnityTimeStopwatch processTime = UnityTimeStopwatch.StartNew();
 
 			for (int i = 0; i < ModConfig.Instance.EmployeeJobFrequencyMultiplier.Value; i++) {
 				if (currentEmployeeId >= childCount) {
@@ -121,16 +127,19 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 
 
-		private static bool ProcessTimedOut(Stopwatch processTime) {
-			if (processTime.Elapsed.TotalMilliseconds >= MaxEmployeeProcessingTimeMillis) {
-				if (IsProcessTimeoutActive) {
-					if (!periodicCounter.Value.TryIncreaseCounter()) {
-						//TODO 6 - Maybe show this in-game too, but only once the first time they start a game.
-						BepInExTimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
-							$"being automatically limited by {MyPluginInfo.PLUGIN_NAME} to improve performance. " +
-							$"To fix this, try decreasing the value of the setting \"{ModConfig.Instance.EmployeeJobFrequencyMultiplier.Definition.Key}\".",
-							TimeLoggerBase.LogCategories.PerfTest);
-					}
+		private static bool ProcessTimedOut(UnityTimeStopwatch processTime) {
+			if (!IsTimeoutWarningActive) {
+				return true;	//Stop processing more employee actions than default while loading.
+			}
+
+			if (processTime.ElapsedMillisecondsPrecise >= MaxEmployeeProcessingTimeMillis) {
+
+				if (!periodicCounter.Value.TryIncreaseCounter()) {
+					//TODO 6 - Maybe show this in-game too, but only once the first time they start a game.
+					BepInExTimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
+						$"being automatically limited by {MyPluginInfo.PLUGIN_NAME} to improve performance. " +
+						$"To fix this, try decreasing the value of the setting \"{ModConfig.Instance.EmployeeJobFrequencyMultiplier.Definition.Key}\".",
+						TimeLoggerBase.LogCategories.PerfTest);
 				}
 
 				return true;

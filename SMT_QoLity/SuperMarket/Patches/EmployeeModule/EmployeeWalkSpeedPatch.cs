@@ -1,8 +1,16 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using BepInEx.Configuration;
+using Cysharp.Threading.Tasks;
 using Damntry.Utils.Tasks;
+using Damntry.Utils.Tasks.AsyncDelay;
+using Damntry.UtilsBepInEx.Configuration;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.Logging;
+using Damntry.UtilsUnity.Tasks.AsyncDelay;
+using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using UnityEngine;
@@ -12,7 +20,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 
 	/// <summary>
-	/// Employees move faster while the store is closed. 
+	/// Employees move faster while the store is closed and no customers are in it with pending actions. 
 	/// Works with betterSMT perk speed increase.
 	/// </summary>
 	public class EmployeeWalkSpeedPatch : FullyAutoPatchedInstance {
@@ -28,8 +36,15 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		private static MethodInfo updateEmployeeStatsMethod;
 
-		//To avoid spamming the calls to UpdateEmployeeStats whenever the employee walk speed setting slider moves.
-		private DelayedThreadedSingleTask delayTask;
+		private static float accelerationBase = 0f;
+		private static float angularSpeedBase = 0f;
+
+		public static bool IsEmployeeSpeedIncreased { get; private set; }
+
+		private static CancellableSingleTask<UniTaskDelay> storeClosedTask = new CancellableSingleTask<UniTaskDelay>();
+
+		private static bool checkCustomers;
+
 
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
@@ -37,39 +52,36 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				updateEmployeeStatsMethod = AccessTools.Method(typeof(NPC_Manager), nameof(NPC_Manager.UpdateEmployeeStats));
 				//No need to check null. If it were the case, UpdateEmployeeStatsPostFix patch would have failed before reaching this point.
 
-				delayTask = new DelayedThreadedSingleTask(() => {
-					if (NPC_Manager.Instance != null) {	//Its null when game hasnt started yet. Values will be set normaly while loading game world.
+				//Whenever the slider of the setting ClosedStoreEmployeeWalkSpeedMultiplier moves, we wait for a bit
+				//	before applying the changes, to avoid possibly spamming calls to UpdateEmployeeStats.
+				DelayedThreadedSingleTask<AsyncDelay> delayTask = new(() => {
+					if (NPC_Manager.Instance != null) {	//Null when game hasnt started. We can skip since the setting will also be read while loading game world.
 						updateEmployeeStatsMethod.Invoke(NPC_Manager.Instance, null);
 					}
 				});
 
 				ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.ConfigFile.SettingChanged += 
-					(object sender, SettingChangedEventArgs args) => delayTask.Start(1500);
+					(object sender, SettingChangedEventArgs args) => delayTask.Start(1000);
 			}
 		}
 
 
-		private static float accelerationBase = 0f;
-		private static float angularSpeedBase = 0f;
-
-		public static bool IsEmployeeSpeedIncreased {  get; private set; }
-
 		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.UpdateEmployeeStats))]
-		[HarmonyPriority(Priority.Low)]
+		[HarmonyPriority(Priority.VeryLow)]	//So this patch runs after other postfixes from mods that might modify movement values.
 		[HarmonyPostfix]
-		private static void UpdateEmployeeStatsPostFix(NPC_Manager __instance) {
+		private static void UpdateEmployeeStatsPostfix(NPC_Manager __instance) {
 			foreach (object obj in __instance.employeeParentOBJ.transform) {
 				Transform transform = (Transform)obj;
 				NavMeshAgent npcNavMesh = transform.GetComponent<NavMeshAgent>();
 
-				if (GameData.Instance.isSupermarketOpen) {
+				if (GameData.Instance.isSupermarketOpen || (checkCustomers && HasCustomersWithPendingActions())) {
 					IsEmployeeSpeedIncreased = false;
 					npcNavMesh.acceleration = accelerationBase;
 					npcNavMesh.angularSpeed = angularSpeedBase;
 				} else {
 					IsEmployeeSpeedIncreased = ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value > 1;
 
-					//Multipliy over the value already set in UpdateEmployeeStats()
+					//Multiply over the value already set in UpdateEmployeeStats()
 					npcNavMesh.speed *= ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value;
 
 					if (accelerationBase == 0f || angularSpeedBase == 0f) {
@@ -95,7 +107,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				//If false, it makes them stop on its tracks when they reach their destination, instead of
 				//	overshooting if their acceleration is not high enough. Though its a bit too sudden.
 				npcNavMesh.autoBraking = !IsEmployeeSpeedIncreased;
-
 			}
 		}
 
@@ -104,16 +115,62 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		/// </summary>
 		[HarmonyPatch(typeof(GameData), nameof(GameData.NetworkisSupermarketOpen), MethodType.Setter)]
 		[HarmonyPostfix]
-		private static void NetworkisSupermarketOpenPatch() {
-			updateEmployeeStatsMethod.Invoke(NPC_Manager.Instance, null);
+		private static async void NetworkisSupermarketOpenPatch() {
+			//Since the user could manually close the store and start a new day before customers leave or the 
+			//	safety timeout is over, we make it so if there is a previous call to this method still ongoing,
+			//	we cancel it since its not relevant anymore, and then let the current one proceed normally.
+			if (storeClosedTask.IsTaskRunning) {
+				await storeClosedTask.StopTaskAndWaitAsync();
+			}
+
+			//In UpdateEmployeeStatsPostfix we only want to do the customer check if the store closes and its being called from this setter call.
+			checkCustomers = !GameData.Instance.isSupermarketOpen;
+
+			if (!GameData.Instance.isSupermarketOpen) {
+				await storeClosedTask.StartAwaitableTaskAsync(CheckCustomersPendingActions, "Wait for end of customers actions", true);
+				checkCustomers = false;
+			}
+
+			if (storeClosedTask.IsCancellationRequested) {
+				return;
+			}
+
+			updateEmployeeStatsMethod.Invoke(NPC_Manager.Instance, []);
+		}
+
+		private static async Task CheckCustomersPendingActions() {
+			//Safety timeout in case the check in HasCustomersWithPendingActions becomes outdated and never returns true.
+			UnityTimeStopwatch safetyTimeout = UnityTimeStopwatch.StartNew();
+			try {
+				//Delay continuing until HasCustomersWithPendingActions() returns false, so
+				//	UpdateEmployeeStatsPostFix runs when it can increase their speed.
+				while (HasCustomersWithPendingActions(storeClosedTask.CancellationToken) && safetyTimeout.ElapsedSeconds < 180) {
+					await UniTask.Delay(500, cancellationToken: storeClosedTask.CancellationToken);
+				}
+			} catch (OperationCanceledException) {
+				return; //Exit and let the 2º call do its logic.
+			}
+		}
+
+		private static bool HasCustomersWithPendingActions(CancellationToken cancelToken = default(CancellationToken)) {
+			//Check if there are any customers in a state where they still have things to do in the supermarket.
+			foreach (Transform customerObj in NPC_Manager.Instance.customersnpcParentOBJ.transform) {
+				cancelToken.ThrowIfCancellationRequested();
+				
+				NPC_Info customerInfo = customerObj.gameObject.GetComponent<NPC_Info>();
+				if (customerInfo.state < 99) {   //99 = Leaving for the map exit
+					return true;    //A customer still has stuff to do.
+				}
+			}
+
+			return false;
 		}
 
 		public static bool IsWarpingEnabled() {
-			//TODO 4 - Make this into an static extension to get the min/max of an AcceptableValueBase, in Damntry.Globals.BepInEx.ConfigurationManager
-			AcceptableValueRange<float> acceptableVal = (AcceptableValueRange<float>)ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Description.AcceptableValues;
+			float maxWalkSpeedMultValue = ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Description.AcceptableValues.GetMaxValue<float>();
 
 			return EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased && ModConfig.Instance.EnabledDebug.Value
-				&& ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value == acceptableVal.MaxValue;
+				&& ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value == maxWalkSpeedMultValue;
 		}
 
 	}
