@@ -59,7 +59,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 				warpSound = await AddAudioSourceComponent();
 			}
 
-			//TODO 4 - An alternative idea to the global cooldown, is a global limit on the number of Plays within X ms.
+			//TODO 5 - An alternative idea to the global cooldown, is a global limit on the number of Plays within X ms.
 			//		Should probably add both to be honest. A tiny global cooldown, and then the limit per period on top,
 			//		and I could use PeriodicTimeLimitedCounter for it.
 			if ((!warpLocalCooldownTimer.IsRunning || warpLocalCooldownTimer.ElapsedMillisecondsPrecise >= warpGlobalCooldownMillis) &&
