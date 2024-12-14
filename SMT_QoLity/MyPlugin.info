@@ -6,12 +6,15 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.7.6</Version>
+    <Version>0.7.8</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <BetterSMTSupportedVersion>1.8.5</BetterSMTSupportedVersion>
+  </PropertyGroup>
   <!-- Full debug for old Unity runtimes, instead of the modern portable one.
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>Full</DebugType>
@@ -20,7 +23,7 @@
 
   <!-- 
   Build code below was taken from "BepInEx.PluginInfoProps.props", of the "BepInEx.PluginInfoProps" NuGet package 
-  Modified to use take values for GUID and Name from different properties (Used to be <AssemblyName> for GUID, and <Product> for name).
+  Modified to take values for GUID and Name from different properties (Used to be <AssemblyName> for GUID, and <Product> for name).
   -->
   <Target Name="AddGeneratedFile" BeforeTargets="BeforeCompile;CoreCompile" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.cs">
     <PropertyGroup>
@@ -36,6 +39,7 @@ namespace $(RootNamespace)
         public const string PLUGIN_GUID = "$(BepInExPluginGuid)"%3B
         public const string PLUGIN_NAME = "$(BepInExPluginName)"%3B
         public const string PLUGIN_VERSION = "$(BepInExPluginVersion)"%3B
+        public const string BETTERSMT_SUPPORTED_VERSION = "$(BetterSMTSupportedVersion)"%3B
     }
 }
       ]]>

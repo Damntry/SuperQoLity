@@ -134,11 +134,11 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			indexStart = indexElse + 1;
 			indexEnd = indexEndElse - 1;
 
-			//if (rowActionType == RowActionType.Remove) { BepInExTimeLogger.Loggerger.LogTimeWarning($"Instruction list before:\n\n{instrList.GetFormattedIL()}\n", TimeLoggerBase.LogCategories.TempTest); }
+			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list before:\n\n{instrList.GetFormattedIL()}\n", TimeLogger.LogCategories.TempTest); }
 
 			ReplaceConstantsWithCallResult(instrList, generator, indexStart, indexEnd, rowActionType);
 
-			//if (rowActionType == RowActionType.Remove) { BepInExTimeLogger.Loggerger.LogTimeWarning($"Instruction list after:\n\n{instrList.GetFormattedIL()}\n", TimeLoggerBase.LogCategories.TempTest); }
+			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list after:\n\n{instrList.GetFormattedIL()}\n", TimeLogger.LogCategories.TempTest); }
 
 			return instrList;
 		}

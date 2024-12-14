@@ -1,4 +1,4 @@
 Globals.LoadOpCodes();
 MethodInfo mInfo = AccessTools.Method(typeof(Data_Container), "AddItemToRow", (Type[])null, (Type[])null);
 SDILReader.MethodBodyReader mr = new MethodBodyReader(mInfo);
-BepInExTimeLogger.Logger.LogTimeWarning($"IL:\n{mr.GetBodyCode()}", TimeLoggerBase.LogCategories.TempTest);
+TimeLogger.Logger.LogTimeWarning($"IL:\n{mr.GetBodyCode()}", TimeLoggerBase.LogCategories.TempTest);

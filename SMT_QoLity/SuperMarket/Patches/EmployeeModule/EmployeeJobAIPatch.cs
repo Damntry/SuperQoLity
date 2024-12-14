@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection;
 using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -17,32 +16,7 @@ using UnityEngine.AI;
 
 
 namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
-	//TODO 8 - Employees can pick up storage boxes from behind the wall. This happens in vanilla too, and I think
-	//	it started after an update, so maybe I just need to move, or replace, the storage shelves.
-	//	If that doesnt fix it either, I could ask around if it happens to them and fix it myself. Its just some
-	//	interaction distance thingy for sure, but reducing it does have other consequences. But the thing is
-	//	that they should be going for the "spotplace" or some name like that which sits in front of the storage..
-	//	maybe that spot got fucked, or the interaction radius is so big that even from behind they can reach?
-	//		I checked it out and even if I put it very far from the wall, they still go for the wall. Its like
-	//		the navmesh cant reach, and thats the closest spot it can find to the limit.
-	//		This is probably some fuckery with how I have more storage space than main area space or something.
-	//		For now I ll leave this todo here with lower priority, but in general I think I can safely ignore
-	//		this, unless I start hearing from other people having the same problem.
-
-	//TODO 3 - When an employee is moving towards a destination target, instead of just waiting until it arrives, check
-	//		periodically if the target is valid, so he doesnt try to do a job that a player has already made not possible.
-
-	//TODO 2 - Should the restocker when going to fill a shelf, reserve the storage where its going to put the
-	//		box back? I guess this would only need to happen if the box has enough items so there are any left
-	//		when finished, but even then is it a good idea?
-	//	Advantages: If there is no free storage space, it avoids the restocker going to drop the box to the left
-	//		over box space, and the storage worker to unnecessarily put a box where the other one should have been.
-	//	Disadvantages: If the restocker fills another shelf, or the shelf gets emptied on the way by customers
-	//		or a player, and this results in the box ending up empty, the storage slot has been reserved for nothing.
-
-	//TODO 1 - I dont know what changed but NPCs seem to bounce and overshoot the target a bit too much again?
-	//		I should try and leave it a bit more decent before release.
-
+	
 	/// <summary>
 	/// Changes:
 	/// - Make employees acquire jobs, so its current target (a dropped box, or a storage/shelf slot) is "marked" and 
@@ -72,24 +46,13 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableEmployeeChanges.Value;
 
-		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - employee patch failed. Employee Module inactive";
+		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Employee patch failed. Employee Module inactive";
 
 
 		public static Lazy<MethodInfo> GetMaxProductsPerRowMethod = new Lazy<MethodInfo>(() => 
 			AccessTools.Method(typeof(NPC_Manager), "GetMaxProductsPerRow", [typeof(int), typeof(int)]));
 
-		private const bool logEmployeeActions = true;
-
-		private static Stopwatch swTemp = Stopwatch.StartNew();
-
-		//TODO 0 - ADD TO FUTURE FEATURES: Key binds for employee assignments.
-		//	Timekeeper: So like at end of day I can hit V and it assigns all employees to restocking, then
-		//	a default keybind like, 3 cashiers, 15 restocking, 2 security.
-		//	I could add %, plus fill cashier spots and stuff, I dont know, I ll need to think this through.
-
-		//TODO Another possible future idea. Change settings (some) in game using canvas or whatever it is like
-		//		a normal game interface? Could do it in the escape key like an external framework for mods to
-		//		add their settings.
+		private const bool logEmployeeActions = false;
 
 
 		//TODO 4 - Pretty big change. I should trash EmployeeNPCControl and create a new system to handle employee jobs.
@@ -106,6 +69,13 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		//	activate and handle the jobs itself.
 		//	Basically this would make it so I keep my own Employee AI system, and whatever the dev releases after it, I would
 		//	have to implement manually or maybe adapt and extend, but any changes would now be much easier to make.
+		//
+		//	Use Unity movement only for the most basic stuff, and handle deceleration, acceleration, and rotation myself.
+		//	For rotation, disable updateRotation and use Quaternion.RotateTowards to set the destination, aswell as
+		//	controlling how much should it decelerate when approaching the end of a path point, based on how tight the curve
+		//	is so it doesnt overshoot targets, and the acceleration towards the next one depending on remaining distance.
+		//	Maybe use Vector3.SmoothDamp for better looking accel/decel, but I need to check how expensive it is.
+
 
 		[HarmonyPatch("EmployeeNPCControl")]
 		[HarmonyPrefix]
@@ -116,11 +86,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			NavMeshAgent component2 = gameObject.GetComponent<NavMeshAgent>();
 
 			int taskPriority = component.taskPriority;
-
-			if (swTemp.ElapsedMilliseconds > 5000) {
-				LOG.DEBUG(EmployeeTargetReservation.GetReservationStatusLog());
-				swTemp.Restart();
-			}
 
 			if (state == -1) {
 				return false;
@@ -486,7 +451,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									LOG.DEBUG($"Restocker #{GetUniqueId(component)}: Box recycled.", logEmployeeActions);
 									float num7 = 1.5f * GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
 									AchievementsManager.Instance.CmdAddAchievementPoint(2, 1);
-									GameData.Instance.CmdAlterFunds(num7);
+									SMTAntiCheat_Helper.Instance.CmdAlterFunds(num7);
+									
 									component.state = 6;
 									return false;
 								}
@@ -624,7 +590,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									LOG.DEBUG($"Storage #{GetUniqueId(component)}: Recycling.", logEmployeeActions);
 									float num10 = 1.5f * GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
 									AchievementsManager.Instance.CmdAddAchievementPoint(2, 1);
-									GameData.Instance.CmdAlterFunds(num10);
+									SMTAntiCheat_Helper.Instance.CmdAlterFunds(num10);
 									component.state = 5;
 									return false;
 								}
@@ -746,11 +712,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 
 		private static bool IsEmployeeAtDestination(NavMeshAgent employeePathing) {
-			//TODO 1 - Temporary log
-			if (employeePathing.pathStatus == NavMeshPathStatus.PathInvalid) {
-				LOG.DEBUG($"Employee {employeePathing.gameObject.GetComponent<NPC_Info>().netId} " + $" has invalid path status with warping disabled");
-			}
-
 			if (EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased) {
 
 				if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && 
@@ -761,14 +722,22 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 					return false;
 				}
 
-				//Reduced "arrive" requirements to avoid employees bouncing around when at high speeds.
+				//Mitche was playing around with stoppingDistance, so this is in case he changes it.
 				float stoppingDistance = Math.Max(employeePathing.stoppingDistance, 1);
-				if (!employeePathing.pathPending && employeePathing.remainingDistance <= stoppingDistance &&
-						(!employeePathing.hasPath || employeePathing.velocity.sqrMagnitude < (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 2))) {
 
-					employeePathing.velocity = Vector3.zero;
-					return true;
+				//Reduced "arrive" requirements to avoid employees bouncing around when at high speeds.
+				if (!employeePathing.pathPending && employeePathing.remainingDistance <= 5) {
+					if (employeePathing.remainingDistance <= stoppingDistance && 
+						(!employeePathing.hasPath || employeePathing.velocity.sqrMagnitude < (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 5))) {
+
+						employeePathing.velocity = Vector3.zero;
+						return true;
+					} else if (!EmployeeWalkSpeedPatch.IsWarpingEnabled()) {
+						//Extra braking power to further reduce employees overshooting targets
+						employeePathing.velocity = employeePathing.desiredVelocity / (3.5f / employeePathing.remainingDistance);
+					}
 				}
+
 			} else {
 				//Base game logic
 				return !employeePathing.pathPending && employeePathing.remainingDistance <= employeePathing.stoppingDistance &&

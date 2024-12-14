@@ -5,7 +5,6 @@ using Damntry.Utils.Logging;
 using Damntry.Utils.Timers;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsBepInEx.Logging;
 using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
@@ -136,10 +135,10 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 				if (!periodicCounter.Value.TryIncreaseCounter()) {
 					//TODO 6 - Maybe show this in-game too, but only once the first time they start a game.
-					BepInExTimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
+					TimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
 						$"being automatically limited by {MyPluginInfo.PLUGIN_NAME} to improve performance. " +
 						$"To fix this, try decreasing the value of the setting \"{ModConfig.Instance.EmployeeJobFrequencyMultiplier.Definition.Key}\".",
-						TimeLoggerBase.LogCategories.PerfTest);
+						TimeLogger.LogCategories.PerfTest);
 				}
 
 				return true;

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using Damntry.UtilsBepInEx.Logging;
+using Damntry.Utils.Logging;
 using HarmonyLib;
 using HighlightPlus;
 using SuperQoLity.SuperMarket.ModUtils;
@@ -10,7 +10,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 	public class ShelfHighlighting {
 
 		public static readonly Lazy<MethodInfo> HighlightShelfMethod = new Lazy<MethodInfo>(() =>
-			AccessTools.Method($"{BetterSMT_Helper.BetterSMTInfo.PatchesNamespace}.PlayerNetworkPatch:HighlightShelf"));
+			AccessTools.Method($"{ModInfoBetterSMT.PatchesNamespace}.PlayerNetworkPatch:HighlightShelf"));
 
 		public enum ShelfType {
 			ProductDisplay,
@@ -87,7 +87,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 						if (highlightsMarker != null) {
 							HighlightShelf(highlightsMarker.GetChild(j).GetChild(0), enableSlotHighlight, ModConfig.Instance.PatchBetterSMT_StorageSlotHighlightColor.Value);
 						} else {
-							BepInExTimeLogger.Logger.LogTimeError("The highlightsMarker object for the storage could not be found. Storage slot highlighting wont work.", Damntry.Utils.Logging.TimeLoggerBase.LogCategories.Highlight);
+							TimeLogger.Logger.LogTimeError("The highlightsMarker object for the storage could not be found. Storage slot highlighting wont work.", Damntry.Utils.Logging.TimeLogger.LogCategories.Highlight);
 						}
 					} else {
 						highlightsMarker = shelf.Find(shelfData.highlightsName);
@@ -155,7 +155,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 			HighlightEffect highlightEffect = t.GetComponent<HighlightEffect>();
 			if (highlightEffect == null) {
 				highlightEffect = t.gameObject.AddComponent<HighlightEffect>();
-				BepInExTimeLogger.Logger.LogTimeWarning($"Transform {t.GetPath()} doesnt have an highlight effect", Damntry.Utils.Logging.TimeLoggerBase.LogCategories.TempTest);
+				BepInExTimeLogger.Logger.LogTimeWarning($"Transform {t.GetPath()} doesnt have an highlight effect", Damntry.Utils.Logging.TimeLogger.LogCategories.TempTest);
 			}
 
 			if (color != null) {

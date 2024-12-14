@@ -1,5 +1,4 @@
 ﻿using BepInEx;
-using Damntry.Utils;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
@@ -9,22 +8,27 @@ using Damntry.UtilsBepInEx.HarmonyPatching;
 
 namespace SuperQoLity {
 
-	//Soft dependency so we load after BetterSMT if it exists.
-	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID_NEW, BepInDependency.DependencyFlags.SoftDependency)]
-	[BepInDependency(BetterSMT_Helper.BetterSMTInfo.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+	//Soft dependency so we load after ika.smtanticheat and BetterSMT if they exist.
+	[BepInDependency(ModInfoSMTAntiCheat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+	[BepInDependency(ModInfoBetterSMT.GUID, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {
 
-		//TODO 2 - Check if my mod is using too much memory comparing before and after. Maybe the library caching is too much? Now that
-		//		I can debug the game I should try a memory performance thingy.
-
 		//TODO 4 - Make it so building only copies the .pdb files if we are in Debug project configuration
+
+		//TODO 3 - When warp mode the player might not even know why, if he got the config of someone else
+		//	or he is not sure what he is doing. I should probably change the DEBUG into a "cheat" section
+		//	where I have all these options that I consider to be beyond what is QoL, and the debug option
+		//	would be in it too.
+
+		//TODO 1 - Go through log uses that send notifications and see what to do with ones that are too long.
+		//		Maybe I should go ahead with the star wars text thingy?
+
 
 		public void Awake() {
 			//Init logger
-			BepInExTimeLogger.InitializeTimeLogger(MyPluginInfo.PLUGIN_NAME, false);
-			GlobalConfig.Logger = BepInExTimeLogger.Logger;
-
+			TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(false, MyPluginInfo.PLUGIN_NAME);
+			
 			//Register patch containers.
 			AutoPatcher.RegisterAllAutoPatchContainers();
 
@@ -36,27 +40,27 @@ namespace SuperQoLity {
 			//Init in-game notifications
 			GameNotifications.Instance.InitializeGameNotifications();
 
-			BetterSMT_Helper.LogCurrentBetterSMTStatus();
+			BetterSMT_Helper.Instance.LogCurrentBetterSMTStatus();
 
 			//Start patching process of enabled auto patch classes
 			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
 			//Compare method signatures and log results
-			StartMethodSignatureCheck().LogResultMessage(TimeLoggerBase.LogTier.Debug, false, true);
+			StartMethodSignatureCheck().LogResultMessage(TimeLogger.LogTier.Debug, false, true);
 
 			StupidMessageSendator2000_v16_MKII_CopyrightedName.SendWelcomeMessage(allPatchsOK);
 
-			BepInExTimeLogger.Logger.LogTime(TimeLoggerBase.LogTier.Message, $"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", TimeLoggerBase.LogCategories.Loading);
+			TimeLogger.Logger.LogTimeMessage($"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", TimeLogger.LogCategories.Loading);
 		}
 
 		private void DebugModeHandler() {
 #if DEBUG
-			BepInExTimeLogger.DebugEnabled = true;
-			BepInExTimeLogger.Logger.LogTimeWarning("THIS BUILD IS IN DEBUG MODE.", TimeLoggerBase.LogCategories.Loading);
+			TimeLogger.DebugEnabled = true;
+			TimeLogger.Logger.LogTimeWarning("THIS BUILD IS IN DEBUG MODE.", TimeLogger.LogCategories.Loading);
 #else
 			if (ModConfig.Instance.EnabledDebug.Value) {
-				BepInExTimeLogger.DebugEnabled = true;
-				BepInExTimeLogger.Logger.LogTimeWarning("Debug mode enabled.", TimeLoggerBase.LogCategories.Loading);
+				TimeLogger.DebugEnabled = true;
+				TimeLogger.Logger.LogTimeWarning("Debug mode enabled.", TimeLogger.LogCategories.Loading);
 			}
 #endif
 		}

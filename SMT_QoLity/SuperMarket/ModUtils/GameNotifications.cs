@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
-using Damntry.UtilsBepInEx.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.Utils.Logging;
 using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using TMPro;
 using UnityEngine;
 using SuperQoLity.SuperMarket.Patches;
-using static Damntry.Utils.Logging.TimeLoggerBase;
+using static Damntry.Utils.Logging.TimeLogger;
 using Cysharp.Threading.Tasks;
 
 
@@ -95,10 +94,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				notificationsOk = EnableShowingNotifications();
 
 			} catch (Exception ex) {
-				BepInExTimeLogger.Logger.LogTimeExceptionWithMessage("Error while enabling game notifications.", ex, TimeLoggerBase.LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeExceptionWithMessage("Error while enabling game notifications.", ex, TimeLogger.LogCategories.Notifs);
 			} finally {
 				if (!notificationsOk) {
-					TimeLoggerBase.RemoveGameNotificationSupport();
+					TimeLogger.RemoveGameNotificationSupport();
 				}
 			}
 		}
@@ -108,7 +107,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				notificationTask.StartTaskAsync(() => notificationConsumer(), "Notification Consumer", false).FireAndForget(LogCategories.Notifs);
 				return true;
 			} else {
-				BepInExTimeLogger.Logger.LogTimeWarning("EnableShowingNotifications() was called but the notification system is not enabled. Notifications wont show.", LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeWarning("EnableShowingNotifications() was called but the notification system is not enabled. Notifications wont show.", LogCategories.Notifs);
 				return false;
 			}
 
@@ -131,11 +130,11 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 					normalNotifExists = true;
 				}
 			} catch (Exception ex) {
-				BepInExTimeLogger.Logger.LogTimeExceptionWithMessage("Exception while accessing the game notification objects.", ex, LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeExceptionWithMessage("Exception while accessing the game notification objects.", ex, LogCategories.Notifs);
 			}
 
 			if (!importantNotifExists && !normalNotifExists) {
-				BepInExTimeLogger.Logger.LogTimeError("The prefab and transform objects required for notifications cant be used. " +
+				TimeLogger.Logger.LogTimeError("The prefab and transform objects required for notifications cant be used. " +
 					"The mod notification system will be disabled.", LogCategories.Notifs);
 				return NotificationSystemEnabled = false;
 			}
@@ -176,10 +175,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				//	has ever been deleted, add to the end of the queue a message saying something like "More errors not shown. Check LogOutput.log"
 
 				//Queue is full enough, Discard. Whatever error or warning it was has been at least logged already.
-				BepInExTimeLogger.Logger.LogTimeInfo($"Notification queue already has the max limit of {notificationQueue.Count} messages waiting. Discarding this message.", LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeInfo($"Notification queue already has the max limit of {notificationQueue.Count} messages waiting. Discarding this message.", LogCategories.Notifs);
 				return;
 			} else if (notificationQueue.Count > 0) {
-				BepInExTimeLogger.Logger.LogTimeInfo($"Queueing notification. Notification queue had {notificationQueue.Count} messages waiting.", LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeInfo($"Queueing notification. Notification queue had {notificationQueue.Count} messages waiting.", LogCategories.Notifs);
 			}
 
 			notificationQueue.Enqueue(new NotificationInfo(message, logLevel));

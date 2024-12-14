@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -72,12 +71,12 @@ namespace SuperQoLity.SuperMarket.Patches {
 					}
 				} catch (Exception ex) {
 					state = DetectionState.Failed;
-					BepInExTimeLogger.Logger.LogTimeExceptionWithMessage("Error while trying to detect game finished loading.", ex, TimeLoggerBase.LogCategories.Loading);
+					TimeLogger.Logger.LogTimeExceptionWithMessage("Error while trying to detect game finished loading.", ex, TimeLogger.LogCategories.Loading);
 				} finally {
 					GameWorldEventsPatch instance = Container<GameWorldEventsPatch>.Instance;
 					if (state == DetectionState.Failed) {
 						//Something changed and it wont work anymore without a mod update. Unpatch everything and forget it exists.
-						BepInExTimeLogger.Logger.LogTimeError(instance.ErrorMessageOnAutoPatchFail, TimeLoggerBase.LogCategories.Loading);
+						TimeLogger.Logger.LogTimeError(instance.ErrorMessageOnAutoPatchFail, TimeLogger.LogCategories.Loading);
 						instance.UnpatchInstance();
 
 						sw.Stop();

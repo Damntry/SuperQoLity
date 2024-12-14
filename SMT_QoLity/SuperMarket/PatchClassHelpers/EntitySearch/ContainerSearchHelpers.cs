@@ -121,7 +121,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 		public static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
 			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
-				(storageId, slotId, productId, quantity) => {
+				(storageId, slotId, productId, quantity, storageObjT) => {
 
 					if (productId == boxIDProduct && quantity > 0 &&
 							quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
@@ -139,7 +139,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 		public static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, int boxIDProduct) {
 			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
-				(storageIndex, slotIndex, productId, quantity) => {
+				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 					//Ìf boxIDProduct is zero or positive, it means finding free storage with the same assigned item id is the max
 					//	priority, but if it is unassigned or unlabeled, the priority setting is used to value one over the other.

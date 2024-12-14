@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.Logging;
 
 
 namespace SuperQoLity.SuperMarket.ModUtils {
@@ -24,9 +23,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		public static void SendWelcomeMessage(bool noErrorOccurred) {
 			if (noErrorOccurred) {
-				BepInExTimeLogger.Logger.LogTime(TimeLoggerBase.LogTier.Message, $"Supermarket tip of the day: {GetRandomWelcomeMessage()}", TimeLoggerBase.LogCategories.Loading);
+				TimeLogger.Logger.LogTimeMessage($"Supermarket tip of the day: {GetRandomWelcomeMessage()}", TimeLogger.LogCategories.Loading);
 			} else {
-				BepInExTimeLogger.Logger.LogTimeFatal($"Random Error Pro Tip: {GetRandomHelpMessage()}", TimeLoggerBase.LogCategories.Loading);
+				TimeLogger.Logger.LogTimeFatal($"Random Error Pro Tip: {GetRandomHelpMessage()}", TimeLogger.LogCategories.Loading);
 			}
 		}
 

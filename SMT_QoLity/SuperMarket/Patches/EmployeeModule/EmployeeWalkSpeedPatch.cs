@@ -8,7 +8,6 @@ using Damntry.Utils.Tasks;
 using Damntry.Utils.Tasks.AsyncDelay;
 using Damntry.UtilsBepInEx.Configuration;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsBepInEx.Logging;
 using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
@@ -54,7 +53,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 				//Whenever the slider of the setting ClosedStoreEmployeeWalkSpeedMultiplier moves, we wait for a bit
 				//	before applying the changes, to avoid possibly spamming calls to UpdateEmployeeStats.
-				DelayedThreadedSingleTask<AsyncDelay> delayTask = new(() => {
+				DelayedSingleTask<AsyncDelay> delayTask = new(() => {
 					if (NPC_Manager.Instance != null) {	//Null when game hasnt started. We can skip since the setting will also be read while loading game world.
 						updateEmployeeStatsMethod.Invoke(NPC_Manager.Instance, null);
 					}
@@ -99,8 +98,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 					if (accelerationBase == npcNavMesh.acceleration) {
 						//TODO 5 - Make these 2 options below into an extra advanced setting, in
 						//	case something changes in the future and it needs extra tunning.
-						npcNavMesh.acceleration = accelerationBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.80f));
-						npcNavMesh.angularSpeed = angularSpeedBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 25000f));
+						npcNavMesh.acceleration = accelerationBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 0.70f));
+						npcNavMesh.angularSpeed = angularSpeedBase * (1 + (ModConfig.Instance.ClosedStoreEmployeeWalkSpeedMultiplier.Value * 25000000f));
 					}
 				}
 

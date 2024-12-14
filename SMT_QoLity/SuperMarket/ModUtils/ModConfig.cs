@@ -2,19 +2,32 @@
 using BepInEx;
 using BepInEx.Configuration;
 using Damntry.Utils.ExtensionMethods;
-using Damntry.UtilsBepInEx.ConfigurationManager;
+using Damntry.UtilsBepInEx.Configuration.ConfigurationManager;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using SuperQoLity.SuperMarket.Patches.BetterSMT_Module;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
-using static SuperQoLity.SuperMarket.ModUtils.BetterSMT_Helper;
 using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearchHelpers;
 using static SuperQoLity.SuperMarket.Patches.TransferItemsModule.IncreasedItemTransferPatch;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
 	public class ModConfig {
+
+
+		//TODO 2 - I tested the config editor of Gale mod manager from Thunderstore, and while the interface was nice, the
+		//		editor was as vanilla as I imagined since it only supports the most basic bepinex config settings.
+		//		The problem is that my notes headers are sections, and those have very little space in this manager so you
+		//		cant even read them unless you maximize the window. Then there is the important note with an empty key, which
+		//		makes it so you cant hover the key text to see the note description (it was only meant to be read from the file
+		//		which always shows descriptions, and they are usually pretty long).
+		//
+		//	Its getting bad enough that I should be using 2 configs: the one Im using now when Config Manager is detected, and
+		//	a new one when its not. But this is not really very viable because if the user adds/removes Config Manager, the config
+		//	file would become a complete mess. I would actually need to manually delete the config file, and force a save.
+
+		//TODO 1 - Many descriptions are way too long. Its good to provide plenty of detail but I ve gone overboard with it.
 
 		public static ModConfig Instance {
 			get {
@@ -89,7 +102,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: "The game has a limit of 50 employee \"actions\" per second. This means that if you have 50 employees (using mods), an " +
 								"employee can only do a single action every second, no matter if assigned to a job or not. The more employees you " +
 								"have, or the faster they move, the worse and more noticeable it gets.\nThis fix is a multiplier to the number of " +
-								"actions they can perform compared to base game, but there may be a noticeable performance hit depending on your potato system.\n" +
+								"actions they can perform compared to base game. It doesnt make them faster than normal, it just avoids them slowing down " +
+								"when the number of employees increases, but there may be a noticeable performance hit depending on your potato system.\n" +
 								"Generally you should set this to the lowest possible value where you stop noticing any employee slowdowns, but if you " +
 								"have a decent CPU you can set it very high.",
 				acceptableValueRange: new AcceptableValueRange<int>(1, 50),
@@ -183,7 +197,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				defaultValue: true,
 				description: "If enabled, in addition to BetterSMT highlighting the storage shelf itself, individual storage slots that " +
 				"have that product assigned will also be highlighted, empty or not.",
-				disabled: BetterSMTLoadStatus.Value == BetterSMT_Status.NotLoaded);
+				disabled: BetterSMT_Helper.Instance.IsModLoadedAndEnabled);
 
 
 			string colorSettingHelpMessage = $"\nRequires starting the game with the setting \"{EnablePatchBetterSMT_ExtraHighlightFunctions.Definition.Key}\" enabled.\n\n" +
@@ -255,11 +269,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 
 		private string GetBetterSMTConfigMessage() {
-			return BetterSMTLoadStatus.Value switch {
-				BetterSMT_Status.NotLoaded => $"{BetterSMTInfo.Name} is not loaded. Setting unused.",
-				BetterSMT_Status.DifferentVersion or BetterSMT_Status.LoadedOk => $"Highlight storage slots {RequiresRestartSymbol}",
-				_ => throw new NotImplementedException($"The switch case {BetterSMTLoadStatus.Value} is not implemented."),
-			};
+			return BetterSMT_Helper.Instance.IsModLoadedAndEnabled ?
+				$"Highlight storage slots {RequiresRestartSymbol}" :
+				$"{ModInfoBetterSMT.Name} is not loaded. Setting unused.";
 		}
 
 	}

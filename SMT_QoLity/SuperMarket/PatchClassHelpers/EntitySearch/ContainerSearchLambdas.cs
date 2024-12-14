@@ -1,5 +1,6 @@
 ﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
+using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 	public class ContainerSearchLambdas {
@@ -33,16 +34,18 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		/// <param name="slotIndex">Child index of current storage slot.</param>
 		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
 		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
+		/// <param name="storageObjT">The storage object transform.</param>
 		/// <returns>The <see cref="LoopStorageAction"/> to perform in the current loop. </returns>
-		public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity);
+		public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity, Transform storageObjT);
 
 		/// <summary>Defines the parameters available in the lambda to iterate through storage slots.</summary>
 		/// <param name="storageIndex">Child index of the current storage shelf.</param>
 		/// <param name="slotIndex">Child index of current storage slot.</param>
 		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
 		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
+		/// <param name="storageObjT">The storage object transform.</param>
 		/// <returns>The <see cref="LoopAction"/> to perform.</returns>
-		public delegate LoopAction StorageLoopFunction(int storageIndex, int slotIndex, int productId, int quantity);
+		public delegate LoopAction StorageLoopFunction(int storageIndex, int slotIndex, int productId, int quantity, Transform storageObjT);
 
 		//TODO 6 - Join ForEachStorageSlotLambda and ForEachProductShelfSlotLambda into a common private method.
 		//		They are the same thing and there is no sense in duplicating their functionality.
@@ -57,7 +60,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		/// <returns></returns>
 		public static void ForEachStorageSlotLambda(NPC_Manager __instance, bool checkNPCStorageTarget, StorageLoopFunction storageSlotLambda) {
 			for (int i = 0; i < __instance.storageOBJ.transform.childCount; i++) {
-				int[] productInfoArray = __instance.storageOBJ.transform.GetChild(i).GetComponent<Data_Container>().productInfoArray;
+				Transform storageObjT = __instance.storageOBJ.transform.GetChild(i);
+				int[] productInfoArray = storageObjT.GetComponent<Data_Container>().productInfoArray;
 				int num = productInfoArray.Length / 2;
 				for (int j = 0; j < num; j++) {
 					//Check if this storage slot is already in use by another NPC
@@ -67,7 +71,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 					int storageProductId = productInfoArray[j * 2];
 					int quantity = productInfoArray[j * 2 + 1];
 
-					if (storageSlotLambda(i, j, storageProductId, quantity) == LoopAction.Exit) {
+					if (storageSlotLambda(i, j, storageProductId, quantity, storageObjT) == LoopAction.Exit) {
 						return;
 					}
 				}
@@ -89,9 +93,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			}
 
 			ForEachStorageSlotLambda(__instance, checkNPCStorageTarget,
-				(storageId, slotId, productId, quantity) => {
+				(storageId, slotId, productId, quantity, storageObjT) => {
 
-					LoopStorageAction loopStorageAction = storageSlotLambda(storageId, slotId, productId, quantity);
+					LoopStorageAction loopStorageAction = storageSlotLambda(storageId, slotId, productId, quantity, storageObjT);
 
 					if (loopStorageAction == LoopStorageAction.SaveHighPrio || loopStorageAction == LoopStorageAction.SaveAndExit) {
 						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);

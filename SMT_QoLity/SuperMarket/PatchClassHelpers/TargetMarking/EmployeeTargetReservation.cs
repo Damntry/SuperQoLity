@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine.AI;
 using UnityEngine;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
-using System.Linq;
-using Damntry.UtilsBepInEx.Logging;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
@@ -37,9 +35,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		/// </summary>
 		public static Dictionary<NPC_Info, Vector3> LastDestinationSet { get; private set; } = new();
 
-
-		//TODO 2 - Eventually this info will become the new NPC watch panel. But instead of returning
-		//		a string, I ll return a new info class so the caller formats it however it wants.
+		/*	TODO 5 - Eventually this info will become the new NPC watch panel. But instead of returning
+		//	a string, I ll return a new info class so the caller formats it however it wants.
+		//		
 		//Actually useful stats:
 		//	Employee total time idle while store open
 		//	% of time working per TaskPriority while store open
@@ -56,8 +54,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static string GetNpcReservations<T>(Dictionary<NPC_Info, T> targets) {
-			//TODO 0 - Group by taskpriority of the employee and show it
-			//Grouping is not working right, but it needs a remake to add new features so not worth fixing.
+			//TODO 5 - Group by taskpriority of the employee and show it.
+			//	The grouping below is not working right but it needs a remake to add new features, so not worth fixing.
 			return string.Join("\n", 
 				targets.Keys
 					.GroupBy(npc => npc.taskPriority)
@@ -71,6 +69,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 					})
 			);
 		}
+		*/
 
 		public static void ClearNPCReservations(this NPC_Info NPC) {
 			DeleteNPCTargets(NPC);
