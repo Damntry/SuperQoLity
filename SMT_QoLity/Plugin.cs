@@ -1,10 +1,14 @@
-﻿using BepInEx;
+﻿using System;
+using BepInEx;
+using Damntry.Utils.ExtensionMethods;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.Logging;
+using Damntry.UtilsUnity.Components;
+using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
-using Damntry.UtilsBepInEx.HarmonyPatching;
+using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
 
 
 namespace SuperQoLity {
@@ -15,35 +19,37 @@ namespace SuperQoLity {
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {
 
-		//TODO 4 - Make it so building only copies the .pdb files if we are in Debug project configuration
+		public static bool IsSolutionInDebugMode = false;
 
 		public void Awake() {
 			//Init logger
 			TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(
 				GameNotifications.RemoveSpecialNotifNewLinesForLog, false, MyPluginInfo.PLUGIN_NAME);
 
-		//TODO 1 - Go through log uses that send notifications and see what to do with ones that are too long.
-		//		Maybe I should go ahead with the star wars text thingy?
+			//Early debug check so we can enable debugging if solution is in DEBUG
+			SolutionDebugModeHandler();
 
+			//Basic config pre-initialization for ConfigDebugModeHandler
+			ModConfig.Instance.InitializeConfig(this);
 
-		public void Awake() {
-			//Init logger
-			TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(false, MyPluginInfo.PLUGIN_NAME);
+			//Late debug check to read from the config
+			ConfigDebugModeHandler();
 			
 			//Register patch containers.
 			AutoPatcher.RegisterAllAutoPatchContainers();
 
-			//Init config
-			ModConfig.Instance.InitializeConfig(this);
-
-			DebugModeHandler();
+			ModConfig.Instance.StartConfigBinding();
 
 			//Init in-game notifications
 			GameNotifications.Instance.InitializeGameNotifications();
 
-			BetterSMT_Helper.Instance.LogCurrentBetterSMTStatus();
+			//Start hotkey system
+			KeyPressDetection.InitializeAsync(() => FirstPersonController.Instance, () => !AuxUtils.IsChatOpen())
+				.FireAndForget(LogCategories.Loading);
 
-			//Start patching process of enabled auto patch classes
+			TimeLogger.Logger.LogTimeDebug($"{MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) initialization finished.", LogCategories.Loading);
+
+			//Start patching process of auto patch classes
 			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
 			//Compare method signatures and log results
@@ -53,14 +59,20 @@ namespace SuperQoLity {
 			TimeLogger.Logger.LogTimeMessage($"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", LogCategories.Loading);
 		}
 
-		private void DebugModeHandler() {
+		private void SolutionDebugModeHandler() {
 #if DEBUG
+			IsSolutionInDebugMode = true;
 			TimeLogger.DebugEnabled = true;
-			TimeLogger.Logger.LogTimeWarning("THIS BUILD IS IN DEBUG MODE.", TimeLogger.LogCategories.Loading);
-#else
-			if (ModConfig.Instance.EnabledDebug.Value) {
+			TimeLogger.Logger.LogTimeWarning("THIS BUILD IS IN DEBUG MODE.", LogCategories.Loading);
+#endif
+		}
+
+		private void ConfigDebugModeHandler() {
+#if !DEBUG
+			if (ModConfig.Instance.IsDebugConfig()) {
 				TimeLogger.DebugEnabled = true;
-				TimeLogger.Logger.LogTimeWarning("Debug mode enabled.", TimeLogger.LogCategories.Loading);
+				TimeLogger.Logger.LogTimeWarning($"{MyPluginInfo.PLUGIN_NAME} Debug Dev mode enabled.", 
+					LogCategories.Loading);
 			}
 #endif
 		}
