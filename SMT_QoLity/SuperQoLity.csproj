@@ -123,6 +123,10 @@
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
   
+  <ItemGroup>
+    <Folder Include="SuperMarket\Patches\Debug\" />
+  </ItemGroup>
+  
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <PropertyGroup>
       <SupermarketTogetherFolder>H:\!SteamLibrary\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>

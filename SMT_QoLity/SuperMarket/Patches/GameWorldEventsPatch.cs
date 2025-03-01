@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
 using Damntry.Utils.Logging;
-using HarmonyLib;
-using UnityEngine;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using HarmonyLib;
+using Mirror;
+using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.Patches {
 
-	public enum GameWorldEvent {
-		Start,
-		Quit
-	}
-
 	//TODO 6 - Find a proper way to get when the game finishes loading, instead of this all-nighter borne curse.
+	//		It has to be somewhere in the FSM.
 	/// <summary>
 	/// Detects:
 	///		- When the game finishes loading by checking when the black fade out transition ends.
@@ -26,9 +23,6 @@ namespace SuperQoLity.SuperMarket.Patches {
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Detection of finished game loading failed. Disabled";
 
 
-		public static event Action<GameWorldEvent> OnGameWorldChange;
-
-
 		private class DetectGameLoadFinished {
 
 			private enum DetectionState {
@@ -37,46 +31,74 @@ namespace SuperQoLity.SuperMarket.Patches {
 				Failed
 			}
 
-			private static Stopwatch sw = Stopwatch.StartNew();
+
+			private static readonly Stopwatch sw = Stopwatch.StartNew();
 
 			private static GameObject transitionBCKobj;
 
 			private static DetectionState state = DetectionState.Initial;
 
+						
+			[HarmonyPatch(typeof(NetworkManager), nameof(NetworkManager.OnStartServer))]
+			[HarmonyPrefix]
+			public static void OnStartHostPrefixPatch() {
+				SetLoadingWorld();
+			}
+
+			[HarmonyPatch(typeof(NetworkManager), nameof(NetworkManager.OnStartClient))]
+			[HarmonyPrefix]
+			public static void OnStartClientPrefixPatch() {
+				//A host also triggers OnStartClient, and we only need to trigger once.
+				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+					SetLoadingWorld();
+				}
+			}
+
+			private static void SetLoadingWorld() {
+				GameOnlineMode mode = NetworkServer.activeHost ? GameOnlineMode.Host : GameOnlineMode.Client;
+				WorldState.CurrenOnlineMode = mode;
+				WorldState.SetGameWorldState(GameWorldEvent.LoadingWorld);
+			}
+
+			[HarmonyPatch(typeof(GameCanvas), "Awake")]
+			[HarmonyPostfix]
+			private static void GameCanvasAwake(GameCanvas __instance) {
+				WorldState.SetGameWorldState(GameWorldEvent.CanvasLoaded);
+			}
 
 			[HarmonyPatch(typeof(GameCanvas), "Update")]
 			[HarmonyPostfix]
 			private static void GameCanvasUpdatePostFix(GameCanvas __instance) {
-				if (sw.ElapsedMilliseconds < 500) { //Reduce check frequency for performance.
+				if (sw.ElapsedMilliseconds < 100) { //Reduce check frequency for performance.
 					return;
 				}
 
 				try {
-					//Every time we exit to main menu, transitionBCKobj becomes null again.
+					//Every time we exit to main menu, transitionBCKobj becomes null again. So at
+					//	this point where GameCanvas is updating, we know we are loading the game.
 					if (transitionBCKobj == null) {
 						state = DetectionState.Initial;
+
 						transitionBCKobj = GameObject.Find("MasterOBJ/MasterCanvas/TransitionBCK");
 					}
 
 					//The moment transitionBCKobj is not null, and then its activeSelf becomes false, is
 					//	when the loading black fadeout has finished and the game has started fully.
+					//	Seems like transitionBCKobj is controlled in some FSM with a timer that is not
+					//	hooked (or badly hooked), to when the scene finishes loading. Maybe even by design.
 					if (transitionBCKobj != null && !transitionBCKobj.activeSelf && state == DetectionState.Initial) {
-						//TODO 3 - Test this transitionBKC thing while being a client.
-
 						state = DetectionState.Success;
 
-						if (OnGameWorldChange != null) {
-							OnGameWorldChange(GameWorldEvent.Start);
-						}
+						WorldState.SetGameWorldState(GameWorldEvent.WorldStarted);
 					}
 				} catch (Exception ex) {
 					state = DetectionState.Failed;
-					TimeLogger.Logger.LogTimeExceptionWithMessage("Error while trying to detect game finished loading.", ex, TimeLogger.LogCategories.Loading);
+					TimeLogger.Logger.LogTimeExceptionWithMessage("Error while trying to detect game finished loading.", ex, LogCategories.Loading);
 				} finally {
 					GameWorldEventsPatch instance = Container<GameWorldEventsPatch>.Instance;
 					if (state == DetectionState.Failed) {
 						//Something changed and it wont work anymore without a mod update. Unpatch everything and forget it exists.
-						TimeLogger.Logger.LogTimeError(instance.ErrorMessageOnAutoPatchFail, TimeLogger.LogCategories.Loading);
+						TimeLogger.Logger.LogTimeError(instance.ErrorMessageOnAutoPatchFail, LogCategories.Loading);
 						instance.UnpatchInstance();
 
 						sw.Stop();
@@ -88,14 +110,15 @@ namespace SuperQoLity.SuperMarket.Patches {
 			}
 		}
 
+
 		private class DetectQuitToMainMenu {
 
-			[HarmonyPatch(typeof(CustomNetworkManager), nameof(CustomNetworkManager.LocalHostDisconnect))]
+			[HarmonyPatch(typeof(CustomNetworkManager), nameof(CustomNetworkManager.OnClientDisconnect))]
 			[HarmonyPostfix]
-			public static void LocalHostDisconnectPatch(GameCanvas __instance) {
-				if (OnGameWorldChange != null) {
-					OnGameWorldChange(GameWorldEvent.Quit);
-				}
+			public static void OnClientDisconnectPatch(GameCanvas __instance) {
+				TimeLogger.Logger.LogTimeDebug("Quitting to main menu.", LogCategories.Other);
+				WorldState.CurrenOnlineMode = GameOnlineMode.None;
+				WorldState.SetGameWorldState(GameWorldEvent.QuitOrMenu);
 			}
 
 		}

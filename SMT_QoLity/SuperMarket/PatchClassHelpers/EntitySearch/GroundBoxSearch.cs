@@ -10,7 +10,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 	public class GroundBoxSearch {
 
-		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, GameObject employee) {
+		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, Transform employeeT) {
 			//Filter list of ground boxes so we skip the ones already targeted by another NPC.
 			List<GameObject> untargetedGroundBoxes = GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
 
@@ -31,7 +31,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 			if (!pickableGroundBoxes.HasItems()) {
 				//No assigned free slot. Check if there is unassigned or unlabeled space in storage.
-				StorageSlotInfo freeUnassignedStorage = ContainerSearchHelpers.FreeUnassignedStorageContainer(__instance);
+				StorageSlotInfo freeUnassignedStorage = ContainerSearch.FreeUnassignedStorageContainer(__instance, employeeT);
 
 				if (freeUnassignedStorage.FreeStorageFound) {
 					//Generate list of existing boxes on the ground
@@ -39,12 +39,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 				}
 			}
 
+			//TODO !0 AI IMPROVEMENTS - Find ground boxes that can be merged.
+
 			if (!pickableGroundBoxes.HasItems()) {
 				//No space in storage. Check if any ground boxes are empty and can be trashed.
 				pickableGroundBoxes = GetEmptyGroundBoxList(untargetedGroundBoxes);
 			}
 
-			return GetClosestGroundBox(pickableGroundBoxes, employee.transform.position);
+			return GetClosestGroundBox(pickableGroundBoxes, employeeT.position);
 		}
 
 		private static List<GameObject> GetListUntargetedStationaryBoxes(GameObject allGroundBoxes) {

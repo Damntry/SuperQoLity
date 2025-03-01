@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Reflection;
+using System.Collections.Generic;
 using Damntry.Utils.Logging;
-using HarmonyLib;
 using HighlightPlus;
 using SuperQoLity.SuperMarket.ModUtils;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 	public class ShelfHighlighting {
-
-		public static readonly Lazy<MethodInfo> HighlightShelfMethod = new Lazy<MethodInfo>(() =>
-			AccessTools.Method($"{ModInfoBetterSMT.PatchesNamespace}.PlayerNetworkPatch:HighlightShelf"));
 
 		public enum ShelfType {
 			ProductDisplay,
@@ -38,6 +34,15 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 
 		}
 
+		private static Dictionary<int, Transform> highlightObjectCache;
+
+		public static bool IsHighlightCacheUsed { get; set; } = true;
+
+		public static void InitHighlightCache() {
+			highlightObjectCache = new();
+		}
+
+
 		public static string GetGameObjectStringPath(ShelfType shelfType) {
 			return shelfType switch {
 				ShelfType.ProductDisplay => "Level_SupermarketProps/Shelves",
@@ -47,13 +52,22 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 		}
 
 		public static void HighlightShelvesByProduct(int productID) {
-			HighlightShelfTypeByProduct(productID, ModConfig.Instance.PatchBetterSMT_ShelfHighlightColor.Value, ShelfType.ProductDisplay);
-			HighlightShelfTypeByProduct(productID, ModConfig.Instance.PatchBetterSMT_StorageHighlightColor.Value, ShelfType.Storage);
+			HighlightShelfTypeByProduct(productID, ModConfig.Instance.ShelfHighlightColor.Value, ShelfType.ProductDisplay);
+			HighlightShelfTypeByProduct(productID, ModConfig.Instance.StorageHighlightColor.Value, ShelfType.Storage);
 		}
 
 		public static void ClearHighlightedShelves() {
-			ClearHighlightShelvesByProduct(ShelfType.ProductDisplay);
-			ClearHighlightShelvesByProduct(ShelfType.Storage);
+			if (IsHighlightCacheUsed) {
+				foreach (var item in highlightObjectCache) {
+					if (item.Value != null) {
+						HighlightShelf(item.Value, false);
+					}
+				}
+				highlightObjectCache.Clear();
+			} else {
+				ClearHighlightShelvesByProduct(ShelfType.ProductDisplay);
+				ClearHighlightShelvesByProduct(ShelfType.Storage);
+			}
 		}
 
 		private static void ClearHighlightShelvesByProduct(ShelfType shelfType) {
@@ -73,25 +87,28 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 
 				for (int j = 0; j < num; j++) {
 					bool enableSlotHighlight = false;
-					if (productID >= 0) {
-						enableSlotHighlight = productInfoArray[j * 2] == productID;
-						if (enableSlotHighlight) {
-							enableShelfHighlight = true;
-						}
+					if (productID >= 0 && productInfoArray[j * 2] == productID) { 
+						//Slot has same product id and should be highlighted if the setting is enabled.
+						enableSlotHighlight = true;
+						enableShelfHighlight = true;
 					}
 
-					ShelfData shelfData = new ShelfData(shelfType);
-					if (shelfType == ShelfType.Storage) {
+					if (enableSlotHighlight ||
+							//If there are slot highlights pending to disable
+							!enableSlotHighlight && IsHighlightCacheUsed && highlightObjectCache.Count > 0) {
+
+						ShelfData shelfData = new ShelfData(shelfType);
 						highlightsMarker = shelf.Find(shelfData.highlightsName);
 
-						if (highlightsMarker != null) {
-							HighlightShelf(highlightsMarker.GetChild(j).GetChild(0), enableSlotHighlight, ModConfig.Instance.PatchBetterSMT_StorageSlotHighlightColor.Value);
+						if (shelfType == ShelfType.Storage) {
+							if (highlightsMarker != null) {
+								HighlightShelf(highlightsMarker.GetChild(j).GetChild(0), enableSlotHighlight, ModConfig.Instance.StorageSlotHighlightColor.Value);
+							} else {
+								TimeLogger.Logger.LogTimeError("The highlightsMarker object for the storage could not be found. Storage slot highlighting wont work.", Damntry.Utils.Logging.LogCategories.Highlight);
+							}
 						} else {
-							TimeLogger.Logger.LogTimeError("The highlightsMarker object for the storage could not be found. Storage slot highlighting wont work.", Damntry.Utils.Logging.TimeLogger.LogCategories.Highlight);
+							HighlightShelf(highlightsMarker.GetChild(j), enableSlotHighlight, ModConfig.Instance.ShelfLabelHighlightColor.Value);
 						}
-					} else {
-						highlightsMarker = shelf.Find(shelfData.highlightsName);
-						HighlightShelf(highlightsMarker.GetChild(j), enableSlotHighlight, ModConfig.Instance.PatchBetterSMT_ShelfLabelHighlightColor.Value);
 					}
 				}
 				//Highlight the entire storage shelf
@@ -121,42 +138,42 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 
 				HighlightShelf(highlight, false, null);
 			}
-
 		}
 
-		private static void ClearHighlightedShelves(string shelfObjString, ShelfType shelfType) {
-			GameObject gameObject = GameObject.Find(shelfObjString);
-			for (int i = 0; i < gameObject.transform.childCount; i++) {
-				Transform child = gameObject.transform.GetChild(i);
+		public static void HighlightShelf(Transform t, bool isEnableHighlight, Color? color = null) {
+			HighlightEffect highlightEffect = t.GetComponent<HighlightEffect>() ?? t.gameObject.AddComponent<HighlightEffect>();
 
-				Transform highlightObject = null;
-				ShelfData shelfData = new ShelfData(shelfType);
-
-				if (shelfType == ShelfType.ProductDisplay) {
-					highlightObject = child.Find(shelfData.highlightsName);
-				} else if (shelfType == ShelfType.Storage) {
-					highlightObject = child.Find(shelfData.highlightsName);
+			if (IsHighlightCacheUsed) {
+				//Test this in multiplayer. Also, what happens if someone destroys
+				//		the storage while you are holding its box?
+				if (isEnableHighlight == highlightEffect.highlighted) {
+					return;
 				}
 
-				int num = child.gameObject.GetComponent<Data_Container>().productInfoArray.Length / 2;
-				for (int j = 0; j < num; j++) {
-					HighlightShelf(highlightObject.GetChild(j), false, null);
+				if (isEnableHighlight) {
+					if (highlightObjectCache.ContainsKey(t.GetInstanceID())) {
+						if (highlightEffect.outlineColor == color) {
+							//Already highlighted with the same color.
+							return;
+						}
+					} else {
+						highlightObjectCache.Add(t.GetInstanceID(), t);
+					}
 				}
-				HighlightShelf(child, false, null);
-			}
-		}
 
-		public static void HighlightShelf(Transform t, bool value, Color? color = null) {
-			HighlightShelfMethod.Value.Invoke(null, [t, value, color]);
-		}
+				//Make the object to be highlighted ignore occlusion culling, so it doesnt dissapear
+				MeshRenderer meshRender = t.GetComponent<MeshRenderer>();
+				meshRender.allowOcclusionWhenDynamic = !isEnableHighlight;
 
-		/*
-		public static void HighlightShelf_(Transform t, bool value, Color? color = null) {
-			HighlightEffect highlightEffect = t.GetComponent<HighlightEffect>();
-			if (highlightEffect == null) {
-				highlightEffect = t.gameObject.AddComponent<HighlightEffect>();
-				BepInExTimeLogger.Logger.LogTimeWarning($"Transform {t.GetPath()} doesnt have an highlight effect", Damntry.Utils.Logging.TimeLogger.LogCategories.TempTest);
+				if (isEnableHighlight) {
+					foreach (var mat in meshRender.materials) {
+						mat.renderQueue = 1000;
+					}
+				}
 			}
+
+			//TODO 8 - Refresh should only be called when the storage changes from a box being placed in it.
+			highlightEffect.Refresh();
 
 			if (color != null) {
 				highlightEffect.outlineColor = (Color)color;
@@ -173,21 +190,26 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 
 			highlightEffect.seeThroughMaxDepth = 0f;
 			highlightEffect.seeThroughDepthOffset = 0f;
-			//highlightEffect.seeThrough = SeeThroughMode.;
-			//highlightEffect.seeThroughOccluderMask = 0;
-			//highlightEffect.seeThroughOccluderThreshold = 0f;
 			highlightEffect.seeThroughOccluderCheckIndividualObjects = false;
 			highlightEffect.seeThroughOccluderCheckInterval = 1f;
 
+			
+			//highlightEffect.outlineMaskMode = MaskMode.IgnoreMask;
+			//highlightEffect.seeThrough = SeeThroughMode.WhenHighlighted;
+			//highlightEffect.seeThroughOccluderMask = -1;
+			//highlightEffect.seeThroughBorder = 1f;
+			//highlightEffect.seeThroughBorderColor = Color.green;
+			//highlightEffect.seeThroughIntensity = 5f;
+			//highlightEffect.targetFXGroundMaxDistance = 10000000f;
+			
+
 			highlightEffect.outlineIndependent = true;
-			highlightEffect.outline = value ? 1f : 0f;
-			highlightEffect.glow = value ? 0f : 1f;
-			//TODO 8 - Refresh should only be called when the storage changes from a box being placed in it.
-			highlightEffect.Refresh();
+			highlightEffect.outline = isEnableHighlight ? 1f : 0f;
+			highlightEffect.glow = isEnableHighlight ? 0f : 1f;
 			highlightEffect.enabled = true;
-			highlightEffect.SetHighlighted(value);
+
+			highlightEffect.SetHighlighted(isEnableHighlight);
 		}
-		*/
 
 	}
 }
