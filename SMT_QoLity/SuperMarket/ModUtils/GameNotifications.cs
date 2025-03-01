@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
-using Damntry.Utils.Tasks;
 using Damntry.Utils.Logging;
+using Damntry.Utils.Tasks;
 using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using TMPro;
 using UnityEngine;
-using SuperQoLity.SuperMarket.Patches;
 using static Damntry.Utils.Logging.TimeLogger;
-using Cysharp.Threading.Tasks;
 
 
 namespace SuperQoLity.SuperMarket.ModUtils {
@@ -20,25 +20,48 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		private static readonly Lazy<GameNotifications> instance = new Lazy<GameNotifications>(() => new GameNotifications());
 
-		public const int MAX_MESSAGE_QUEUE = 5;
+
+		private const byte MinSingleMessageLength = 6;
+
+		private const byte MaxSingleMessageLength = 60;
+
+		/// <summary>
+		/// Multipart message separators in decreasing order of priority.
+		/// </summary>
+		private readonly string[] separatorPriority = [":", ". ", " ", "."];
+
+		/// <summary>
+		/// New line separator, splits the text exclusively for the notification text, otherwise its removed.
+		/// The new line "\n" works as a new line character, but when you are logging a multiline 
+		/// notification and still want a one liner in the logs, this separator can be used.
+		/// </summary>
+		public const string NewLineNotifSeparator = "´^¨";
+
+
+		public static int MAX_MESSAGE_QUEUE = 5;
 
 		private Queue<NotificationInfo> notificationQueue;
 
-		//TODO 6 - Instead of a fixed value, I could make this a range and the system chooses based on character/word count.
-		private int notificationFrequencyMilli = 4250;
+		private readonly int notificationFrequencyMilli = 4250;
 
+		private readonly int minDelay = 900;
 
-		public bool NotificationSystemEnabled { get; private set; }
+		private readonly int maxDelay = 3250;
+
+		private bool notificationSystemEnabled;
 
 		//Use UniTaskDelay so notifications pause while the game is in the Escape menu.
 		private CancellableSingleTask<UniTaskDelay> notificationTask;
 
 		private object queueLock;
 
+		public bool NotificationsActive { get; private set; }
+
+
 
 		private GameNotifications() {
 			notificationTask = new CancellableSingleTask<UniTaskDelay>();
-			NotificationSystemEnabled = false;
+			notificationSystemEnabled = false;
 			queueLock = new object();
 		}
 
@@ -48,36 +71,44 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				AddNotificationSupport();
 			}
 
-			GameWorldEventsPatch.OnGameWorldChange += (GameWorldEvent ev) => {
-				if (ev == GameWorldEvent.Start) {
-					if (GameNotifications.Instance.NotificationSystemEnabled) {
+			WorldState.OnGameWorldChange += (GameWorldEvent ev) => {
+				if (ev == GameWorldEvent.WorldStarted) {
+					if (GameNotifications.Instance.notificationSystemEnabled) {
 						//Even if notification support wasnt added above, we still hook onto the
 						//	event since the user could enable notifications in the settings at any time.
 						TryEnableNotificationsInGame();
 					}
-				} else if (ev == GameWorldEvent.Quit) {
+				} else if (ev == GameWorldEvent.QuitOrMenu) {
 					DisableShowingNotifications();
 				}
 			};
 
-			ModConfig.Instance.EnableModNotifications.SettingChanged += ModConfig.Instance.NotificationsSettingsChanged;
+			ModConfig.Instance.EnableModNotifications.SettingChanged += NotificationsSettingsChanged;
+		}
+
+		public void NotificationsSettingsChanged(object sender, EventArgs e) {
+			if (ModConfig.Instance.EnableModNotifications.Value) {
+				GameNotifications.Instance.AddNotificationSupport();
+			} else {
+				GameNotifications.Instance.RemoveNotificationSupport();
+			}
 		}
 
 		public bool AddNotificationSupport() {
-			if (!NotificationSystemEnabled) {
+			if (!notificationSystemEnabled) {
 				var sendNotifActionLambda = (string msg, LogTier logLevel) => SendInGameNotification(msg, logLevel);
 				AddGameNotificationSupport(sendNotifActionLambda, MyPluginInfo.PLUGIN_NAME);
 			}
 
-			return NotificationSystemEnabled = true;
+			return notificationSystemEnabled = true;
 		}
 
 		public bool RemoveNotificationSupport() {
-			if (NotificationSystemEnabled) {
+			if (notificationSystemEnabled) {
 				RemoveGameNotificationSupport();
 			}
 
-			return NotificationSystemEnabled = false;
+			return notificationSystemEnabled = false;
 		}
 
 		public void TryEnableNotificationsInGame() {
@@ -86,7 +117,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			try {
 				bool notifObjOk = TestNotificationObjects();
 				if (!notifObjOk) {
-					//Notification objects are not working. Return so the finally handles everything.
+					//GameNotification objects are not working. Return so the finally handles everything.
 					return;
 				}
 
@@ -94,7 +125,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				notificationsOk = EnableShowingNotifications();
 
 			} catch (Exception ex) {
-				TimeLogger.Logger.LogTimeExceptionWithMessage("Error while enabling game notifications.", ex, TimeLogger.LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeExceptionWithMessage("Error while enabling game notifications.", ex, LogCategories.Notifs);
 			} finally {
 				if (!notificationsOk) {
 					TimeLogger.RemoveGameNotificationSupport();
@@ -103,18 +134,19 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		}
 
 		public bool EnableShowingNotifications() {
-			if (NotificationSystemEnabled) {
-				notificationTask.StartTaskAsync(() => notificationConsumer(), "Notification Consumer", false).FireAndForget(LogCategories.Notifs);
+			if (notificationSystemEnabled) {
+				notificationTask.StartTaskAsync(() => NotificationConsumer(), "GameNotification Consumer", false).FireAndForget(LogCategories.Notifs);
+				NotificationsActive = true;
 				return true;
 			} else {
 				TimeLogger.Logger.LogTimeWarning("EnableShowingNotifications() was called but the notification system is not enabled. Notifications wont show.", LogCategories.Notifs);
 				return false;
 			}
-
 		}
 
 		public void DisableShowingNotifications() {
 			notificationTask.StopTaskAndWaitAsync(10000).FireAndForgetCancels(LogCategories.Notifs);
+			NotificationsActive = false;
 		}
 
 		public bool TestNotificationObjects() {
@@ -136,14 +168,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			if (!importantNotifExists && !normalNotifExists) {
 				TimeLogger.Logger.LogTimeError("The prefab and transform objects required for notifications cant be used. " +
 					"The mod notification system will be disabled.", LogCategories.Notifs);
-				return NotificationSystemEnabled = false;
+				return notificationSystemEnabled = false;
 			}
 
 			return true;
 		}
 
 
-		private async Task notificationConsumer() {
+		private async Task NotificationConsumer() {
 			while (!notificationTask.IsCancellationRequested) {
 				NotificationInfo oldestNotification = null;
 
@@ -154,17 +186,15 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				}
 
 				if (oldestNotification != null) {
-					ShowNotification(oldestNotification);
+					await ShowNotification(oldestNotification);
 				}
 
 				await UniTask.Delay(notificationFrequencyMilli, cancellationToken: notificationTask.CancellationToken);
 			}
 		}
 
-		
-
 		public void SendInGameNotification(string message, LogTier logLevel) {
-			//Queue this notification. If the consumer loop is working, it ll be shown whenno message is pending.
+			//Queue this notification. If the consumer loop is working, it ll be shown when no message is pending.
 			if (notificationQueue == null) {
 				notificationQueue = new Queue<NotificationInfo>();
 			} else if (notificationQueue.Count >= MAX_MESSAGE_QUEUE) {
@@ -175,19 +205,130 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				//	has ever been deleted, add to the end of the queue a message saying something like "More errors not shown. Check LogOutput.log"
 
 				//Queue is full enough, Discard. Whatever error or warning it was has been at least logged already.
-				TimeLogger.Logger.LogTimeInfo($"Notification queue already has the max limit of {notificationQueue.Count} messages waiting. Discarding this message.", LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeInfo($"GameNotification queue already has the max limit of {notificationQueue.Count} messages waiting. Discarding this message.", LogCategories.Notifs);
 				return;
 			} else if (notificationQueue.Count > 0) {
-				TimeLogger.Logger.LogTimeInfo($"Queueing notification. Notification queue had {notificationQueue.Count} messages waiting.", LogCategories.Notifs);
+				TimeLogger.Logger.LogTimeInfo($"Queueing notification. GameNotification queue had {notificationQueue.Count} messages waiting.", LogCategories.Notifs);
 			}
 
 			notificationQueue.Enqueue(new NotificationInfo(message, logLevel));
 		}
 
 
-		private void ShowNotification(NotificationInfo notifInfo) {
-			GameObject notifObj = CreateNotificationObjetFromLogLevel(notifInfo.logLevel);
-			notifObj.GetComponent<TextMeshProUGUI>().text = notifInfo.message;
+		private async Task ShowNotification(NotificationInfo notifInfo) {
+			bool isMultipartMsg = IsMultipartMessage(notifInfo.message);
+
+			if (isMultipartMsg) {
+				await ShowNotificationMultipartMessage(notifInfo);
+			} else {
+				ShowNotificationMessage(notifInfo);
+			}
+		}
+
+		private bool IsMultipartMessage(string message) {
+			return message.Length > MaxSingleMessageLength || message.Contains("\n") || message.Contains(NewLineNotifSeparator);
+		}
+
+		private async Task ShowNotificationMultipartMessage(NotificationInfo notifInfo) {
+			List<string> msgPartsList = SplitMessageParts(notifInfo.message);
+
+			for (int i = 0; i < msgPartsList.Count; i++) {
+				string msgPart = msgPartsList[i];
+				ShowNotificationMessage(msgPartsList[i], notifInfo.logLevel);
+
+				if (i == msgPartsList.Count - 1) {
+					//Last loop. Do a smaller delay and exit, so the delay between
+					//	notifications that comes after doesnt add up to too much.
+					await UniTask.Delay(500);
+					break;
+				}
+
+				//Calculate delay based on message length against the possible max length.
+				int delay = (int)Mathf.Lerp(minDelay, maxDelay, msgPart.Length / (float)MaxSingleMessageLength);
+
+				await UniTask.Delay(delay);
+			}
+		}
+
+		private List<string> SplitMessageParts(string message) {
+			List<string> msgPartsNewLineFull = new();
+			List<string> msgPartsComplete = new();
+
+			//Split new lines by the special notification character
+			List<string> msgPartsNewLineNotif = message.Split([NewLineNotifSeparator], StringSplitOptions.None).ToList();
+
+			//Further split each item, this time by the default new line character
+			msgPartsNewLineNotif.ForEach((msgPart) => msgPartsNewLineFull.AddRange(msgPart.Split('\n')));
+
+			//Split each individual string if it exceeds the length limit.
+			msgPartsNewLineNotif.ForEach((msgPart) => msgPartsComplete.AddRange(GetExceededCharsMultipartMessage(msgPart.Trim())));
+
+			return msgPartsComplete;
+		}
+
+		private List<string> GetExceededCharsMultipartMessage(string message) {
+			if (message.Length <= MaxSingleMessageLength) {
+				return [message];
+			}
+
+			List<string> msgPartsList = new();
+			int currentIndexPos = 0;
+			int lengthLeft = message.Length;
+
+			//End the search before reaching the point where a message part would be too short.
+			int indexSearchCount = MaxSingleMessageLength - MinSingleMessageLength;
+
+			while (lengthLeft > MaxSingleMessageLength) {
+				//Since we search backwards for a cut off point, get the last splitPointIndex from which we ll start searching.
+				int lastIndexSearchBegin = currentIndexPos + MaxSingleMessageLength;
+
+				int splitPointIndex = FindSeparatorSplitPoint(message, lastIndexSearchBegin, indexSearchCount);
+
+				int partLength;
+				if (splitPointIndex != -1) {
+					//Split string at the found separator position.
+					partLength = splitPointIndex - currentIndexPos;
+				} else {
+					//Couldnt find char in a valid position, just split at max allowed length.
+					partLength = MaxSingleMessageLength;
+				}
+
+				msgPartsList.Add(message.Substring(currentIndexPos, partLength).Trim());
+
+				currentIndexPos += partLength;
+				lengthLeft = message.Length - currentIndexPos - 1;
+			}
+
+			//Add whatever text is left
+			msgPartsList.Add(message.Substring(currentIndexPos, lengthLeft + 1).Trim());
+
+			return msgPartsList;
+		}
+
+		private int FindSeparatorSplitPoint(string message, int lastIndexSearchBegin, int indexSearchCount) {
+			int splitPointIndex = -1;
+
+			foreach (string separator in separatorPriority) {
+				//Find a split point by searching backwards for the last instance 
+				//	of this separator character, within the allowed range.
+				splitPointIndex = message.LastIndexOf(separator, lastIndexSearchBegin, indexSearchCount);
+				if (splitPointIndex != -1) {
+					//Split right after the found separator.
+					splitPointIndex += separator.Length;
+					break;
+				}
+			}
+
+			return splitPointIndex;
+		}
+
+		private void ShowNotificationMessage(NotificationInfo notifInfo) {
+			ShowNotificationMessage(notifInfo.message, notifInfo.logLevel);
+		}
+
+		private void ShowNotificationMessage(string message, LogTier logLevel) {
+			GameObject notifObj = CreateNotificationObjetFromLogLevel(logLevel);
+			notifObj.GetComponent<TextMeshProUGUI>().text = message;
 			notifObj.SetActive(true);
 		}
 
@@ -204,15 +345,27 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			return notificationGameObj;
 		}
 
-
-		private record class NotificationInfo {
-			public NotificationInfo(string message, LogTier logLevel) {
-				this.message = message;
-				this.logLevel = logLevel;
+		/// <summary>
+		/// Implementation of the delegate <see cref="TimeLogger.PreprocessMessageFunc"/>.
+		/// Removes the special character used in notifications to denote a new line, so it doesnt show in the log file.
+		/// This method is sent to the TimeLogger as a preprocess that will be used only for file logging, so the 
+		/// notification will still receive original message with special characters.
+		/// This way there is no need to manually send different texts for logs and notifications in two different calls.
+		/// </summary>
+		public static string RemoveSpecialNotifNewLinesForLog(string text, LogTier logLevel,
+			LogCategories category, bool showInGameNotification, PreprocessType preprocType) {
+			//Skip the expensive Contains check if notifications are not meant to be shown for
+			//	this log, which means that the text "shouldnt" have the new line separators.
+			if (preprocType == PreprocessType.FileLogging && showInGameNotification &&
+					text.Contains(GameNotifications.NewLineNotifSeparator)) {
+				text = text.Replace(GameNotifications.NewLineNotifSeparator, "");
 			}
-			public string message { get; set; }
-			public LogTier logLevel { get; set; }
+
+			return text;
 		}
+
+
+		private record NotificationInfo(string message, LogTier logLevel);
 
 	}
 }

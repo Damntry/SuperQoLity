@@ -1,7 +1,8 @@
 ﻿using BepInEx;
 using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.Logging;
+using Damntry.UtilsBepInEx.HarmonyPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
+using Damntry.UtilsBepInEx.Logging;
 using SuperQoLity.SuperMarket.ModUtils;
 using Damntry.UtilsBepInEx.HarmonyPatching;
 
@@ -16,10 +17,10 @@ namespace SuperQoLity {
 
 		//TODO 4 - Make it so building only copies the .pdb files if we are in Debug project configuration
 
-		//TODO 3 - When warp mode the player might not even know why, if he got the config of someone else
-		//	or he is not sure what he is doing. I should probably change the DEBUG into a "cheat" section
-		//	where I have all these options that I consider to be beyond what is QoL, and the debug option
-		//	would be in it too.
+		public void Awake() {
+			//Init logger
+			TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(
+				GameNotifications.RemoveSpecialNotifNewLinesForLog, false, MyPluginInfo.PLUGIN_NAME);
 
 		//TODO 1 - Go through log uses that send notifications and see what to do with ones that are too long.
 		//		Maybe I should go ahead with the star wars text thingy?
@@ -47,10 +48,9 @@ namespace SuperQoLity {
 
 			//Compare method signatures and log results
 			StartMethodSignatureCheck().LogResultMessage(TimeLogger.LogTier.Debug, false, true);
+			StartingMessage.InitStartingMessages(allPatchsOK);
 
-			StupidMessageSendator2000_v16_MKII_CopyrightedName.SendWelcomeMessage(allPatchsOK);
-
-			TimeLogger.Logger.LogTimeMessage($"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", TimeLogger.LogCategories.Loading);
+			TimeLogger.Logger.LogTimeMessage($"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", LogCategories.Loading);
 		}
 
 		private void DebugModeHandler() {
