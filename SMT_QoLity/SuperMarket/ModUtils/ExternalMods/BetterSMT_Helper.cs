@@ -48,18 +48,18 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 		public void LogCurrentBetterSMTStatus(bool allPatchsOk) {
 			switch (ModStatus) {
 				case ModLoadStatus.DifferentVersion:
-					//Show as in game notification if patching went wrong, otherwise just log.
-					TimeLogger.Logger.LogTime(LogTier.Warning, GetDifferentVersionLogMessage(),
-						LogCategories.Loading, !allPatchsOk);
+					if (!allPatchsOk) {
+						TimeLogger.Logger.LogTimeWarning(GetDifferentVersionLogMessage(), LogCategories.Loading);
+					}
 					break;
 				case ModLoadStatus.NotLoaded:
-					TimeLogger.Logger.LogTimeMessage($"Mod {ModInfoBetterSMT.Name} seems to be missing. Skipping its patches.", LogCategories.Loading);
+					TimeLogger.Logger.LogTimeDebug($"Mod {ModInfoBetterSMT.Name} seems to be missing. Skipping its patches.", LogCategories.Loading);
 					break;
 				case ModLoadStatus.LoadedOk:
-					TimeLogger.Logger.LogTimeInfo($"Mod {ModInfoBetterSMT.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied if its setting is enabled.", LogCategories.Loading);
+					TimeLogger.Logger.LogTimeInfo($"Mod {ModInfoBetterSMT.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied to remove BetterSMT highlighting.", LogCategories.Loading);
 					break;
 				default:
-					throw new NotImplementedException($"The switch case {ModStatus} is not implemented.");
+					throw new NotImplementedException($"This switch case {ModStatus} is not implemented.");
 			}
 		}
 

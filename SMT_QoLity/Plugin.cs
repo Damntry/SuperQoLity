@@ -52,8 +52,11 @@ namespace SuperQoLity {
 			//Start patching process of auto patch classes
 			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
+			//BetterSMT_Helper.Instance.LogCurrentBetterSMTStatus(allPatchsOK);
+#if DEBUG
 			//Compare method signatures and log results
-			StartMethodSignatureCheck().LogResultMessage(TimeLogger.LogTier.Debug, false, true);
+			StartMethodSignatureCheck().LogResultMessage(LogTier.Debug, false, true);
+#endif
 			StartingMessage.InitStartingMessages(allPatchsOK);
 
 			TimeLogger.Logger.LogTimeMessage($"Mod {MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) loaded {(allPatchsOK ? "" : "(not quite) ")}successfully.", LogCategories.Loading);
@@ -78,15 +81,37 @@ namespace SuperQoLity {
 		}
 
 		private CheckResult StartMethodSignatureCheck() {
+			try {
 			MethodSignatureChecker mSigCheck = new MethodSignatureChecker(this.GetType());
 
 			mSigCheck.PopulateMethodSignaturesFromHarmonyPatches();
 
-			//Add manual patches and locally replaced methods.
-			mSigCheck.AddMethodSignature(typeof(NPC_Manager), "GetFreeStorageContainer", [typeof(int)]);
-			mSigCheck.AddMethodSignature(typeof(NPC_Manager), "CheckProductAvailability");
+				//Locally replaced methods
+				mSigCheck.AddMethod(typeof(NPC_Manager), "EmployeeNPCControl", [typeof(int)]);
+				mSigCheck.AddMethod(typeof(NPC_Manager), "GetFreeStorageContainer", [typeof(int)]);
+				mSigCheck.AddMethod(typeof(NPC_Manager), "MainRestockUpdate");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "CheckIfShelfWithSameProduct");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "GetRandomGroundBox");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "GetRandomGroundBoxAllowedInStorage");
+
+				//Methods called by reflection
+				mSigCheck.AddMethod(typeof(NPC_Manager), "DropBoxOnGround");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "UnequipBox");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "AttemptToGetRestPosition");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "CashierGetAvailableCheckout");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "UpdateEmployeeCheckouts");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "CheckIfCustomerInQueue");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "GetThiefTarget");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "IsFirstSecurityEmployee");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "GetClosestDropProduct");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "RetrieveCorrectPatrolPoint");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "UpdateEmployeeStats");
 
 			return mSigCheck.StartSignatureCheck();
+			}catch (Exception ex) {
+				TimeLogger.Logger.LogTimeException(ex, LogCategories.MethodChk);
+				return CheckResult.UnknownError;
+			}
 		}
 
 	}
