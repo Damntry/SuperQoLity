@@ -9,6 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Damntry Globals", "..\!Glob
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{09336125-EB57-48C1-913A-CC6D2487F246}"
 	ProjectSection(SolutionItems) = preProject
+		Changelog.txt = Changelog.txt
 		README.md = README.md
 		README_short.txt = README_short.txt
 	EndProjectSection

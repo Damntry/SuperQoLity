@@ -48,7 +48,7 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 		public void CmdAlterFunds(float funds) {
 			if (IsModLoadedAndEnabled && !methodCallFailed) {
 				try {
-					ReflectionHelper.CallMethod(GameData.Instance, "UserCode_CmdAlterFunds__Single");
+					ReflectionHelper.CallMethod(GameData.Instance, "UserCode_CmdAlterFunds__Single", [funds]);
 					return;
 				} catch (Exception e) {
 					methodCallFailed = true;

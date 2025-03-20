@@ -13,6 +13,9 @@ using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
 
 namespace SuperQoLity {
 
+	//TODO 1 - Find things Im loading on WorldStart and try to move them earlier if possible.
+	//	There is noticeable lag when starting compared to base game, specially on big stores.
+
 	//Soft dependency so we load after ika.smtanticheat and BetterSMT if they exist.
 	[BepInDependency(ModInfoSMTAntiCheat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
 	[BepInDependency(ModInfoBetterSMT.GUID, BepInDependency.DependencyFlags.SoftDependency)]
@@ -70,13 +73,25 @@ namespace SuperQoLity {
 #endif
 		}
 
-		private void ConfigDebugModeHandler() {
+		//TODO 1 - Separate logging from dev mode in a new setting.
+
+		/// <summary>
+		/// All of this is so I can have the debug mode enabled for the config binding itself.
+		/// </summary>
+		public static void ConfigDebugModeHandler() {
 #if !DEBUG
-			if (ModConfig.Instance.IsDebugConfig()) {
-				TimeLogger.DebugEnabled = true;
-				TimeLogger.Logger.LogTimeWarning($"{MyPluginInfo.PLUGIN_NAME} Debug Dev mode enabled.", 
-					LogCategories.Loading);
+			bool debugEnabled = ModConfig.Instance.IsDebugEnabledConfig();
+			if (debugEnabled != TimeLogger.DebugEnabled) {
+				TimeLogger.DebugEnabled = debugEnabled;
+				TimeLogger.Logger.LogTimeWarning($"{MyPluginInfo.PLUGIN_NAME} " +
+					$"Debug Dev mode {(debugEnabled ? "enabled" : "disabled")}.", LogCategories.Loading);
 			}
+#endif
+			}
+
+		public static void HookChangeDebugSetting() {
+#if !DEBUG
+			ModConfig.Instance.EnabledDevMode.SettingChanged += (_, _) => ConfigDebugModeHandler();
 #endif
 		}
 

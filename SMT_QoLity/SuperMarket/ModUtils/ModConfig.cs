@@ -10,6 +10,7 @@ using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearch;
+using System;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -111,6 +112,8 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			InitializeEmployeePerformanceCustomSettingsModule();
 			//InitializeEmployeePerformanceManualSettingsModule();
 			InitializeDebugModule();
+
+			Plugin.HookChangeDebugSetting();
 		}
 
 		private void InitializeConfigStartNotes() {
@@ -416,11 +419,11 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
 			);
-
+			
 			CustomMaximumFrequencyReduction = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: PerfCustomSettingsModuleText,
 				key: "Maximum workload reduction per cycle",
-				defaultValue: balancedMode.DecreaseStep,
+				defaultValue: Math.Abs(balancedMode.DecreaseStep),
 				description: $"{customModeText}\n\n" +
 				"Sets how quickly the job scheduler can reduce workload capacity. Each cycle (1 second), it will reduce workload " +
 				"capacity up to this quantity. The actual quantity will depend on how far below target is the employee avg wait timer.",
@@ -479,7 +482,14 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		*/
 
 		private void InitializeDebugModule() {
+			//Check if the setting was preinitialized and true.
+			//	If thats the case, we need to set the value manually after binding.
+			bool isDevEnabled = EnabledDevMode?.Value == true;
+			
 			EnabledDevMode = BindDebugConfig();
+			if (isDevEnabled) {
+				EnabledDevMode.Value = true;
+			}
 
 			TeleportSoundVolume = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: DebugModuleText,
@@ -503,15 +513,24 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			);
 		}
 
-		public bool IsDebugConfig() {
-			bool debugConfigEnabled;
+		/// <summary>
+		/// Checks if the dev mode is enabled in its setting.
+		/// Works even before performing the complete config binding.
+		/// </summary>
+		/// <returns></returns>
+		public bool IsDebugEnabledConfig() {
+			bool debugConfigEnabled = false;
 
 			if (EnabledDevMode == null) {
-				//Called before its initialization was done. Bind it and remove after taking 
-				//	its value, so the full config initialization can place it in its proper order.
+				//Called before its initialization was performed. Bind it, take its value, and remove 
+				//	the setting, so the full config initialization can place it in its proper order.
 				EnabledDevMode = BindDebugConfig();
 				debugConfigEnabled = EnabledDevMode.Value;
 				configManagerControl.Remove(EnabledDevMode.Definition);
+
+				//Dont null, so we can keep the value for later, since
+				//	configManagerControl.Remove also disables the setting.
+				//EnabledDevMode = null;	
 			} else {
 				debugConfigEnabled = EnabledDevMode.Value;
 			}

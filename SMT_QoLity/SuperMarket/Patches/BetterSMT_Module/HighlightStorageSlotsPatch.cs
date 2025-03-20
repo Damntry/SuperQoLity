@@ -34,7 +34,7 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 				//Highlight cache test
 				KeyPressDetection.AddHotkey(KeyCode.O, 700, () => {
 					ShelfHighlighting.IsHighlightCacheUsed = !ShelfHighlighting.IsHighlightCacheUsed;
-					LOG.DEBUGWARNING($"{(ShelfHighlighting.IsHighlightCacheUsed ? "Highlighting Cache ENABLED" : "Highlighting Cache DISABLED")}");
+					LOG.TEMPWARNING($"{(ShelfHighlighting.IsHighlightCacheUsed ? "Highlighting Cache ENABLED" : "Highlighting Cache DISABLED")}");
 				});
 				*/
 			}
@@ -65,19 +65,21 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 
 		private class AddHighlightsMarkerToStorageSlots {
 
+			/// <summary>Storage object loaded</summary>
 			[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.BoxSpawner))]
 			[HarmonyPostfix]
-			/// <summary>Storage object loaded</summary>
 			private static void BoxSpawnerPatch(Data_Container __instance) {
 				ShelfHighlighting.AddHighlightMarkersToStorage(__instance.transform);
 			}
 
+			/// <summary>New buildable constructed</summary>
 			[HarmonyPatch(typeof(NetworkSpawner), "UserCode_CmdSpawn__Int32__Vector3__Vector3")]
 			[HarmonyPostfix]
-			/// <summary>New buildable constructed</summary>
 			private static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
 				GameObject buildable = __instance.buildables[prefabID];
 
+				//TODO 2 - There is now "GetComponent<InteractableContainer>().isStorageShelf"
+				//	but Im not sure if its 100% trustworthy yet.
 				if (buildable.name.Contains("StorageShelf")) {    //Hopefully this makes it so new storage shelfs in the future are still supported.
 					int index = buildable.GetComponent<Data_Container>().parentIndex;
 					Transform buildableParent = __instance.levelPropsOBJ.transform.GetChild(index);

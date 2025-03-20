@@ -3,7 +3,6 @@ using System.Collections;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
-using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
 using HutongGames.PlayMaker;
@@ -31,6 +30,19 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - TestAndDebugPatch FAILED. Disabled";
 
+		/* Console debug tools
+		 * Should make these as in-game keys with a shitty ingame menu or something that
+			only works on #Debug solution so I dont have to type while doing tests
+			
+			GameData.Instance.UserCode_CmdAlterFunds__Single(ISyncVarBehaviour);
+			GameData.Instance.NetworkgameFranchisePoints = XX;
+			Time.timeScale = 1f;
+			timeFactor
+
+			Change timescale
+			Max hierable employees
+			
+		*/
 
 
 		[Flags]
@@ -181,7 +193,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 					if (spawnCustomers) {
 						for (int i = 0; i < count; i++) {
-							IEnumerator enumCust = ReflectionHelper.CallMethod<IEnumerator>(NPC_Manager.Instance, "SpawnCustomerNCP");
+							IEnumerator enumCust = NPC_Manager.Instance.SpawnCustomerNCP();
 							while (enumCust.MoveNext()) ;
 						}
 						TimeLogger.Logger.LogTimeWarning($"Total customers on map: {NPC_Manager.Instance.customersnpcParentOBJ.transform.childCount}",
