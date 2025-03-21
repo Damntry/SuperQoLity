@@ -72,7 +72,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 					if (quantity <= 0 && productId >= 0) {
 						if (!storableProducts.ContainsKey(productId)) {
-							storableProducts.Add(productId, new StorageSlotInfo(storageIndex, slotIndex, productId, quantity));
+							storableProducts.Add(productId, new StorageSlotInfo(storageIndex, slotIndex, productId, quantity, storageObjT.position));
 						}
 					}
 					return ContainerSearchLambdas.LoopAction.Nothing;

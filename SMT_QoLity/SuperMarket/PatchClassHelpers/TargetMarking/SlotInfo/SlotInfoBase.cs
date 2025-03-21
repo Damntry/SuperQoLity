@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 
 	public abstract class SlotInfoBase {
 
-		public SlotInfoBase(int shelfIndex, int slotIndex, int productId, int quantity) {
+		public SlotInfoBase(int shelfIndex, int slotIndex, int productId, int quantity, Vector3 position) {
 			ShelfIndex = shelfIndex;
 			SlotIndex = slotIndex;
 			ExtraData.ProductId = productId;
 			ExtraData.Quantity = quantity;
+			ExtraData.Position = position;
 		}
 
 		public SlotInfoBase(int shelfIndex, int slotIndex) {
@@ -17,11 +19,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 			SlotIndex = slotIndex;
 		}
 
-		public void SetValues(int shelfIndex, int slotIndex, int productId, int Quantity) {
+		public void SetValues(int shelfIndex, int slotIndex, int productId, int Quantity, Vector3 Position) {
 			ShelfIndex = shelfIndex;
 			SlotIndex = slotIndex;
 			ExtraData.ProductId = productId;
 			ExtraData.Quantity = Quantity;
+			ExtraData.Position = Position;
 		}
 
 		public void SetValues(SlotInfoBase SlotInfoBase) {
@@ -29,6 +32,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 			SlotIndex = SlotInfoBase.SlotIndex;
 			ExtraData.ProductId = SlotInfoBase.ExtraData.ProductId;
 			ExtraData.Quantity = SlotInfoBase.ExtraData.ProductId;
+			ExtraData.Position = SlotInfoBase.ExtraData.Position;
 		}
 
 
@@ -36,7 +40,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 
 		public int SlotIndex { get; set; }
 
-		public ExtraDataClass _extraData;
+		private ExtraDataClass _extraData;
 
 		public ExtraDataClass ExtraData {
 			get {
@@ -54,10 +58,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 
 			public int Quantity { get; set; }
 
+			public Vector3 Position { get; set; }
+
 		}
 
 		public override string ToString() {
-			return $"Shelf {this.ShelfIndex}, Slot {this.SlotIndex} (PID: {this.ExtraData.ProductId}, Amount: {this.ExtraData.Quantity})";
+			return $"Shelf {this.ShelfIndex}, Slot {this.SlotIndex} (PID: {this.ExtraData.ProductId}, Amount: {this.ExtraData.Quantity}, Position: {this.ExtraData.Position})";
 		}
 
 	}

@@ -9,6 +9,8 @@ using Damntry.UtilsUnity.Components;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
 
 
 namespace SuperQoLity {
@@ -23,6 +25,7 @@ namespace SuperQoLity {
 	public class Plugin : BaseUnityPlugin {
 
 		public static bool IsSolutionInDebugMode = false;
+
 
 		public void Awake() {
 			//Init logger
@@ -56,6 +59,7 @@ namespace SuperQoLity {
 			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
 			//BetterSMT_Helper.Instance.LogCurrentBetterSMTStatus(allPatchsOK);
+			RestockMatcher.Enable();
 #if DEBUG
 			//Compare method signatures and log results
 			StartMethodSignatureCheck().LogResultMessage(LogTier.Debug, false, true);

@@ -1,45 +1,37 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Attributes;
-using HarmonyLib;
-using SuperQoLity.SuperMarket.ModUtils;
-using System.Reflection.Emit;
-using Damntry.UtilsBepInEx.IL;
-using Damntry.UtilsBepInEx.HarmonyPatching.Helpers;
-using SuperQoLity.SuperMarket.Patches.EmployeeModule;
-using static SuperQoLity.SuperMarket.Patches.TransferItemsModule.IncreasedItemTransferPatch;
-
-
+﻿
 namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
+	/* Not needed now that EmployeeAddsItemToRow already accepts a variable number of items.
+	
+	//	IncreasedEmployeeItemTransferPatch and EmployeeNPCControlPatch depend on each other.
+	//		If EmployeeNPCControlPatch patching fails, the vanilla method will fail when it calls my
+	//		transpiled EmployeeAddsItemToRow. And the opposite is true too.
+	//		I need to make so:
+	//			- If EmployeeNPCControlPatch is disabled or fails patching, this transpile becomes
+	//				inactive or unpatches itself.
+	//			- If this transpile fails patching or is disabled, I need to change in EmployeeNPCControlPatch
+	//				the way I call EmployeeAddsItemToRow and handle args and returns same way as if it was vanilla.
+
+		
 	internal class IncreasedEmployeeItemTransferPatch : FullyAutoPatchedInstance {
 
-		//This class was meant to exist temporarily until I transpiled NPCManager.EmployeeNPCControl
-		//		so I could do both together in the same patch class.
-		//		Seeing as that ship has sailed now that I ve changed so much in EmployeeNPCControl plus all
-		//		future features I have planned for it, this class is here to stay.
-
-		//	TODO 1 - IncreasedEmployeeItemTransferPatch and EmployeeNPCControlPatch depend on each other.
-		//		If EmployeeNPCControlPatch patching fails, the vanilla method will fail when it calls my
-		//		transpiled EmployeeAddsItemToRow. And the opposite is true too.
-		//		I need to make so:
-		//			- If EmployeeNPCControlPatch is disabled or fails patching, this transpile becomes
-		//				inactive or unpatches itself.
-		//			- If this transpile fails patching or is disabled, I need to change in EmployeeNPCControlPatch
-		//				the way I call EmployeeAddsItemToRow and handle args and returns same way as if it was vanilla.
-
-
+		
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableTransferProducts.Value;
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Employee item transfer speed failed. Disabled";
+
+		
+		//This class was meant to exist temporarily until I transpiled NPCManager.EmployeeNPCControl
+		//		so I could do both together in the same patch class.
+		//		Seeing as that ship has sailed now that I ve changed so much in EmployeeNPCControl
+		//		plus all future features I have planned for it, this class is here to stay.
 
 		//Dont look at these and everything will be alright.
 		public static ArgumentHelper<int> ArgBoxNumberProducts = new(typeof(IncreasedEmployeeItemTransferPatch), nameof(ArgBoxNumberProducts), -1);
 
 		public static ArgumentHelper<int> ArgMaxProductsPerRow = new(typeof(IncreasedEmployeeItemTransferPatch), nameof(ArgMaxProductsPerRow), -1);
 
-		//TODO 3 - Throw meaningful errors when it cant match instructions.
+
 		//[HarmonyDebug]
 		[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.EmployeeAddsItemToRow))]
 		[HarmonyBeforeInstance(typeof(IncreasedItemTransferPatch))]
@@ -53,22 +45,30 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			CodeMatcher codeMatcher = new CodeMatcher(instructions);
 
 			///Old C#:
-			///		num2++;
+			///		num2 += quantity;
 			///New C#:
 			///		int numTransferItems = IncreasedItemTransferPatch.GetNumTransferItems(ArgBoxNumberProducts.Value, num2, ArgMaxProductsPerRow.Value);
 			///		num2 += numTransferItems;
-			codeMatcher.MatchForward(false,                     //Match for the whole "num2++" IL to step on its first line.
+			codeMatcher.MatchForward(false,                     //Match for the whole "num2 += quantity" IL to step on its first line.
 					new CodeMatch(inst => inst.IsLdloc()),
-					new CodeMatch(OpCodes.Ldc_I4_1),
+					new CodeMatch(inst => inst.IsLdarg()),
 					new CodeMatch(OpCodes.Add),
 					new CodeMatch(inst => inst.IsStloc()));
+
+			if (codeMatcher.IsInvalid) {
+				throw new TranspilerDefaultMsgException("IL Line \"num2 += quantity\" couldnt be found.");
+			}
 
 			List<CodeInstruction> callGetNumTransferItemsInstrs = CallGetNumTransferItems(codeMatcher.Instruction, localBnumTransfItems.LocalIndex);
 
 			codeMatcher
 				.Insert(callGetNumTransferItemsInstrs)              //Insert the IL lines that calls the method to get the number of items we can transfer.
 				.Advance(callGetNumTransferItemsInstrs.Count + 1)   //Go back to the same relative position before adding the call, plus an extra line.
-				.SetInstruction(loadLocalVarNumTransferItemsInstr);      //Replace the Ldc_I4_1 constant with the numTransferItems var
+				.SetInstruction(loadLocalVarNumTransferItemsInstr); //Replace the Ldc_I4_1 constant with the numTransferItems var
+
+			if (codeMatcher.IsInvalid) {
+				throw new TranspilerDefaultMsgException("Current IL line is invalid.");
+			}
 
 			///New C#:
 			///		IncreasedEmployeeItemTransferPatch.ArgBoxNumberProducts.Value -= numTransferItems;
@@ -89,14 +89,20 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			///		AchievementsManager.Instance.CmdAddAchievementPoint(1, numTransferItems);
 			MethodInfo achievementMethod = AccessTools.Method(typeof(AchievementsManager), nameof(AchievementsManager.CmdAddAchievementPoint));
 
-			codeMatcher.MatchForward(false,                         //Match to the line where "1" is passed as second argument to the achievement method.
+			codeMatcher.MatchForward(false,					//Match to the line where "1" is passed as second argument to the achievement method.
 					new CodeMatch(OpCodes.Ldc_I4_1),
-					new CodeMatch(inst => inst.Calls(achievementMethod)))
-				.SetInstruction(loadLocalVarNumTransferItemsInstr); //Replace with our local var
+					new CodeMatch(inst => inst.Calls(achievementMethod)));
+
+			if (codeMatcher.IsInvalid) {
+				throw new TranspilerDefaultMsgException("Current IL line is invalid after Looking for the achievement increase.");
+			}
+
+			codeMatcher.SetInstruction(loadLocalVarNumTransferItemsInstr); //Replace with our local var
 
 
 			return codeMatcher.InstructionEnumeration();
 		}
+
 
 		private static List<CodeInstruction> CallGetNumTransferItems(CodeInstruction loadLocalNum2, int localVarItemTransferIndex) {
 			//C#:	int numTransferItems = IncreasedItemTransferPatch.GetNumTransferItems(boxNumberProducts, num2, maxProductsPerRow);
@@ -115,8 +121,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
 			return instrs;
 		}
-
+		
 	}
-
-
+	*/
 }

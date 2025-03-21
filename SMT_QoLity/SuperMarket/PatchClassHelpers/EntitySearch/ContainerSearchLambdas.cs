@@ -1,5 +1,5 @@
-﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
+﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
@@ -22,10 +22,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			SaveAndExit = 3
 		}
 		public enum LoopAction {
-			Nothing = 0,    //Keep looping.
-			Nothing2 = 1,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
-			Nothing3 = 2,   //Same as Nothing. Exists for conversion compatibility with LoopStorageAction.
-			Exit = 3        //Stop and return immediately.
+			/// <summary>Keeps looping.</summary>
+			Nothing = 0,
+			/// <summary>Same as Nothing. Exists for conversion compatibility with LoopStorageAction.</summary>
+			Nothing2 = 1,
+			/// <summary>Same as Nothing. Exists for conversion compatibility with LoopStorageAction.</summary>
+			Nothing3 = 2,
+			/// <summary>Stop and return immediately.</summary>
+			Exit = 3
 		}
 
 
@@ -98,10 +102,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 					LoopStorageAction loopStorageAction = storageSlotLambda(storageId, slotId, productId, quantity, storageObjT);
 
 					if (loopStorageAction == LoopStorageAction.SaveHighPrio || loopStorageAction == LoopStorageAction.SaveAndExit) {
-						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
+						freeStorageSlot.SetValues(storageId, slotId, productId, quantity, storageObjT.position);
 					} else if (loopStorageAction == LoopStorageAction.SaveLowPrio && !freeStorageSlot.FreeStorageFound) {
 						//Save only if it was empty
-						freeStorageSlot.SetValues(storageId, slotId, productId, quantity);
+						freeStorageSlot.SetValues(storageId, slotId, productId, quantity, storageObjT.position);
 					}
 
 					//Their enum values are numerically equitative so it performs the correct action in ForEachStorageSlotLambda
@@ -116,8 +120,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		/// <param name="slotIndex">Child index of current product shelf slot.</param>
 		/// <param name="productId">Product ID of the current product shelf slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
 		/// <param name="quantity">Quantity of the product in the current product shelf slot. Can be -1 if empty.</param>
+		/// <param name="prodShelfObjT">The product shelf object transform.</param>
 		/// <returns>The <see cref="LoopAction"/> to perform.</returns>
-		public delegate LoopAction ProdShelfLoopFunction(int prodShelfIndex, int slotIndex, int productId, int quantity);
+		public delegate LoopAction ProdShelfLoopFunction(int prodShelfIndex, int slotIndex, int productId, int quantity, Transform prodShelfObjT);
 
 		/// <summary>
 		/// Loops through all product shelves and its item slots, and executes on each the lambda passed through parameter.
@@ -128,7 +133,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		/// <returns></returns>
 		public static void ForEachProductShelfSlotLambda(NPC_Manager __instance, bool checkNPCProdShelfTarget, ProdShelfLoopFunction prodShelfSlotLambda) {
 			for (int i = 0; i < __instance.shelvesOBJ.transform.childCount; i++) {
-				int[] productInfoArray = __instance.shelvesOBJ.transform.GetChild(i).GetComponent<Data_Container>().productInfoArray;
+				Transform prodShelfObjT = __instance.shelvesOBJ.transform.GetChild(i);
+				int[] productInfoArray = prodShelfObjT.GetComponent<Data_Container>().productInfoArray;
 				int num = productInfoArray.Length / 2;
 				for (int j = 0; j < num; j++) {
 					//Check if this product shelf slot is already in use by another NPC
@@ -138,7 +144,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 					int prodShelfProductId = productInfoArray[j * 2];
 					int quantity = productInfoArray[j * 2 + 1];
 
-					if (prodShelfSlotLambda(i, j, prodShelfProductId, quantity) == LoopAction.Exit) {
+					if (prodShelfSlotLambda(i, j, prodShelfProductId, quantity, prodShelfObjT) == LoopAction.Exit) {
 						return;
 					}
 				}

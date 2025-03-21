@@ -1,17 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Damntry.UtilsBepInEx.IL;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
+using Damntry.UtilsBepInEx.IL;
+using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using System.ComponentModel;
-using static SuperQoLity.SuperMarket.Patches.EmployeeModule.EmployeeJobAIPatch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours;
 
 namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
+
+
+	//After the employee leveling patch, enabling item transfer for employees would break progression.
+	public enum EnumItemTransferMode {
+		[Description("Disabled")]
+		Disabled,
+		[Description("Only while store is closed")]
+		OnlyWhileStoreClosed,
+		[Description("Always on")]
+		AlwaysOn
+		/*
+		[Description("Players and employees (Closed store)")]
+		PlayersAndEmployeesWithStoreClosed,
+		[Description("Players (Always) | Employees (Closed store)")]
+		PlayersAlways_EmployeesStoreClosed,
+		[Description("Players and employees (Always)")]
+		PlayersAndEmployeesAlways
+		*/
+	}
 
 	/// <summary>
 	/// Uses transpiling to modify the methods that control the number of items to transfer to and from shelves.
@@ -35,17 +55,11 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			Employee
 		}
 
-		public enum PlayerEmployeeItemTransferMode {
-			[Description("Disabled")]
-			Disabled,
-			[Description("Players and employees (Closed store)")]
-			PlayersAndEmployeesWithStoreClosed,
-			[Description("Players (Always) | Employees (Closed store)")]
-			PlayersAlways_EmployeesStoreClosed,
-			[Description("Players and employees (Always)")]
-			PlayersAndEmployeesAlways
+		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
+			if (IsPatchActive) {
+				NetworkSpawnManager.RegisterNetwork<ItemTransferNetwork>(871623);
+			}
 		}
-
 
 		/// <summary>
 		/// Gets the total number of products to move from the equipped box into the shelf, or viceversa.
@@ -54,35 +68,56 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 		/// From Shelf to Box: (shelfItemCount, boxItemCount, boxMaxCapacity)
 		/// </summary>
 		public static int GetNumTransferItems(int giverItemCount, int receiverItemCount, int receiverMaxCapacity, CharacterType charType) {
-			int numMovedProducts = 1;
+			return GetNumTransferItems(giverItemCount, receiverItemCount, receiverMaxCapacity, charType, 1);
+		}
 
-			if (ModConfig.Instance.EnableTransferProducts.Value && ModConfig.Instance.NumTransferProducts.Value != numMovedProducts 
-					&& IsItemTransferEnabledFor(charType)) {
-
+		/// <summary>
+		/// Gets the total number of products to move from the equipped box into the shelf, or viceversa.
+		/// Parameter meanings change depending on the direction of transfer:
+		/// From Box to Shelf: (boxItemCount, shelfItemCount, shelfMaxCapacity)
+		/// From Shelf to Box: (shelfItemCount, boxItemCount, boxMaxCapacity)
+		/// </summary>
+		public static int GetNumTransferItems(int giverItemCount, int receiverItemCount, int receiverMaxCapacity, CharacterType charType, int numMovedProducts) {
+#pragma warning disable Harmony003 // Harmony non-ref patch parameters modified
+			if (IsItemTransferEnabledFor(charType, numMovedProducts)) {
 				int receiverEmptyCapacity = receiverMaxCapacity - receiverItemCount;
 				//Calculate quantity to transfer by taking the lower number of these 3 values:
 				//	- Number of products to transfer from the config.
 				//	- How much is left in the giver container (the box when placing, the shelf when removing).
 				//	- How much is left to fill the receiving container (the shelf when placing, the box when removing).
-				numMovedProducts = Math.Min(Math.Min(ModConfig.Instance.NumTransferProducts.Value, giverItemCount), receiverEmptyCapacity);
-			}
 
+				int settingMaxTransferCount = charType == CharacterType.Player ? 
+					ItemTransferNetwork.ItemTransferQuantitySync.Value : int.MaxValue;
+				numMovedProducts = Math.Min(Math.Min(settingMaxTransferCount, giverItemCount), receiverEmptyCapacity);
+			}
 			return numMovedProducts;
+#pragma warning restore Harmony003 // Harmony non-ref patch parameters modified
 		}
 
-		public static bool IsItemTransferEnabledFor(CharacterType charType) {
-			if (ModConfig.Instance.ItemTransferMode.Value == PlayerEmployeeItemTransferMode.Disabled) {
+		public static bool IsItemTransferEnabledFor(CharacterType charType, int numMovedProducts) {
+			if ((charType == CharacterType.Player &&
+					ItemTransferNetwork.ItemTransferModeSync.Value == EnumItemTransferMode.Disabled)
+				|| (charType == CharacterType.Employee &&
+					!ModConfig.Instance.ClosedStoreEmployeeItemTransferMaxed.Value)) {
+
+				//Disabled in config for the char type.
 				return false;
 			}
 
+			//If not disabled, its always active while the store is open.
+			if (!StoreStatusNetwork.IsStoreOpenOrCustomersInsideSync) {
+				return true;
+			}
+
 			if (charType == CharacterType.Player) {
-				//Only 1 mode needs the store closed for the player.
-				return !GameData.Instance.isSupermarketOpen ||
-					ModConfig.Instance.ItemTransferMode.Value != PlayerEmployeeItemTransferMode.PlayersAndEmployeesWithStoreClosed;
+				return ModConfig.Instance.EnableTransferProducts.Value &&
+					//Item count to transfer came precalculated and already matches what we wanted.
+					ItemTransferNetwork.ItemTransferQuantitySync.Value != numMovedProducts &&
+					//Only 1 mode needs the store closed for the player.
+					ItemTransferNetwork.ItemTransferModeSync.Value != EnumItemTransferMode.OnlyWhileStoreClosed;
 			} else if (charType == CharacterType.Employee) {
-				//Only 1 mode works with the store open for the employee
-				return !GameData.Instance.isSupermarketOpen ||
-					ModConfig.Instance.ItemTransferMode.Value == PlayerEmployeeItemTransferMode.PlayersAndEmployeesAlways;
+				//Store is closed. Remains disabled.
+				return false;
 			}
 
 			throw new InvalidOperationException($"{charType} is not a supported value in this method.");
@@ -134,11 +169,11 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			indexStart = indexElse + 1;
 			indexEnd = indexEndElse - 1;
 
-			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list before:\n\n{instrList.GetFormattedIL()}\n", TimeLogger.LogCategories.TempTest); }
+			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list before:\n\n{instrList.GetFormattedIL()}\n", LogCategories.TempTest); }
 
 			ReplaceConstantsWithCallResult(instrList, generator, indexStart, indexEnd, rowActionType);
 
-			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list after:\n\n{instrList.GetFormattedIL()}\n", TimeLogger.LogCategories.TempTest); }
+			//if (rowActionType == RowActionType.Remove) { TimeLogger.Logger.LogTimeWarning($"Instruction list after:\n\n{instrList.GetFormattedIL()}\n", LogCategories.TempTest); }
 
 			return instrList;
 		}
@@ -214,8 +249,8 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			GetNumTransferItemsInstr.Add(new CodeInstruction(OpCodes.Ldc_I4_S, (int)CharacterType.Player));
 
 			//Call GetNumTransferItems to put its return value on the stack
-			GetNumTransferItemsInstr.Add(Transpilers.EmitDelegate((int p1, int p2, int p3, CharacterType p4) =>
-				IncreasedItemTransferPatch.GetNumTransferItems(p1, p2, p3, p4)));
+			GetNumTransferItemsInstr.Add(Transpilers.EmitDelegate<Func<int, int, int, CharacterType, int>>(
+				IncreasedItemTransferPatch.GetNumTransferItems));
 
 			return GetNumTransferItemsInstr;
 		}
