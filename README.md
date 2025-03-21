@@ -1,50 +1,29 @@
-# Mod Features and Known bugs
+# SuperQoLity - AI, performance, and QoL changes for Supermarket Together
 
 ## Features:
 
-- NPC job coordination (kinda). Employees acquire jobs, so its current job target (a dropped box, or a specific storage/shelf slot) is reserved and other employees ignore it.
+- NPC job coordination. Employees wont go for the same jobs anymore.
+- Shelf/storage highlighting functionality, inherited from BetterSMT, with customizable colors. BetterSMT is not needed for this.
+- Configurable employee movement speed while the store is closed. Faster and less laggy than the star perk.
+- Configurable, faster item transfer to/from shelves, for players and/or employees.
+- Many small and not so small performance optimisations to employees (more to come).
+- Implemented an employee job scheduler that lets you choose their workload performance.
+- Configurable storage priority for employees (labeled/unlabeled/any)
+- Configurable employee wait time after finishing a job step.
+- Storage employees prioritise the closest box on the floor, instead of random one.
+- And tons of bugs I missed.
 
-  With this, work gets distributed instead of everyone trying to do the same thing. Only affects storage and restock workers.
+This mod is multiplayer ready. If a setting has any multiplayer requirements (only hosts, only clients, etc), its description will tell you so.
+<br />
 
-- Fix for having too many employees causing them to work slower. 
-  
-  This happened because of a bottleneck in the number of actions they can perform each second. 
-  
-  Use its setting to configure a multiplier on the actions they do.
+#### NOTE ABOUT THE SETTINGS
 
-- Configurable employee speed, but only while the store is closed.
+All settings in this mod have base game values by default. You need to edit the config to enable most features.<br />
+If you dont have an in-game config manager, I recommend using the BepInEx5 version of BepInEx.ConfigurationManager, as it lets you change settings in-game:<br />
+https://github.com/BepInEx/BepInEx.ConfigurationManager/releases
 
-  Works together with BetterSMT employee speed perk by applying a multiplier on top of it, though employee movement will look even goofier.
+By design and to promote fair play, the host has control over some of the allowed features. If the host doesnt have the mod, or it has the feature disabled, the client wont be able to use it.
 
-- Configurable amount of items to transfer to/from a product shelf each action. 
-
-  From 1 (default) to 50, with an aditional option to make this happen only while the store is closed (enabled by default).
-
-  Restocker employees are also affected by those settings.
-
-- Configurable employee wait time after finishing a single job, or idling. 
-  
-  I feel like the wait after finishing a job was too high by default and it might have been done to avoid the employee actions bottleneck, more than gameplay reasons. 
-  
-  Idle time is fine as it is, but it can be changed too though I dont recommend it.
-
-- When an employee searchs for a box on the floor, it gets the closest one instead of one random.
-
-
-* Below are BetterSMT specific changes. BetterSMT is not required, but if detected, these extra settings show up:
-
-	- New highlight features:
-		* When you pick up a box, empty storage box slots that have the same product assigned are also highlighted.
-		* Color configuration for each element (storage, storage slot, shelf, and shelf label).
-
-	- Legacy fixes for old BetterSMT versions. These have been fixed in BetterSMT > 1.6.2 and you should update if you havent yet.
-		* Fixed a bug in the storage box highlighting. It stopped working for a storage slot if you removed its box.
-		* Make it so the highlighting is updated when you hold an empty box, and take a different product into it.
-			
-
-* In the settings, features are grouped into modules. Those modules can be disabled to avoid patching the base game.
-  This means that if something fails in the future, you can keep enabled the features that still work, and the disabled ones that dont wont bug out the game.
-
-## Known bugs:
-	- Got a pretty ugly server desync once, while spamming box <-> shelf item transfers with a high number. No idea if it was a fluke that can happen in vanilla too or it was my mod. Need more feedback from testing.
-	- "The unknown bugs are the ones that keep me up at night"
+### Known bugs:
+None.
+					The unknown bugs are the ones that keep me up at night.

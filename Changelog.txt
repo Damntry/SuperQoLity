@@ -1,5 +1,7 @@
 ## Changelog
 
+### 0.8.X.X Ongoing
+	- Reworked the entire mod network communication. Tell me if something goes wrong with item transfer not using the host´s value.
 ### 0.8.1.0
 	- Main restocker process optimized and shouldnt stutter anymore, alike to base game.
 		Much better optimizations are already planned to make it not just faster than base game, but also have restockers find jobs sooner.
