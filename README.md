@@ -26,4 +26,5 @@ By design and to promote fair play, the host has control over some of the allowe
 
 ### Known bugs:
 None.
-					The unknown bugs are the ones that keep me up at night.
+				
+	The unknown bugs are the ones that keep me up at night.
