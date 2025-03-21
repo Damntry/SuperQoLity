@@ -6,14 +6,14 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.7.8</Version>
+    <Version>0.8.1.0</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
   </PropertyGroup>
 
   <PropertyGroup>
-    <BetterSMTSupportedVersion>1.8.5</BetterSMTSupportedVersion>
+    <BetterSMTSupportedVersion>1.9.9</BetterSMTSupportedVersion>
   </PropertyGroup>
   <!-- Full debug for old Unity runtimes, instead of the modern portable one.
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

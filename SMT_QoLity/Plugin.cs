@@ -5,6 +5,7 @@ using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.Logging;
+using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
 using Damntry.UtilsUnity.Components;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
@@ -24,6 +25,17 @@ namespace SuperQoLity {
 	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 	public class Plugin : BaseUnityPlugin {
 
+		/// <summary>
+		/// Beginning digits of all generated AssetIds for this mod.
+		/// Must be a value between 1 and 4293, both inclusive.
+		/// The value must be unique within all installed mods, so if 
+		/// another mod uses the same one, it will have to be changed.
+		/// It is recommended to set the value like this in a property
+		/// so it can be patched by another mod once this one is not
+		/// maintained anymore.
+		/// </summary>
+		private static int AssetIdModSignature { get; } = 3071;
+
 		public static bool IsSolutionInDebugMode = false;
 
 
@@ -40,7 +52,7 @@ namespace SuperQoLity {
 
 			//Late debug check to read from the config
 			ConfigDebugModeHandler();
-			
+
 			//Register patch containers.
 			AutoPatcher.RegisterAllAutoPatchContainers();
 
@@ -52,6 +64,8 @@ namespace SuperQoLity {
 			//Start hotkey system
 			KeyPressDetection.InitializeAsync(() => FirstPersonController.Instance, () => !AuxUtils.IsChatOpen())
 				.FireAndForget(LogCategories.Loading);
+
+			NetworkSpawnManager.Initialize(AssetIdModSignature);
 
 			TimeLogger.Logger.LogTimeDebug($"{MyPluginInfo.PLUGIN_NAME} ({MyPluginInfo.PLUGIN_GUID}) initialization finished.", LogCategories.Loading);
 
@@ -93,19 +107,19 @@ namespace SuperQoLity {
 					$"Debug Dev mode {(debugEnabled ? "enabled" : "disabled")}.", LogCategories.Loading);
 			}
 #endif
-			}
+		}
 
 		public static void HookChangeDebugSetting() {
 #if !DEBUG
 			ModConfig.Instance.EnabledDevMode.SettingChanged += (_, _) => ConfigDebugModeHandler();
 #endif
 		}
-
+		
 		private CheckResult StartMethodSignatureCheck() {
 			try {
-			MethodSignatureChecker mSigCheck = new MethodSignatureChecker(this.GetType());
+				MethodSignatureChecker mSigCheck = new MethodSignatureChecker(this.GetType());
 
-			mSigCheck.PopulateMethodSignaturesFromHarmonyPatches();
+				mSigCheck.PopulateMethodSignaturesFromHarmonyPatches();
 
 				//Locally replaced methods
 				mSigCheck.AddMethod(typeof(NPC_Manager), "EmployeeNPCControl", [typeof(int)]);
@@ -128,7 +142,7 @@ namespace SuperQoLity {
 				mSigCheck.AddMethod(typeof(NPC_Manager), "RetrieveCorrectPatrolPoint");
 				mSigCheck.AddMethod(typeof(NPC_Manager), "UpdateEmployeeStats");
 
-			return mSigCheck.StartSignatureCheck();
+				return mSigCheck.StartSignatureCheck();
 			}catch (Exception ex) {
 				TimeLogger.Logger.LogTimeException(ex, LogCategories.MethodChk);
 				return CheckResult.UnknownError;
