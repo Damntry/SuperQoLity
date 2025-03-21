@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
-using Damntry.Utils.Logging;
-using Damntry.Utils.Timers;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsUnity.Timers;
+using Damntry.UtilsBepInEx.Configuration.ConfigurationManager;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
-
+using static Damntry.UtilsBepInEx.Configuration.ConfigurationManager.SettingAttributes.ConfigurationManagerAttributes;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
+using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
 
 namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
-
 
 	/// <summary>
 	/// In the base game, employee logic is processed in FixedUpdate, which executes 50 times each second.
@@ -30,67 +30,74 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Employee slowdown fix multiplier failed. Disabled";
 
-		private static int currentEmployeeId;
 
-		//To maintain >= 60fps, each frame must take < 16.6~ ms. A bit less than 7ms for 144fps.
-		//I dont know how much every other process takes in relative terms, but
-		//	5ms seems like a high enough ceiling to let the user go crazy enough 
-		//	with the multiplier, without them completely destroying their game.
-		private const double MaxEmployeeProcessingTimeMillis = 5d;
+		public override void OnPatchFinishedVirtual(bool IsActive) {
+			if (!IsActive) {
+				return;
+			}
 
-		private static Lazy<PeriodicTimeLimitedCounter<UnityTimeStopwatch>> periodicCounter = new Lazy<PeriodicTimeLimitedCounter<UnityTimeStopwatch>>(() =>
-			new PeriodicTimeLimitedCounter<UnityTimeStopwatch>(true, 30, 30000, true));
+			//Show or hide manual job performance settings depending on the chosen mode
+			//SetManualPerfModeVisibility();
+			SetCustomPerfModeVisibility();
 
-		private static bool IsTimeoutWarningActive;
+			ModConfig.Instance.EmployeeJobFrequencyMode.SettingChanged += (object sender, EventArgs e) => {
+				//SetManualPerfModeVisibility();
+				SetCustomPerfModeVisibility();
 
-		/// <summary>
-		/// FixedUpdate is active while the game is loading, but we dont want to send performance warnings
-		/// to the user since the cpu is doing plenty of work and long process times are normal. With this
-		/// we activate the warning only while the game is in the game world.
-		/// </summary>
-		[HarmonyPrepare]
-		private static bool Prepare() {
-			GameWorldEventsPatch.OnGameWorldChange += (ev) => {
-				if (ev == GameWorldEvent.Start) {
-					IsTimeoutWarningActive = true;
-				} else if (ev == GameWorldEvent.Quit) {
-					IsTimeoutWarningActive = false;
-				}
+				ConfigManagerController.RefreshGUI();
 			};
-
-			return true;
 		}
 
-		//TODO 3 - Throw meaningful errors when it cant match instructions
-		[HarmonyPatch(typeof(NPC_Manager), "FixedUpdate")]
+
+		[HarmonyPrepare]
+		public static bool HarmonyPrepare() {
+			return Container<EmployeeJobAIPatch>.Instance.IsPatchActive;
+		}
+
+		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.FixedUpdate))]
 		[HarmonyAfterInstance(typeof(EmployeeJobAIPatch))]
 		[HarmonyTranspiler]
 		public static IEnumerable<CodeInstruction> FixedUpdateTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
 			CodeMatcher codeMatcher = new CodeMatcher(instructions);
 
-			///Old C#:<
+			///Old C#:
 			///		if (childCount > 0) {
+			///			if (!this.mainShelfUpdateIsRunning){
+			///				base.StartCoroutine(this.MainRestockUpdate());
+			///			}
 			///			this.EmployeeNPCControl(this.counter2);
 			///			this.counter2++;
-			///			if (this.counter2 >= childCount) {
+			///			if (this.counter2 >= employeeCount) {
 			///				this.counter2 = 0;
 			///			}
 			///		}
 			///New C#:
-			///		if (childCount > 0) {
-			///			ProcessEmployeeJobs(this, childCount);
+			///		if (employeeCount > 0) {
+			///			ProcessEmployeeJobs(this, employeeCount);
 			///		}
-			codeMatcher.MatchForward(false,                                 //Match for the whole "this.EmployeeNPCControl(this.counter2);" IL to step on its first line.
+
+			codeMatcher.MatchForward(true,                              //Match for the whole "if (childCount > 0)" IL to step on its first line.
+					new CodeMatch(inst => inst.IsLdloc() && inst.labels.Count > 0),
+					new CodeMatch(inst => inst.LoadsConstant()),
+					new CodeMatch(inst => inst.operand is Label));
+
+			if (codeMatcher.IsInvalid) {
+				throw new TranspilerDefaultMsgException($"IL line \"if (childCount > 0)\" could not be found.");
+			}
+
+			/* Old one before the restocker employee rework
+			codeMatcher.MatchForward(false,                             //Match for the whole "this.EmployeeNPCControl(this.counter2);" IL to step on its first line.
 					new CodeMatch(inst => inst.IsLdarg()),
 					new CodeMatch(inst => inst.IsLdarg()),
 					new CodeMatch(OpCodes.Ldfld),
 					new CodeMatch(OpCodes.Call));
+			*/
 
-			int startPos = codeMatcher.Pos;                                 //Save start position for later
+			int startPos = codeMatcher.Pos + 1;							//Save start position inside the condition block for later
 
-			Label endLabel = (Label)codeMatcher.Advance(-1).Operand;        //Get the destination label where the "if (childCount > 0) {" bracket ends.
+			Label endLabel = (Label)codeMatcher.Operand;                //Get the destination label where the "if (childCount > 0) {" bracket ends.
 
-			codeMatcher.MatchForward(true,                                  //Move to the label.
+			codeMatcher.MatchForward(true,                              //Move to the label.
 				new CodeMatch(inst => inst.labels.Contains(endLabel)));
 
 			codeMatcher.RemoveInstructionsInRange(startPos, codeMatcher.Pos - 1);   //Remove all instructions inside the "if (childCount > 0) {" block.
@@ -99,52 +106,38 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			processEmployeesInstr.Add(new CodeInstruction(OpCodes.Ldarg_0));    //Load "this" onto the stack
 																				//TODO 4 - Dont assume its the first var, and search for it.
 			processEmployeesInstr.Add(new CodeInstruction(OpCodes.Ldloc_0));    //Load childCount onto the stack
-			processEmployeesInstr.Add(Transpilers.EmitDelegate(                 //Call the function to consume the 2 previous arguments on the stack.
-				(NPC_Manager __instance, int childCount) => ProcessEmployeeJobs(__instance, childCount)));
+																				//Call the function to consume the 2 previous arguments on the stack.
+			processEmployeesInstr.Add(Transpilers.EmitDelegate(JobSchedulerManager.ProcessEmployeeJobs));
 
 			codeMatcher.Start().Advance(startPos).Insert(processEmployeesInstr);    //Insert the method call that replaces the old code functionality.
 
 			return codeMatcher.InstructionEnumeration();
 		}
 
+		/*
+		private void SetManualPerfModeVisibility() {
+			bool IsManualModeEnabled = ModConfig.Instance.EmployeeJobFrequencyMode.Value == EnumJobFrequencyMultMode.Manual;
 
-		private static void ProcessEmployeeJobs(NPC_Manager __instance, int childCount) {
-			UnityTimeStopwatch processTime = UnityTimeStopwatch.StartNew();
-
-			for (int i = 0; i < ModConfig.Instance.EmployeeJobFrequencyMultiplier.Value; i++) {
-				if (currentEmployeeId >= childCount) {
-					currentEmployeeId = 0;
-				}
-				EmployeeJobAIPatch.EmployeeNPCControlPatch(__instance, currentEmployeeId);
-				currentEmployeeId++;
-
-				//Make sure we dont overdo the time we take to process employees.
-				if (ProcessTimedOut(processTime)) {
-					break;
-				}
-			}
+			ModConfig.Instance.EmployeeJobFrequencyManualMultiplier.SetConfigAttribute(
+					ConfigAttributes.Browsable, IsManualModeEnabled);
+			ModConfig.Instance.EmployeeJobManualMaxProcessTime.SetConfigAttribute(
+				ConfigAttributes.Browsable, IsManualModeEnabled);
 		}
+		*/
 
+		private void SetCustomPerfModeVisibility() {
+			bool IsCustomMode = ModConfig.Instance.EmployeeJobFrequencyMode.Value == EnumJobFrequencyMultMode.Auto_Custom;
 
-		private static bool ProcessTimedOut(UnityTimeStopwatch processTime) {
-			if (!IsTimeoutWarningActive) {
-				return true;	//Stop processing more employee actions than default while loading.
-			}
-
-			if (processTime.ElapsedMillisecondsPrecise >= MaxEmployeeProcessingTimeMillis) {
-
-				if (!periodicCounter.Value.TryIncreaseCounter()) {
-					//TODO 6 - Maybe show this in-game too, but only once the first time they start a game.
-					TimeLogger.Logger.LogTimeWarning("Processing employee actions is taking too much time and its " +
-						$"being automatically limited by {MyPluginInfo.PLUGIN_NAME} to improve performance. " +
-						$"To fix this, try decreasing the value of the setting \"{ModConfig.Instance.EmployeeJobFrequencyMultiplier.Definition.Key}\".",
-						TimeLogger.LogCategories.PerfTest);
-				}
-
-				return true;
-			}
-
-			return false;
+			ModConfig.Instance.CustomAvgEmployeeWaitTarget.SetConfigAttribute(
+				ConfigAttributes.Browsable, IsCustomMode);
+			ModConfig.Instance.CustomMinimumFrequencyMult.SetConfigAttribute(
+					ConfigAttributes.Browsable, IsCustomMode);
+			ModConfig.Instance.CustomMaximumFrequencyMult.SetConfigAttribute(
+				ConfigAttributes.Browsable, IsCustomMode);
+			ModConfig.Instance.CustomMaximumFrequencyReduction.SetConfigAttribute(
+					ConfigAttributes.Browsable, IsCustomMode);
+			ModConfig.Instance.CustomMaximumFrequencyIncrease.SetConfigAttribute(
+				ConfigAttributes.Browsable, IsCustomMode);
 		}
 
 	}

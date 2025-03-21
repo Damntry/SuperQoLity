@@ -59,6 +59,8 @@ namespace SuperQoLity {
 			bool allPatchsOK = AutoPatcher.StartAutoPatcher();
 
 			//BetterSMT_Helper.Instance.LogCurrentBetterSMTStatus(allPatchsOK);
+
+			JobSchedulerManager.InitializeJobSchedulerEvents();
 			RestockMatcher.Enable();
 #if DEBUG
 			//Compare method signatures and log results
