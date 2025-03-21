@@ -3,10 +3,8 @@ using System.Diagnostics;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsUnity.Components;
 using HarmonyLib;
 using Mirror;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Networking;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.Patches {
