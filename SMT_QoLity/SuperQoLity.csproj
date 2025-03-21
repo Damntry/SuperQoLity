@@ -37,9 +37,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj" />
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj" />
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals\Damntry Globals.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals BepInEx\!Damntry Globals BepInEx.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals Unity\!Damntry Globals Unity.csproj" />
+    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals\!Damntry Globals.csproj" />
   </ItemGroup>
   
   <ItemGroup>
