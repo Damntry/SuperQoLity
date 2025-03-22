@@ -20,15 +20,15 @@
 
 		At least until they change it to something else. Or I do.
 	- Reworked the entire mod network communication. Tell me if something goes wrong with item transfer not using the host´s value.
-### 0.8.1.0
+#### 0.8.1.0
 	- Main restocker process optimized and shouldnt stutter anymore, alike to base game.
 		Much better optimizations are already planned to make it not just faster than base game, but also have restockers find jobs sooner.
 	- Fixed higher leveled employees sometimes putting more items in product shelves than what should fit.
 	- Fixed that when an employee was on its way to pick up a box from storage, a player removing or adding items into it would make the employee still think it had the old amount in it.
-0.8.0.6
+#### 0.8.0.6
 	- Fixed cache exception happening after the "Electronics II + Decoration" game update.
 	- Fixed setting "Maximum workload reduction per cycle" showing default as a negative value.
-0.8.0.5
+#### 0.8.0.5
 	- Fixed employees recycling only at the furthest recycle bin.
 	- Fixed some "Host only" settings keeping previous values when you were a client, instead of going default.
 	- Fixed Dev mode always disabled at game start.
@@ -36,10 +36,10 @@
 	- Currently, the only thing slower than base game is the main restocker process.
 		I made it a bit faster for now, but I expect to finish the complete solution to this for the next update. 
 		It should be a pretty decent optimization in big stores.
-0.8.0.2
+#### 0.8.0.2
 	- Fixed bug introduced in 0.8.0.1 where if a reserved storage target wasnt valid anymore, the NPC would have no destination.
 	- Added that whenever an storage worker destination was invalid, the employee looks for new storage instead of directly going to drop the box at the left over spot
-0.8.0.1
+#### 0.8.0.1
 	- Fixed bug where box items would be lost if there were more than 2 boxes to merge by storage workers.
-0.8
+#### 0.8
 	- Initial Release
