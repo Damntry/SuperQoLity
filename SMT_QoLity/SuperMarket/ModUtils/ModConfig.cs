@@ -11,6 +11,7 @@ using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearch;
 using System;
+using SuperQoLity.SuperMarket.Patches.Misc;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -47,6 +48,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<Color> ShelfLabelHighlightColor { get; private set; }
 		public ConfigEntry<Color> StorageHighlightColor { get; private set; }
 		public ConfigEntry<Color> StorageSlotHighlightColor { get; private set; }
+
+		public ConfigEntry<bool> EnableMiscPatches { get; private set; }
+		public ConfigEntry<bool> EnablePriceGunFix { get; private set; }
 
 		public ConfigEntry<bool> EnableModNotifications { get; private set; }
 		public ConfigEntry<bool> EnableWelcomeMessages { get; private set; }
@@ -107,6 +111,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			InitializeEmployeePerformanceModule();
 			InitializeItemTransferSpeedModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
 			InitializeHighlightExtensionModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
+			InitializeMiscModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
 			InitializeNotificationModule();
 			InitializeDisplayAutoSettingsModule();
 			InitializeEmployeePerformanceCustomSettingsModule();
@@ -333,6 +338,26 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			);
 		}
 
+		private void InitializeMiscModule(string moduleGenericEnablerKey, string moduleGenericEnablerDescription) {
+			string miscModuleText = "Misc. Module";
+
+			EnableMiscPatches = configManagerControl.AddConfig(
+				sectionName: miscModuleText,
+				key: string.Format(moduleGenericEnablerKey, miscModuleText),
+				defaultValue: true,
+				description: string.Format(moduleGenericEnablerDescription, miscModuleText)
+			);
+
+			EnablePriceGunFix = configManagerControl.AddConfig(
+				sectionName: miscModuleText,
+				key: "Enable pricing gun double price fix",
+				defaultValue: false,
+				description: "Fixes customers sometimes complaining when prices are set to 200%." +
+				"See the 0.8.2.0 changelog for a explanation on why I consider this a bug.",
+				patchInstanceDependency: Container<PricingGunFixPatch>.Instance,
+				modInstallSide: MultiplayerModInstallSide.HostSideOnly
+			);
+		}
 		private void InitializeNotificationModule() {
 			string notificationsModuleText = "Notifications Module";
 

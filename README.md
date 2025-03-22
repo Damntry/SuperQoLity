@@ -10,6 +10,7 @@
 - Implemented an employee job scheduler that lets you choose their workload performance.
 - Configurable storage priority for employees (labeled/unlabeled/any)
 - Configurable employee wait time after finishing a job step.
+- Pricing gun fixed so doubling the price no longer makes customers complain (Check 0.8.2.0 changelog to see why I see this as a bug)
 - Storage employees prioritise the closest box on the floor, instead of random one.
 - And tons of bugs I missed.
 

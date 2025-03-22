@@ -1,6 +1,24 @@
 ## Changelog
 
-### 0.8.X.X Ongoing
+### 0.8.2.0
+	- Pricing gun fixed so doubling the price no longer makes customers complain.
+		This one needs a bit of an explanation on why I consider it a bug:
+
+		A customer only complains if something is over 2 times the price.
+		Yet when you double an item´s market price with the pricing gun, sometimes customers still complain. 
+		Why? Because the market price is a lie: The pricing gun might show you a market price of 1.25, so you would think 2.5 should be fine. 
+		In reality its something like 1.2453, which doubled results in 2,4906. 
+		When a customer comes and checks the price, 2.5 is greater than 2,4906, so they complain.
+
+		All of this only happens depending on calculated market price. Some products are fine with a 200% markup and a certain inflation value, but then comes inflation day and setting the same product to 200% gets complains.
+		This inconsistency is what makes it a bug, though a pretty small one.
+
+		The pricing machine doesnt have this problem (even if you dont round down 1 cent), but not because it is doing hidden magic, but because it does calculations based on what is being shown.
+			
+		I changed it so what you see is what you get. If the pricing gun tells you the market price is 1.25, it really is. 
+		Now you can trust the pricing gun and stop doing -1 cent on everything.
+
+		At least until they change it to something else. Or I do.
 	- Reworked the entire mod network communication. Tell me if something goes wrong with item transfer not using the host´s value.
 ### 0.8.1.0
 	- Main restocker process optimized and shouldnt stutter anymore, alike to base game.
