@@ -56,6 +56,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			Security = 4
 		}
 
+		//TODO 1 - Create something to try and detect when an employee is stuck in some kind of loop, so
+		//	I can fix the vanilla error I ve been seeing of employees going back and forth in place.
+
 		//TODO 2 - Make this be activable when Debug is enabled and you press a certain hotkey, so
 		//			I can help people with employee problems.
 		//			Make it send a notification in-game to confirm its enabled/disabled.
