@@ -10,6 +10,7 @@ using Damntry.UtilsUnity.Components;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
 
@@ -18,6 +19,10 @@ namespace SuperQoLity {
 
 	//TODO 1 - Find things Im loading on WorldStart and try to move them earlier if possible.
 	//	There is noticeable lag when starting compared to base game, specially on big stores.
+
+	//TODO 2 - Make a method that when debug is enabled and a certain hotkey is pressed, it gathers
+	//	info about installed mods, the current LogOutput and what not, and copies it into the clipboard
+	//	to help users make error reporting easier.
 
 	//Soft dependency so we load after ika.smtanticheat and BetterSMT if they exist.
 	[BepInDependency(ModInfoSMTAntiCheat.GUID, BepInDependency.DependencyFlags.SoftDependency)]

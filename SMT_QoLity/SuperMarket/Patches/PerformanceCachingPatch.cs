@@ -53,6 +53,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 					//The Data_Container belongs to a product shelf object. Calculate its capacity for each product.
 					foreach (GameObject prodPrefab in ProductListing.Instance.productPrefabs) {
 
+						if (prodPrefab == null) {
+							//Support for mod "Custom Products" that resizes the array to a
+							//	fixed 9999 elements, leaving empty ones.
+							continue;
+						}
 						int productId = prodPrefab.GetComponent<Data_Product>().productID;
 						int maxProductsPerRow = GetMaxProductsPerRow(dataContainer, productId);
 						maxProductsPerRowCache.Add((dataContainer.containerClass, dataContainer.containerID, productId), maxProductsPerRow);

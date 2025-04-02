@@ -6,7 +6,7 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.8.2.0</Version>
+    <Version>0.8.3.0</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>

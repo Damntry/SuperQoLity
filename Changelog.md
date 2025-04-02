@@ -1,6 +1,11 @@
 ## Changelog
-
-### 0.8.2.0
+### 0.8.3.0
+	- Requested by Aretha Cairn: You can now hold the mouse button to scan items in the checkout belt.
+		It should make easier to play cashier for long periods of time.
+	- Requested by Aretha Cairn: New setting to expand the clickable area of the product order button in the blackboard, so it can be clicked (almost) anywhere in its product square.
+	- Added support for "Custom Products" mod to avoid an exception when loading the game.
+	- Removed debug log from the pricing gun fix that I forgot to remove. Oh no.
+#### 0.8.2.0
 	- Pricing gun fixed so doubling the price no longer makes customers complain.
 		This one needs a bit of an explanation on why I consider it a bug:
 

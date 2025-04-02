@@ -38,11 +38,15 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public const string NewLineNotifSeparator = "´^¨";
 
 
-		public static int MAX_MESSAGE_QUEUE = 5;
+		public static readonly int MAX_MESSAGE_QUEUE = 5;
 
 		private Queue<NotificationInfo> notificationQueue;
 
+		//TODO 2 - So what happens if the multipart notif takes longer than this and another notif shows up?
+		/// <summary>Wait between notifications. Multipart notifications are counted as one.</summary>
 		private readonly int notificationFrequencyMilli = 4250;
+
+		private readonly int notifConsumerFrequency = 150;
 
 		private readonly int minDelay = 900;
 
@@ -58,6 +62,24 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public bool NotificationsActive { get; private set; }
 
 
+		/* TODO 3 - Code to modify the FSM controlled time that notifications show on screen.
+			This changes the base values from the prefab that FSM will clone to make the notification, so
+			it affects every notification from then on, but I can just do this on my manually
+			instantiated notification prefab so I have a per-message setting.
+
+			PlayMakerFSM playMakerAlpha = GameCanvas.Instance.notificationPrefab.GetComponents<PlayMakerFSM>()
+				.FirstOrDefault(p => p.FsmName == "AlphaDelay");
+			playMakerAlpha.FsmVariables.GetFsmFloat("InitDelay").Value = 1.25f;
+			playMakerAlpha.FsmVariables.GetFsmFloat("Overlapping").Value = 0.75f;
+
+			PlayMakerFSM playMakerImportantAlpha = GameCanvas.Instance.importantNotificationPrefab.GetComponents<PlayMakerFSM>()
+				.FirstOrDefault(p => p.FsmName == "AlphaDelay");
+			playMakerImportantAlpha.FsmVariables.GetFsmFloat("InitDelay").Value = 1.25f;
+			playMakerImportantAlpha.FsmVariables.GetFsmFloat("Overlapping").Value = 0.75f;
+
+			//This should be same or lower than InitDelay + Overlapping
+			GameNotifications.notificationFrequencyMilli = 1000;
+		*/
 
 		private GameNotifications() {
 			notificationTask = new CancellableSingleTask<UniTaskDelay>();
@@ -178,6 +200,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		private async Task NotificationConsumer() {
 			while (!notificationTask.IsCancellationRequested) {
 				NotificationInfo oldestNotification = null;
+				int notificationDelay = notifConsumerFrequency;
 
 				lock (queueLock) {
 					if (notificationQueue?.Count > 0) {
@@ -187,9 +210,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 				if (oldestNotification != null) {
 					await ShowNotification(oldestNotification);
+					notificationDelay = notificationFrequencyMilli;
 				}
 
-				await UniTask.Delay(notificationFrequencyMilli, cancellationToken: notificationTask.CancellationToken);
+				await UniTask.Delay(notificationDelay, cancellationToken: notificationTask.CancellationToken);
 			}
 		}
 
