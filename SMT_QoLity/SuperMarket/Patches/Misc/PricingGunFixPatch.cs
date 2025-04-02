@@ -21,7 +21,6 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Pricing Gun price patch failed. Disabled.";
 
 
-		[HarmonyDebug]
 		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.CustomerNPCControl))]
 		[HarmonyTranspiler]
 		public static IEnumerable<CodeInstruction> CustomerNPCControlTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {

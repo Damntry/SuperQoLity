@@ -58,6 +58,12 @@
     <Reference Include="PlayMaker">
       <HintPath>lib\PlayMaker.dll</HintPath>
     </Reference>
+    <Reference Include="Rewired_Core">
+      <HintPath>lib\Rewired_Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Rewired_Windows">
+      <HintPath>lib\Rewired_Windows.dll</HintPath>
+    </Reference>
     <Reference Include="UniTask">
       <HintPath>lib\UniTask.dll</HintPath>
     </Reference>

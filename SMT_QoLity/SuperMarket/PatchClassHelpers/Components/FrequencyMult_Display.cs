@@ -25,9 +25,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 		private bool allowDisplay;
 		
 		private void Awake() {
-			freqMultDisplay = new GameObject("JobFreqMult_Display");
-			freqMultDisplay.transform.SetParent(masterCanvas.transform);
-			freqMultDisplay.SetActive(false);
+			freqMultDisplay = SMTGameObjectManager.CreateSuperQoLGameObject("JobWorkload_Display", TargetObject.UI_MasterCanvas, false);
 
 			SetupUI();
 
@@ -43,8 +41,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 		}
 
 		public static void Initialize() {
-			masterCanvas = GameObject.Find("MasterOBJ/MasterCanvas");
-			masterCanvas.AddComponent<FrequencyMult_Display>();
+			SMTGameObjectManager.AddComponentTo<FrequencyMult_Display>(TargetObject.UI_MasterCanvas);
 		}
 
 		private void SetupUI() {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Mirror;
@@ -271,6 +272,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				if (employee.equippedItem > 0) {
 					__instance.DropBoxOnGround(employee);
 					__instance.UnequipBox(employee);
+				}
+				if (state != 0) {
+					employee.state = 0;
 				}
 				return true;
 			}

@@ -50,7 +50,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<Color> StorageSlotHighlightColor { get; private set; }
 
 		public ConfigEntry<bool> EnableMiscPatches { get; private set; }
+		public ConfigEntry<bool> EnableCheckoutAutoClicker { get; private set; }
 		public ConfigEntry<bool> EnablePriceGunFix { get; private set; }
+		public ConfigEntry<bool> EnableExpandedProdOrderClickArea { get; private set; }
 
 		public ConfigEntry<bool> EnableModNotifications { get; private set; }
 		public ConfigEntry<bool> EnableWelcomeMessages { get; private set; }
@@ -348,6 +350,16 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: string.Format(moduleGenericEnablerDescription, miscModuleText)
 			);
 
+			EnableCheckoutAutoClicker = configManagerControl.AddConfig(
+				sectionName: miscModuleText,
+				key: "Hold click to scan checkout products",
+				defaultValue: false,
+				description: "Instead of having to keep pressing Main Action (Left Click by default) to scan each product " +
+				"on the cash register belt, you can hold it to continuously scan as you mouse over products.",
+				patchInstanceDependency: Container<CheckoutAutoClickScanner>.Instance,
+				modInstallSide: MultiplayerModInstallSide.Any
+			);
+
 			EnablePriceGunFix = configManagerControl.AddConfig(
 				sectionName: miscModuleText,
 				key: "Enable pricing gun double price fix",
@@ -356,6 +368,16 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				"See the 0.8.2.0 changelog for a explanation on why I consider this a bug.",
 				patchInstanceDependency: Container<PricingGunFixPatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
+			);
+
+			EnableExpandedProdOrderClickArea = configManagerControl.AddConfig(
+				sectionName: miscModuleText,
+				key: "Increased clickable area in product order",
+				defaultValue: false,
+				description: "When at the Manager Blackboard, you can click anywhere in the product panel " +
+				"to add it to the shopping list, instead of just the \"+\" button.",
+				patchInstanceDependency: Container<ExpandProductOrderClickArea>.Instance,
+				modInstallSide: MultiplayerModInstallSide.Any
 			);
 		}
 		private void InitializeNotificationModule() {

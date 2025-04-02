@@ -1,21 +1,25 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
+using Mirror;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using static SuperQoLity.SuperMarket.Patches.EmployeeModule.EmployeeJobAIPatch;
 
-namespace SuperQoLity.SuperMarket.Patches {
+namespace SuperQoLity.SuperMarket.Patches.Debug {
 
-	/* ************** ONLY WORKS IN VS DEBUG MODE ************** */
+	/* ************** PATCHES ONLY WORK IN VISUAL STUDIO DEBUG MODE ************** */
 
 	/// <summary>
 	/// Tests and stuffs, only meant to be used occasionally.
@@ -40,7 +44,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 			timeFactor
 
 			Change timescale
-			Max hierable employees
+			Max hireable employees
 			
 		*/
 
@@ -55,16 +59,36 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 			All = ~None
 		}
+		[Flags]
+		private enum ActiveDebugUtilities {
+			None = 0,
+			PerformanceTableLogging = 1,
+			GetSceneComponents = 2,
+			CheckoutProductFiller = 4,
+
+			All = ~None
+		}
 
 		private static ActiveDebugPatches activeDebugPatches = ActiveDebugPatches.None;
+		private static ActiveDebugUtilities activeDebugUtilities = ActiveDebugUtilities.CheckoutProductFiller;
 
 
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
 			if (IsPatchActive) {
-				//StartPerformanceTableLogging();
+				if (activeDebugUtilities == ActiveDebugUtilities.PerformanceTableLogging) {
+					StartPerformanceTableLogging();
+				}
 				if (SpawnMoreEmployeesAndAutoAssign.IsAutoAssignAllEmployeesActive) {
 					WorldState.OnGameWorldChange += SpawnMoreEmployeesAndAutoAssign.SpawnMoreEmployeesAndAutoAssignEvent;
+				}
+				if (activeDebugUtilities == ActiveDebugUtilities.GetSceneComponents) {
+					SceneManager.activeSceneChanged += (_, newActiveScene) => {
+						ComponentLogger.GetActiveComponentsInScene(newActiveScene); 
+					};
+				}
+				if (activeDebugUtilities == ActiveDebugUtilities.CheckoutProductFiller) {
+					WorldState.OnWorldStarted += CheckoutProductFiller.StartProductSpawnLoop;
 				}
 			}
 		}
@@ -231,6 +255,128 @@ namespace SuperQoLity.SuperMarket.Patches {
 			}
 		}
 
+		public static class ComponentLogger {
+
+			private static Dictionary<MonoBehaviour, DateTime> dict = new();
+
+			public static async void GetActiveComponentsInScene(Scene newActiveScene) {
+				if (!newActiveScene.name.ToLower().Contains("main")) {
+					return;
+				}
+
+				while (true) {
+					AddNewMonoBehavioursFromActiveScene();
+
+					if (WorldState.IsGameWorldStarted) {
+						System.Text.StringBuilder sb = new();
+
+						dict
+							.OrderBy(x => x.Value)
+							.Do(p => {
+								sb.Append(p.Key.ToString());
+								sb.Append("  --  ");
+								sb.AppendLine(p.Value.ToString("HH:mm:ss.fff"));
+							}
+						);
+						LOG.TEMPWARNING(sb.ToString());
+						return;
+					}
+
+					await System.Threading.Tasks.Task.Delay(2);
+				}
+			}
+
+			public static void AddNewMonoBehavioursFromActiveScene() {
+				DateTime currentTime = DateTime.Now;
+
+				foreach (var gameObject in SceneManager.GetActiveScene().GetRootGameObjects()) {
+					foreach (var item in gameObject.GetComponentsInChildren<MonoBehaviour>(true)) {
+						if (!dict.ContainsKey(item)) {
+							dict.Add(item, currentTime);
+						}
+					}
+
+				}
+			}
+
+		}
+
+		public static class CheckoutProductFiller {
+
+			private static readonly float SpawnInterval = 0.15f;
+			private static readonly int TotalProductLimit = 16;
+
+			private static readonly List<int> productsIDInCheckout = new();
+			private static float timeFill;
+
+			private static bool loopActive = false;
+
+			public static async void StartProductSpawnLoop() {
+				if (NPC_Manager.Instance == null || NPC_Manager.Instance.checkoutOBJ)
+				WorldState.OnQuitOrMenu += () => { loopActive = false; };
+
+				loopActive = true;
+
+				while (loopActive && NPC_Manager.Instance != null && 
+						NPC_Manager.Instance.checkoutOBJ != null && 
+						NPC_Manager.Instance.checkoutOBJ.transform.childCount > 0) {
+
+					PlaceProductOnBelt();
+
+					await UniTask.Delay(1);
+				}
+			}
+
+			/// <summary>
+			/// Generates a product and places it in the belt of the first checkout.
+			/// Based on NPC_Info.PlaceProductsCoroutine.
+			/// </summary>
+			public static void PlaceProductOnBelt() {
+				GameObject checkoutOBJ = NPC_Manager.Instance.checkoutOBJ;
+				Transform currentCheckout = checkoutOBJ.transform.GetChild(0);
+
+				if (timeFill > Time.time || currentCheckout.GetComponent<Data_Container>().NetworkproductsLeft > TotalProductLimit) {
+					return;
+				}
+
+				timeFill = Time.time + SpawnInterval;
+
+				currentCheckout.GetComponent<Data_Container>().NetworkproductsLeft++;
+
+				int num = UnityEngine.Random.Range(1, 50);
+				GameObject gameObject = UnityEngine.Object.Instantiate(NPC_Manager.Instance.productCheckoutPrefab);
+				ProductCheckoutSpawn component = gameObject.GetComponent<ProductCheckoutSpawn>();
+				component.NetworkproductID = num;
+				component.NetworkcheckoutOBJ = currentCheckout.gameObject;
+				//component.NetworkNPCOBJ = base.gameObject;
+				component.NetworkproductCarryingPrice = 10;
+				component.internalDataContainerListIndex = productsIDInCheckout.Count;
+				productsIDInCheckout.Add(num);
+				int num2 = 0;
+				float num3 = 0f;
+				float num4 = 0f;
+				foreach (int item in productsIDInCheckout) {
+					float x = ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x;
+					if (productsIDInCheckout.Count == 1) {
+						num3 = x / 2f;
+						break;
+					}
+					num3 += x / 2f + num4 / 2f + 0.01f;
+					if (num3 + x / 2f > 0.5f) {
+						num2++;
+						num3 = x / 2f;
+						if (num2 > 6) {
+							num2 = 0;
+						}
+					}
+					num4 = x;
+				}
+				gameObject.transform.position = currentCheckout.transform.Find("CheckoutItemPosition").transform.TransformPoint(new Vector3(num3, 0f, (float)num2 * 0.15f));
+				gameObject.transform.rotation = currentCheckout.rotation;
+				currentCheckout.GetComponent<Data_Container>().internalProductListForEmployees.Add(gameObject);
+				NetworkServer.Spawn(gameObject);
+			}
+		}
 
 		private static bool deleteBoxesDone;
 		/// <summary>Delete every box in storage.</summary>

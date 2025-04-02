@@ -5,6 +5,7 @@ using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
 using Mirror;
+using StarterAssets;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.Patches {
@@ -110,13 +111,21 @@ namespace SuperQoLity.SuperMarket.Patches {
 			}
 		}
 
+		private class FirstPersonControllerStart {
+
+			[HarmonyPatch(typeof(FirstPersonController), "Start")]
+			[HarmonyPostfix]
+			public static void OnClientDisconnectPatch(GameCanvas __instance) {
+				WorldState.SetGameWorldState(GameWorldEvent.FPControllerStarted);
+			}
+
+		}
 
 		private class DetectQuitToMainMenu {
 
 			[HarmonyPatch(typeof(CustomNetworkManager), nameof(CustomNetworkManager.OnClientDisconnect))]
 			[HarmonyPostfix]
 			public static void OnClientDisconnectPatch(GameCanvas __instance) {
-				TimeLogger.Logger.LogTimeDebug("Quitting to main menu.", LogCategories.Other);
 				WorldState.CurrenOnlineMode = GameOnlineMode.None;
 				WorldState.SetGameWorldState(GameWorldEvent.QuitOrMenu);
 			}
