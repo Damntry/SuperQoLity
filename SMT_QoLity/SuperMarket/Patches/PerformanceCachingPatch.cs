@@ -117,7 +117,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 				shelfHeight = __instance.shelvesOBJ.transform.GetChild(shelfIndex).GetComponent<Data_Container>().shelfHeight;
 			}
 			*/
-
+			if (ProductID >= ProductListing.Instance.productPrefabs.Length) {
+				//Happened in one update where they added a new hidden, unusable product,
+				//	and its productId didnt match a position inside the array
+				return -1;
+			}
 			GameObject gameObject = ProductListing.Instance.productPrefabs[ProductID];
 			Vector3 size = gameObject.GetComponent<BoxCollider>().size;
 			bool isStackable = gameObject.GetComponent<Data_Product>().isStackable;

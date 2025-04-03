@@ -1,4 +1,7 @@
 ## Changelog
+### 0.8.3.2
+	- Fixed exception happening after new SMT update that made restockers not work.
+	- Fixed exception that happened when the setting "Hold click to scan checkout products" was disabled.
 ### 0.8.3.0
 	- Requested by Aretha Cairn: You can now hold the mouse button to scan items in the checkout belt.
 		It should make easier to play cashier for long periods of time.

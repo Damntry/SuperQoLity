@@ -2,10 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using Damntry.UtilsUnity.Components;
+using Damntry.UtilsUnity.Resources;
 using HarmonyLib;
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
@@ -19,16 +20,17 @@ using static SuperQoLity.SuperMarket.Patches.EmployeeModule.EmployeeJobAIPatch;
 
 namespace SuperQoLity.SuperMarket.Patches.Debug {
 
-	/* ************** PATCHES ONLY WORK IN VISUAL STUDIO DEBUG MODE ************** */
-
 	/// <summary>
 	/// Tests and stuffs, only meant to be used occasionally.
 	/// Methods here are quick and dirty patches or utililty
 	/// methods that are not used in any permanent functionality, 
-	/// and would require some more work to do its job properly.
+	/// and would require some more work and polish.
 	/// </summary>
 	public class TestAndDebugPatch : FullyAutoPatchedInstance {
 
+		/*	*********************************************************************************
+			************** THESE PATCHES ONLY WORK IN VISUAL STUDIO DEBUG MODE ************** 
+			******************************************************************************** */
 
 		public override bool IsAutoPatchEnabled => Plugin.IsSolutionInDebugMode;
 
@@ -48,14 +50,21 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			
 		*/
 
+		private static ActiveDebugPatches activeDebugPatches = 
+			ActiveDebugPatches.None;
+
+		private static ActiveDebugUtilities activeDebugUtilities = 
+			ActiveDebugUtilities.None;
+
+
 
 		[Flags]
 		private enum ActiveDebugPatches {
 			None = 0,
 			FasterTimePassing = 1,
-			FasterMovingCustomers = 2,
-			SpawnMoreEmployeesAndAutoAssign = 4,
-			CustomerMassSpawning = 8,
+			FasterMovingCustomers = 1 << 1,
+			SpawnMoreEmployeesAndAutoAssign = 1 << 2,
+			CustomerMassSpawning = 1 << 3,
 
 			All = ~None
 		}
@@ -63,15 +72,12 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 		private enum ActiveDebugUtilities {
 			None = 0,
 			PerformanceTableLogging = 1,
-			GetSceneComponents = 2,
-			CheckoutProductFiller = 4,
+			GetSceneComponents = 1 << 1,
+			CheckoutProductFiller = 1 << 2,
+			TheDuckening = 1 << 3,
 
 			All = ~None
 		}
-
-		private static ActiveDebugPatches activeDebugPatches = ActiveDebugPatches.None;
-		private static ActiveDebugUtilities activeDebugUtilities = ActiveDebugUtilities.CheckoutProductFiller;
-
 
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
@@ -84,16 +90,25 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 				if (activeDebugUtilities == ActiveDebugUtilities.GetSceneComponents) {
 					SceneManager.activeSceneChanged += (_, newActiveScene) => {
-						ComponentLogger.GetActiveComponentsInScene(newActiveScene); 
+						ComponentLogger.GetActiveComponentsInScene(newActiveScene);
 					};
 				}
 				if (activeDebugUtilities == ActiveDebugUtilities.CheckoutProductFiller) {
 					WorldState.OnWorldStarted += CheckoutProductFiller.StartProductSpawnLoop;
 				}
+				if (activeDebugUtilities == ActiveDebugUtilities.TheDuckening) {
+					WorldState.OnWorldStarted += () => {
+						KeyPressDetection.AddHotkey(KeyCode.Mouse2, 90, () => { TheDuckening.LoadDuck(); });
+					};
+					WorldState.OnQuitOrMenu += () => {
+						KeyPressDetection.RemoveHotkey(KeyCode.Mouse2);
+					};
+				}
+				
 			}
 		}
 
-
+		//Patches are functionality that, if enabled, will do its logic on their own
 		#region Patches
 
 		public class FasterTimePassing {
@@ -146,7 +161,6 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 			internal static EmployeeJob employeeAssigment = EmployeeJob.Restocker;
 			internal static int TotalNumberEmployeesTarget = 30;
-
 
 			public static void SpawnMoreEmployeesAndAutoAssignEvent(GameWorldEvent gameWorldEvent) {
 				if (gameWorldEvent == GameWorldEvent.WorldStarted && WorldState.CurrenOnlineMode == GameOnlineMode.Host) {
@@ -230,7 +244,9 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 		#endregion
 
 
-		#region Utility methods
+		//Utility is functionality that, if enabled, needs to be manually
+		//	called or initialized in some way before doing its logic
+		#region Utility
 
 		public async void StartPerformanceTableLogging() {
 			await Performance.PerformanceTableLoggingMethods.StartLogPerformanceTableNewThread(10000);
@@ -378,25 +394,82 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 		}
 
-		private static bool deleteBoxesDone;
-		/// <summary>Delete every box in storage.</summary>
-		public static void DeleteBoxesFromStorage(bool doOnceOnly) {
-			if (doOnceOnly && deleteBoxesDone) {
-				return;
+		public static class TheDuckening {
+
+			private static readonly string[] duckPrefabSufixes = ["Black", "Blue", "Cyan", "GreenDark", "GreenNeon", 
+				"LightPurple", "Orange", "Pink", "Pond", "Purple", "Red", "RedEye", "White", "Yellow", "YinYang"];
+
+			private static Shader generalShader;
+
+			private static AssetBundleElement bundleElement;
+
+			public static void LoadDuck() {
+				if (!Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward,
+						out RaycastHit raycastHit, 100f, 1)) {
+					return;
+				}
+
+				if (bundleElement == null) {
+					bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\rubberducks");
+				}
+
+				string basePath = "Snowconesolid Assets/Super Rubber Duck Pack/Rubber Duck PREFABS/RubberDuck_";
+				string randomDuckSuffix = duckPrefabSufixes[UnityEngine.Random.Range(0, duckPrefabSufixes.Length)];
+				if (bundleElement.TryLoadNewInstance(basePath + randomDuckSuffix, out GameObject superQolDuck)) {
+					superQolDuck.GetComponent<MeshRenderer>().material.shader = GetGameShader(superQolDuck.transform);
+					superQolDuck.transform.SetParent(SMTComponentInstances.GameDataManagerInstance().transform);
+					superQolDuck.transform.position = raycastHit.point;
+					//Set random model size
+					float scale = UnityEngine.Random.Range(0.15f, 1f);
+					superQolDuck.transform.localScale = new Vector3(scale, scale, scale);
+					//Very basic check to attempt to reduce number of floating ducks.
+					if (Physics.Raycast(superQolDuck.transform.position, Vector3.down,
+							out RaycastHit raycastHit2, 5f, 1)) {
+						superQolDuck.transform.position += new Vector3(0, raycastHit2.point.y + 0.1f, 0);
+					}
+					
+					superQolDuck.transform.Rotate(0, 0, UnityEngine.Random.Range(0, 360));
+				}
 			}
 
-			ContainerSearchLambdas.ForEachStorageSlotLambda(NPC_Manager.Instance, true,
-				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
+			/// <summary>
+			/// These prefabs use the built-in shader, but this game uses URP. I could convert them in the 
+			///		Unity editor but instead I just copy the currently used shader with all its properties.
+			/// </summary>
+			private static Shader GetGameShader(Transform parentTransform) {
+				if (generalShader == null) {
+					if (GameData.Instance == null) {
+						LOG.TEMPWARNING("GameData instance null");
+						return null;
+					}
 
-					Data_Container dataContainer = storageObjT.GetComponent<Data_Container>();
-					dataContainer.EmployeeUpdateArrayValuesStorage(slotIndex * 2, -1, -1);
-
-					return ContainerSearchLambdas.LoopAction.Nothing;
+					generalShader = GameObject.Find("Level_SupermarketProps/UsableProps").transform.
+						GetChild(0).
+						GetComponent<MeshRenderer>().
+						material.shader;
 				}
-			);
 
-			deleteBoxesDone = true;
+				return generalShader;
+			}
 		}
+
+		public static class BoxStorageRemoval {
+
+			/// <summary>Delete every box in storage.</summary>
+			public static void DeleteBoxesFromStorage() {
+				ContainerSearchLambdas.ForEachStorageSlotLambda(NPC_Manager.Instance, true,
+					(storageIndex, slotIndex, productId, quantity, storageObjT) => {
+
+						Data_Container dataContainer = storageObjT.GetComponent<Data_Container>();
+						dataContainer.EmployeeUpdateArrayValuesStorage(slotIndex * 2, -1, -1);
+
+						return ContainerSearchLambdas.LoopAction.Nothing;
+					}
+				);
+			}
+
+		}
+		
 
 		#endregion
 	}

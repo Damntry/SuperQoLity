@@ -14,8 +14,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 
 		private static FrequencyMult_Display instance;
 
-		private static GameObject masterCanvas;
-
 		private GameObject freqMultDisplay;
 
 		private TextMeshProUGUI textDisplay;
@@ -78,7 +76,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 
 			UnityEngine.Object.Destroy(instance.freqMultDisplay);
 
-			masterCanvas = null;
 			instance = null;
 		}
 

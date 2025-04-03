@@ -19,7 +19,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
 			if (IsPatchActive) {
-				KeyPressDetection.AddHotkey(KeyCode.Less, 1000, () => { SaveAsClientX(); });
+				KeyPressDetection.AddHotkey(KeyCode.KeypadDivide, 1000, () => { SaveAsClientX(); });
 			}
 		}
 
@@ -28,7 +28,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			//Based on BetterSMT and GameData.WaitUntilNewDay()
 			LOG.TEMPWARNING("Save started");
 
-			if (NetworkManager.singleton != null) {
+			if (NetworkManager.singleton == null) {
 				TimeLogger.Logger.LogTimeWarning("You can only save in a loaded world.", LogCategories.Other);
 			}
 
