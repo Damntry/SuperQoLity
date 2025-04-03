@@ -10,7 +10,6 @@ using Damntry.UtilsUnity.Components;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
 
@@ -23,6 +22,13 @@ namespace SuperQoLity {
 	//TODO 2 - Make a method that when debug is enabled and a certain hotkey is pressed, it gathers
 	//	info about installed mods, the current LogOutput and what not, and copies it into the clipboard
 	//	to help users make error reporting easier.
+
+	//TODO 0 - Something I noticed is that since I commit to each github project separately, there
+	//	is no good way of getting the entire source code from all projects. It has to be done manually,
+	//	which was more or less a given, but what happens if I dont commit all of them at the same time?
+	//	What if I commit twice in a short space of time on both projects but you want the earlier version?
+	//	You would need to check each manually and its prone to errors.
+	//	Other than commiting to all projects as a whole, think of some other solution.
 
 	//Soft dependency so we load after ika.smtanticheat and BetterSMT if they exist.
 	[BepInDependency(ModInfoSMTAntiCheat.GUID, BepInDependency.DependencyFlags.SoftDependency)]

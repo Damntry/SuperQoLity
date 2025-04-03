@@ -35,6 +35,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Components {
 		public static void UnregisterClickAction<T>()
 				where T : class {
 
+			if (subscriptedReferences.Count == 0 || !subscriptedReferences.ContainsKey(typeof(T))) {
+				return;
+			}
+
 			subscriptedReferences.Remove(typeof(T));
 
 			if (subscriptedReferences.Count == 0) {
