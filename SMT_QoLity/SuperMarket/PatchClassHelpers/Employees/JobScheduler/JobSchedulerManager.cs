@@ -211,7 +211,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler {
 					sessionVars.ShowSchedulerInactiveError = false;
 				}
 
-				return;
+					return;
 			}
 
 			StopwatchDiag processTime = StopwatchDiag.StartNew();
@@ -226,11 +226,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler {
 
 			int loopCounter = 0;
 			int workSkipCounter = 0;
-			//TODO 0 - With workSkipLimit = 0 as a test value, you I get 240 ms minimum in employee
-			//	wait time every cycle??
-			//	WTF am I even smoking, of course its 240. 1000 / 50 = 20 ms each minimum, 12 employees * 20 = 240.
-			//	Need to change how I calculate it.
-			//int workSkipLimit = 0;
+
 			int workSkipLimit = Math.Min(NPC_Manager.Instance.employeeParentOBJ.transform.childCount,
 				fixedTime.fixedUpdateCycleMax);
 			bool isLoopCounted = true;

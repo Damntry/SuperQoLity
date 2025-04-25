@@ -8,29 +8,29 @@ using UnityEngine;
 namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 	public class ShelfHighlighting {
 
-		public enum ShelfType {
+		public enum ShelfHighlightType {
 			ProductDisplay,
 			Storage
 		}
 
-		private struct ShelfData {
+		private struct ShelfHighlightData {
 
-			public ShelfData(ShelfType shelfType) {
-				if (shelfType == ShelfType.ProductDisplay) {
+			public ShelfHighlightData(ShelfHighlightType shelfType) {
+				if (shelfType == ShelfHighlightType.ProductDisplay) {
 					highlightsName = "Labels";
 					highlightsOriginalName = "";
-					this.shelfType = ShelfType.ProductDisplay;
+					this.shelfType = ShelfHighlightType.ProductDisplay;
 				} else {
 					highlightsName = "HighlightsMarker";
 					highlightsOriginalName = "Highlights";
-					this.shelfType = ShelfType.Storage;
+					this.shelfType = ShelfHighlightType.Storage;
 				}
 
 			}
 
 			public string highlightsName;
 			public string highlightsOriginalName;
-			public ShelfType shelfType;
+			public ShelfHighlightType shelfType;
 
 		}
 
@@ -43,17 +43,17 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 		}
 
 
-		public static string GetGameObjectStringPath(ShelfType shelfType) {
+		public static string GetGameObjectStringPath(ShelfHighlightType shelfType) {
 			return shelfType switch {
-				ShelfType.ProductDisplay => "Level_SupermarketProps/Shelves",
-				ShelfType.Storage => "Level_SupermarketProps/StorageShelves",
+				ShelfHighlightType.ProductDisplay => "Level_SupermarketProps/Shelves",
+				ShelfHighlightType.Storage => "Level_SupermarketProps/StorageShelves",
 				_ => throw new InvalidOperationException($"The shelf type {shelfType} is new and needs to be implemented."),
 			};
 		}
 
 		public static void HighlightShelvesByProduct(int productID) {
-			HighlightShelfTypeByProduct(productID, ModConfig.Instance.ShelfHighlightColor.Value, ShelfType.ProductDisplay);
-			HighlightShelfTypeByProduct(productID, ModConfig.Instance.StorageHighlightColor.Value, ShelfType.Storage);
+			HighlightShelfTypeByProduct(productID, ModConfig.Instance.ShelfHighlightColor.Value, ShelfHighlightType.ProductDisplay);
+			HighlightShelfTypeByProduct(productID, ModConfig.Instance.StorageHighlightColor.Value, ShelfHighlightType.Storage);
 		}
 
 		public static void ClearHighlightedShelves() {
@@ -65,16 +65,16 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 				}
 				highlightObjectCache.Clear();
 			} else {
-				ClearHighlightShelvesByProduct(ShelfType.ProductDisplay);
-				ClearHighlightShelvesByProduct(ShelfType.Storage);
+				ClearHighlightShelvesByProduct(ShelfHighlightType.ProductDisplay);
+				ClearHighlightShelvesByProduct(ShelfHighlightType.Storage);
 			}
 		}
 
-		private static void ClearHighlightShelvesByProduct(ShelfType shelfType) {
+		private static void ClearHighlightShelvesByProduct(ShelfHighlightType shelfType) {
 			HighlightShelfTypeByProduct(-1, Color.white, shelfType);
 		}
 
-		private static void HighlightShelfTypeByProduct(int productID, Color shelfHighlightColor, ShelfType shelfType) {
+		private static void HighlightShelfTypeByProduct(int productID, Color shelfHighlightColor, ShelfHighlightType shelfType) {
 			Transform highlightsMarker;
 
 			GameObject shelvesObject = GameObject.Find(GetGameObjectStringPath(shelfType));
@@ -97,10 +97,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 							//If there are slot highlights pending to disable
 							!enableSlotHighlight && IsHighlightCacheUsed && highlightObjectCache.Count > 0) {
 
-						ShelfData shelfData = new ShelfData(shelfType);
-						highlightsMarker = shelf.Find(shelfData.highlightsName);
+						ShelfHighlightData shelfHighlightData = new ShelfHighlightData(shelfType);
+						highlightsMarker = shelf.Find(shelfHighlightData.highlightsName);
 
-						if (shelfType == ShelfType.Storage) {
+						if (shelfType == ShelfHighlightType.Storage) {
 							if (highlightsMarker != null) {
 								HighlightShelf(highlightsMarker.GetChild(j).GetChild(0), enableSlotHighlight, ModConfig.Instance.StorageSlotHighlightColor.Value);
 							} else {
@@ -117,16 +117,17 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers {
 		}
 
 		public static void AddHighlightMarkersToStorage(Transform storage) {
-			ShelfData shelfData = new ShelfData(ShelfType.Storage);
+			ShelfHighlightData shelfHighlightData = new ShelfHighlightData(ShelfHighlightType.Storage);
 
-			Transform highlightsMarker = storage.transform.Find(shelfData.highlightsName);
+			Transform highlightsMarker = storage.transform.Find(shelfHighlightData.highlightsName);
 
+			//Skip if it already exists. This method also gets called when an employee puts a box in storage.
 			if (highlightsMarker != null) {
 				return;
 			}
 
-			highlightsMarker = UnityEngine.Object.Instantiate(storage.Find(shelfData.highlightsOriginalName).gameObject, storage).transform;
-			highlightsMarker.name = shelfData.highlightsName;
+			highlightsMarker = UnityEngine.Object.Instantiate(storage.Find(shelfHighlightData.highlightsOriginalName).gameObject, storage).transform;
+			highlightsMarker.name = shelfHighlightData.highlightsName;
 
 
 			//Activate all markers so they wait for the enabling of the highlighting (It did weird stuff if I used the enabled as an on/off for the highlighting).

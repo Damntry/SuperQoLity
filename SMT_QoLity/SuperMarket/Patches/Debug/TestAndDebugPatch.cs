@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -37,7 +38,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - TestAndDebugPatch FAILED. Disabled";
 
 		/* Console debug tools
-		 * Should make these as in-game keys with a shitty ingame menu or something that
+		 * Should make these as in-game keys with parentScale shitty ingame menu or something that
 			only works on #Debug solution so I dont have to type while doing tests
 			
 			GameData.Instance.UserCode_CmdAlterFunds__Single(ISyncVarBehaviour);
@@ -65,6 +66,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			FasterMovingCustomers = 1 << 1,
 			SpawnMoreEmployeesAndAutoAssign = 1 << 2,
 			CustomerMassSpawning = 1 << 3,
+			DifferentSizesNPC = 1 << 4,
 
 			All = ~None
 		}
@@ -155,6 +157,60 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 		}
 
+		public class DifferentSizesNPC {
+
+			[HarmonyPrepare]
+			internal static bool IsDifferentSizesNPCActive() => activeDebugPatches.HasFlag(ActiveDebugPatches.DifferentSizesNPC);
+
+
+			[HarmonyPatch(typeof(NPC_Manager), "SpawnDummyNCP")]
+			[HarmonyPostfix]
+			public static IEnumerator WaitEndOfIEnumerable(IEnumerator result) {
+				while (result.MoveNext()) {
+					yield return result.Current;
+				}
+
+				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+					yield break;
+				}
+
+				UpdateLastSpawnedNPCSize(NPC_Manager.Instance.dummynpcParentOBJ,
+					new Vector3(1.30f, 1.15f, 1.55f));
+			}
+
+			[HarmonyPatch(typeof(NPC_Manager), "GenerateCompensatedList")]
+			[HarmonyPostfix]
+			public static void GenerateCompensatedListCustomerPatch(int NPCID) {
+				UpdateLastSpawnedNPCSize(NPC_Manager.Instance.customersnpcParentOBJ,
+					new Vector3(0.45f, 0.35f, 0.55f));
+			}
+
+			//[HarmonyPatch(typeof(NPC_Manager), "SpawnEmployeeByIndex")]
+			//Use this method instead as it only executes once for the last employee. We dont want an army of giant ones.
+			[HarmonyPatch(typeof(NPC_Manager), "SetHiredEmployeesNumber")]
+			[HarmonyPostfix]
+			public static void SpawnEmployeeByIndexPostfix() {
+				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+					return;
+				}
+
+				UpdateLastSpawnedNPCSize(NPC_Manager.Instance.employeeParentOBJ,
+					new Vector3(13, 15, 13));
+			}
+
+			public async static void UpdateLastSpawnedNPCSize(GameObject obj, Vector3 size) {
+				Transform parentT = obj.transform;
+				Transform npcNew = parentT.GetChild(parentT.childCount - 1);
+
+				while (npcNew.childCount < 7) {
+					await Task.Delay(100);
+				}
+				Transform npcT = npcNew.GetChild(npcNew.childCount - 1);
+				npcT.localScale = size;
+			}
+
+		}
+
 		public class SpawnMoreEmployeesAndAutoAssign {
 
 			internal static bool IsAutoAssignAllEmployeesActive = activeDebugPatches.HasFlag(ActiveDebugPatches.SpawnMoreEmployeesAndAutoAssign);
@@ -173,7 +229,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 					//Spawn extra employees from copied data of existing ones
 					int hiredIndex = 0;
 					for (int i = hiredEmployees; i < TotalNumberEmployeesTarget; i++) {
-						//Copy data from existing employees in a rotation.
+						//Copy data from existing employees in parentScale rotation.
 						NPC_Manager.Instance.hiredEmployeesData[i] = NPC_Manager.Instance.hiredEmployeesData[hiredIndex];
 						if (++hiredIndex >= hiredEmployees) {
 							hiredIndex = 0;
@@ -344,7 +400,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 
 			/// <summary>
-			/// Generates a product and places it in the belt of the first checkout.
+			/// Generates parentScale product and places it in the belt of the first checkout.
 			/// Based on NPC_Info.PlaceProductsCoroutine.
 			/// </summary>
 			public static void PlaceProductOnBelt() {
@@ -372,20 +428,22 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				float num3 = 0f;
 				float num4 = 0f;
 				foreach (int item in productsIDInCheckout) {
-					float x = ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x;
+					float num5 = ((!ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().hasTrueCollider) 
+						? ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x 
+						: ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().trueCollider.x);
 					if (productsIDInCheckout.Count == 1) {
-						num3 = x / 2f;
+						num3 = num5 / 2f;
 						break;
 					}
-					num3 += x / 2f + num4 / 2f + 0.01f;
-					if (num3 + x / 2f > 0.5f) {
+					num3 += num5 / 2f + num4 / 2f + 0.01f;
+					if (num3 + num5 / 2f > 0.5f) {
 						num2++;
-						num3 = x / 2f;
+						num3 = num5 / 2f;
 						if (num2 > 6) {
 							num2 = 0;
 						}
 					}
-					num4 = x;
+					num4 = num5;
 				}
 				gameObject.transform.position = currentCheckout.transform.Find("CheckoutItemPosition").transform.TransformPoint(new Vector3(num3, 0f, (float)num2 * 0.15f));
 				gameObject.transform.rotation = currentCheckout.rotation;
@@ -457,7 +515,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 			/// <summary>Delete every box in storage.</summary>
 			public static void DeleteBoxesFromStorage() {
-				ContainerSearchLambdas.ForEachStorageSlotLambda(NPC_Manager.Instance, true,
+				ContainerSearchLambdas.ForEachStorageSlotLambda(NPC_Manager.Instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 					(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 						Data_Container dataContainer = storageObjT.GetComponent<Data_Container>();

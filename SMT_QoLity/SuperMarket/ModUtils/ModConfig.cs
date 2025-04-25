@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using System;
+using BepInEx;
 using BepInEx.Configuration;
 using Damntry.Utils.ExtensionMethods;
 using Damntry.UtilsBepInEx.Configuration.ConfigurationManager;
@@ -9,9 +10,8 @@ using SuperQoLity.SuperMarket.Patches.HighlightModule;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
-using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearch;
-using System;
 using SuperQoLity.SuperMarket.Patches.Misc;
+using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearch;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 

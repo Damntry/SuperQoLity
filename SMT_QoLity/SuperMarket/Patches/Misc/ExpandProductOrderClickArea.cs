@@ -13,8 +13,8 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableMiscPatches.Value;
 
-		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = 
-			$"{MyPluginInfo.PLUGIN_NAME} - Hold click to scan checkout products patch failed. Disabled.";
+		public override string ErrorMessageOnAutoPatchFail { get; protected set; } =
+			$"{MyPluginInfo.PLUGIN_NAME} - Increased clickable area in product order patch failed. Disabled.";
 
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {

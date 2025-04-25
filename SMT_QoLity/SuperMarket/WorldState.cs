@@ -1,6 +1,7 @@
 ﻿using System;
 using Damntry.Utils.Events;
 using Damntry.Utils.Logging;
+using SuperQoLity.SuperMarket.Patches;
 
 namespace SuperQoLity.SuperMarket {
 
@@ -27,6 +28,13 @@ namespace SuperQoLity.SuperMarket {
 		public static event Action OnCanvasLoaded;
 		public static event Action OnFPControllerStarted;
 		public static event Action OnWorldStarted;
+
+		public static class BuildingsEvents {
+			public static Action<Data_Container> OnProductShelfLoadedOrUpdated;
+			public static Action<Data_Container> OnStorageLoadedOrUpdated;
+			public static Action<NetworkSpawner, int> OnShelfBuilt;
+		}
+		
 
 
 		public static GameWorldEvent CurrentGameWorldState { get; private set; } = GameWorldEvent.QuitOrMenu;

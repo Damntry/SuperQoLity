@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Linq;
-using Damntry.Utils.Collections;
+using Damntry.Utils.Collections.Queues;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
@@ -19,7 +19,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableMiscPatches.Value;
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = 
-			$"{MyPluginInfo.PLUGIN_NAME} - Increased clickable area in product order patch failed. Disabled.";
+			$"{MyPluginInfo.PLUGIN_NAME} - Hold click to scan checkout products patch failed. Disabled.";
 
 
 		private LayerMask interactableMask = -1;
@@ -104,18 +104,6 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 				interactableMask = SMTComponentInstances.PlayerNetworkInstance().interactableMask;
 			}
 		}
-
-		/*TODO 0 - Not sure I should try the full save thingy. I though of some bad case:
-
-			I load everything as it is in the extra save file, FSM states, etc, EVERYTHING.
-			A mod changes the prefab of something, but obviously not expecting that such prefab 
-				could have possibly have been instanced already due to the way the game works normally.
-			Now that mod is fucked, who knows what happens.
-			
-			I would need to offer some framework to mods so they can make it compatible with my saves.
-			And I would need to change out stuff since I DO the prefab modifying thing.
-
-		*/
 
 		/// <summary>
 		/// Enables or disables the vanilla game implementation to scan checkout

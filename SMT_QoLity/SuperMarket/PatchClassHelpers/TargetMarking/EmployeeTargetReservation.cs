@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 using UnityEngine;
 using UnityEngine.AI;
@@ -80,6 +81,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return groundboxesTargeted.Contains(boxObj);
 		}
 
+		public static bool IsShelfSlotTargeted(ShelfType shelfType, int ShelfIndex, int SlotIndex) =>
+			shelfType switch {
+				ShelfType.StorageSlot => IsStorageSlotTargeted(ShelfIndex, SlotIndex),
+				ShelfType.ProdShelfSlot => IsProductShelfSlotTargeted(ShelfIndex, SlotIndex),
+				_ => throw new NotImplementedException(shelfType.ToString())
+			};
+
 		public static bool IsStorageSlotTargeted(int StorageIndex, int SlotIndex) {
 			return IsStorageSlotTargeted(new StorageSlotInfo(StorageIndex, SlotIndex));
 		}
@@ -114,6 +122,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 
 		public static void MoveEmployeeTo(this NPC_Info NPC, Vector3 destination) {
 			NPC.MoveEmployee(destination, null, null, TargetType.Other);
+		}
+
+		public static void MoveEmployeeTo(this NPC_Info NPC, Transform transformTarget) {
+			NPC.MoveEmployee(transformTarget.position, null, null, TargetType.Other);
 		}
 
 		public static void MoveEmployeeTo(this NPC_Info NPC, GameObject gameObjectTarget) {
