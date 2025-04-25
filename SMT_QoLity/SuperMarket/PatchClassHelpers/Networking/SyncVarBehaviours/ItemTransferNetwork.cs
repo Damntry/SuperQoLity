@@ -22,8 +22,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours
 			ItemTransferQuantitySync = new(EmployeeJobAIPatch.NumTransferItemsBase, ModConfig.Instance.NumTransferProducts);
 		}
 
-		//TODO 0 - Network - RPC TEST
-		/*
+		/* TODO 0 Network - RPC TEST
 		protected override void OnSyncVarsNetworkReady() {
 			base.OnSyncVarsNetworkReady();
 

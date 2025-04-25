@@ -23,6 +23,18 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			}
 		}
 
+		/* TODO 0 Saving - Not sure I should try the full save thingy. I though of some bad case:
+
+			I load everything as it is from the extra save file, FSM states, etc, EVERYTHING.
+			A mod changes the original prefab of something that eventually gets instantiated, but 
+			the mod not expecting that such prefab could have possibly been instanced already on 
+			load, means that prefab wont be instanced and the mod changes wont be in the existing instances.
+			Now that mod is fucked and who knows what happens.
+			
+			I would need to offer some framework to mods so they can make it compatible with my saves.
+			And I would need to change out stuff since I DO the prefab modifying thing.
+
+		*/
 
 		public static async void SaveAsClientX() {
 			//Based on BetterSMT and GameData.WaitUntilNewDay()
@@ -39,13 +51,13 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			}
 
 			if (NetworkManager.singleton.mode == NetworkManagerMode.ClientOnly) {
-				//TODO 0 - Once tests are done, move all logic in here
+				//TODO 0 Saving - Once tests are done, move all logic in here
 			}
 
 			string loadedSaveFileName = FsmVariables.GlobalVariables.GetFsmString("CurrentFilename").Value;
 			string newSaveFileName = "StoreFile12.es3";
 
-			//TODO 0 - Should probably be doing this? BetterSMT does it twice for some reason.
+			//TODO 0 Saving - Should probably be doing this? BetterSMT does it twice for some reason.
 			//GameData.Instance.DoDaySaveBackup();
 
 			LOG.TEMPWARNING($"CurrentFilename: {loadedSaveFileName} - " +
@@ -62,7 +74,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			//For safety more than anything else, since this only gets executed in the client.
 			FsmVariables.GlobalVariables.GetFsmString("CurrentFilename").Value = loadedSaveFileName;
 
-			//TODO 0 - Notify the user of save finished.
+			//TODO 0 Saving - Notify the user of save finished.
 		}
 
 		private static string GetCityName(string loadedSaveFileName) {

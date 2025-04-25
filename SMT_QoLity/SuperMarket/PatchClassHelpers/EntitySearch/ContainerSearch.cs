@@ -18,9 +18,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			Any
 		}
 
-		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, int productIDToCheck, NPC_Info npcInfoComponent, out ProductShelfSlotInfo productShelfSlotInfo) {
-			productShelfSlotInfo = null;
-			List<ProductShelfSlotInfo> productsPriority = new();
+		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, 
+				int productIDToCheck, NPC_Info npcInfoComponent, 
+				out (ProductShelfSlotInfo productShelfSlotInfo, int maxProductsPerRow) result) {
+			result.productShelfSlotInfo = null;
+			result.maxProductsPerRow = -1;
+
+			List<(ProductShelfSlotInfo shelfSlotInfo, int maxProductsPerRow)> productsPriority = new();
 
 			foreach (var currentLoopProdThreshold in NPC_Manager.Instance.productsThreshholdArray) {
 
@@ -32,8 +36,11 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 							int maxProductsPerRow = PerformanceCachingPatch.GetMaxProductsPerRowCached(__instance, shelfDataContainer, productIDToCheck, prodShelfIndex);
 							int shelfQuantityThreshold = Mathf.FloorToInt(maxProductsPerRow * currentLoopProdThreshold);
 							if (quantity == 0 || quantity < shelfQuantityThreshold) {
-								productsPriority.Add(new ProductShelfSlotInfo(prodShelfIndex, slotIndex, productId, 
-									quantity, prodShelfObjT.position));
+								productsPriority.Add(
+									(new ProductShelfSlotInfo(
+										prodShelfIndex, slotIndex, productId, quantity, prodShelfObjT.position),
+									maxProductsPerRow)
+								);
 							}
 						}
 
@@ -42,7 +49,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 				);
 
 				if (productsPriority.Count > 0) {
-					productShelfSlotInfo = productsPriority[UnityEngine.Random.Range(0, productsPriority.Count)];
+					result = productsPriority[UnityEngine.Random.Range(0, productsPriority.Count)];
 					return true;
 				}
 			}
@@ -71,7 +78,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		public static bool MoreThanOneBoxToMergeCheck(NPC_Manager __instance, int boxIDProduct) {
 			int boxCount = 0;
 
-			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, true,
+			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 					if (productId == boxIDProduct && quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
@@ -92,7 +99,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			List<StorageSlotInfo> highPriorityStorage = new();
 			List<StorageSlotInfo> lowPriorityStorage = new();
 
-			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, true,
+			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 					//Ìf boxIDProduct parameter is zero or positive, this method needs to find free storage with the
@@ -106,7 +113,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 					//	It could also be faster to save the closest distance added to each type 
 					//	of priority, and skip adding any further away storages, but then I would 
 					//	be doing distance calculations on potentially less prioritized storages 
-					//	for nothing, if a more prioritized storage exists at the end of the loop.
+					//	for nothing, if product more prioritized storage exists at the end of the loop.
 					//	But at the very least I need to do it for assignedPriorityStorage, and for
 					//	highPriorityStorage if productId == -1. Zero loss doing it like that.
 

@@ -11,7 +11,7 @@ using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Component;
 
 
 namespace SuperQoLity {

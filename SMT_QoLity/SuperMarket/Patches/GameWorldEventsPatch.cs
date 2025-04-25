@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Damntry.Utils.Events;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -21,7 +22,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		public override bool IsAutoPatchEnabled => true;
 
-		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Detection of finished game loading failed. Disabled";
+		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Detection of world events patch failed. Disabled";
 
 
 		private class DetectGameLoadFinished {
@@ -115,7 +116,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 			[HarmonyPatch(typeof(FirstPersonController), "Start")]
 			[HarmonyPostfix]
-			public static void OnClientDisconnectPatch(GameCanvas __instance) {
+			public static void OnClientDisconnectPatch(FirstPersonController __instance) {
 				WorldState.SetGameWorldState(GameWorldEvent.FPControllerStarted);
 			}
 
@@ -125,9 +126,38 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 			[HarmonyPatch(typeof(CustomNetworkManager), nameof(CustomNetworkManager.OnClientDisconnect))]
 			[HarmonyPostfix]
-			public static void OnClientDisconnectPatch(GameCanvas __instance) {
+			public static void OnClientDisconnectPatch(CustomNetworkManager __instance) {
 				WorldState.CurrenOnlineMode = GameOnlineMode.None;
 				WorldState.SetGameWorldState(GameWorldEvent.QuitOrMenu);
+			}
+
+		}
+
+		private class BuildingEvents {
+
+			private class ShelfLoadedOrBuilt {
+
+				/// <summary>Storage object loaded or updated</summary>
+				[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.BoxSpawner))]
+				[HarmonyPostfix]
+				private static void BoxSpawnerPatch(Data_Container __instance) {
+					EventMethods.TryTriggerEvents(WorldState.BuildingsEvents.OnStorageLoadedOrUpdated, __instance);
+				}
+
+				/// <summary>Product shelf object loaded or updated</summary>
+				[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.ItemSpawner))]
+				[HarmonyPostfix]
+				private static void ItemSpawnerPatch(Data_Container __instance) {
+					EventMethods.TryTriggerEvents(WorldState.BuildingsEvents.OnProductShelfLoadedOrUpdated, __instance);
+				}
+
+				/// <summary>New buildable constructed</summary>
+				[HarmonyPatch(typeof(NetworkSpawner), nameof(NetworkSpawner.UserCode_CmdSpawn__Int32__Vector3__Vector3))]
+				[HarmonyPostfix]
+				private static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
+					EventMethods.TryTriggerEvents(WorldState.BuildingsEvents.OnShelfBuilt, __instance, prefabID);
+				}
+
 			}
 
 		}

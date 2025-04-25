@@ -1,4 +1,10 @@
 ## Changelog
+### 0.8.4.0
+	- Added Carboard Baler logic from last update to employees, so they make use of it.
+	- Potential fix for an employee restocking problem that made them not restock sometimes. Contact me if you still get this bug so I can find how it happens.
+	- Made the expensive restock background method lighting fast and multithreaded! Much faster than base game now, no longer will it bog down the rest of the game.
+	- The above change made it so I can now do resource-heavy logic that wasnt viable before, and still have plenty to spare. Now restockers will decide which box to restock from, based on box content quantity and distance from the product shelf.
+	- Fixed yet another exception that happened when the setting "Hold click to scan checkout products" was disabled.
 ### 0.8.3.2
 	- Fixed exception happening after new SMT update that made restockers not work.
 	- Fixed exception that happened when the setting "Hold click to scan checkout products" was disabled.

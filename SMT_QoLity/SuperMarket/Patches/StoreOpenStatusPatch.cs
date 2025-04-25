@@ -34,9 +34,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		public static event Action<bool> OnSupermarketOpenStateChanged;
 
-
+		
 		public override void OnPatchFinishedVirtual(bool IsActive) {
 			NetworkSpawnManager.RegisterNetwork<StoreStatusNetwork>(918219);
+
+			WorldState.OnQuitOrMenu += async () => await storeClosedTask.StopTaskAndWaitAsync(500);
 		}
 
 		[HarmonyPatch(typeof(GameData), nameof(GameData.NetworkisSupermarketOpen), MethodType.Setter)]
@@ -60,9 +62,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 			//Since the user could manually start a new day before customers leave or the safety timeout is
 			//	over, we make it so if there is a previous call to this method still ongoing, we cancel
 			//	 it to not wait anymore, and once its over, we let the new call proceed normally.
-			if (storeClosedTask.IsTaskRunning) {
-				await storeClosedTask.StopTaskAndWaitAsync();
-			}
+			await storeClosedTask.StopTaskAndWaitAsync();
 
 			//We only need this for when there was a existing call than we want to wait to finish,
 			//	but we always do it anyway since there is no point in Releasing conditionally.
@@ -72,7 +72,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 				bool IsOpen = true;
 				if (!GameData.Instance.isSupermarketOpen) {
 					await storeClosedTask.StartAwaitableTaskAsync(CheckCustomersPendingActions, "Wait for end of customers actions", true);
-					TimeLogger.Logger.LogTimeDebugFunc(() => "All customers are leaving or already left the supermarket.", LogCategories.Task);
+					if (storeClosedTask.IsCancellationRequested) {
+						TimeLogger.Logger.LogTimeDebugFunc(() => "Skipped to next day or quitting to main menu before customers left the store.", LogCategories.Task);
+					} else {
+						TimeLogger.Logger.LogTimeDebugFunc(() => "All customers are leaving or already left the supermarket.", LogCategories.Task);
+					}
 					IsOpen = false;
 				}
 
@@ -101,9 +105,10 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		private static bool HasCustomersWithPendingActions(CancellationToken cancelToken = default) {
 			//Check if there are any customers in a state where they still have things to do in the supermarket.
+			if (cancelToken.IsCancellationRequested) {
+				return false;
+			}
 			foreach (Transform customerObj in NPC_Manager.Instance.customersnpcParentOBJ.transform) {
-				cancelToken.ThrowIfCancellationRequested();
-
 				NPC_Info customerInfo = customerObj.gameObject.GetComponent<NPC_Info>();
 				if (customerInfo.state < 99) {   //99 = Leaving for the map exit
 					return true;    //A customer still has stuff to do.

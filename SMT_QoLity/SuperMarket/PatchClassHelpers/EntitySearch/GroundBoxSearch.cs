@@ -67,7 +67,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			//Dictionary so we keep a single storage slot for each product id found
 			Dictionary<int, StorageSlotInfo> storableProducts = new();
 
-			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, true,
+			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 					if (quantity <= 0 && productId >= 0) {

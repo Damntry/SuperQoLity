@@ -19,26 +19,32 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 			SlotIndex = slotIndex;
 		}
 
-		public void SetValues(int shelfIndex, int slotIndex, int productId, int Quantity, Vector3 Position) {
-			ShelfIndex = shelfIndex;
-			SlotIndex = slotIndex;
+		
+		public void SetExtraDataValues(int shelfIndex, int slotIndex, int productId, int Quantity, Vector3 Position) {
 			ExtraData.ProductId = productId;
 			ExtraData.Quantity = Quantity;
 			ExtraData.Position = Position;
 		}
 
-		public void SetValues(SlotInfoBase SlotInfoBase) {
-			ShelfIndex = SlotInfoBase.ShelfIndex;
-			SlotIndex = SlotInfoBase.SlotIndex;
+		public void SetExtraDataValues(SlotInfoBase SlotInfoBase) {
 			ExtraData.ProductId = SlotInfoBase.ExtraData.ProductId;
-			ExtraData.Quantity = SlotInfoBase.ExtraData.ProductId;
+			ExtraData.Quantity = SlotInfoBase.ExtraData.Quantity;
 			ExtraData.Position = SlotInfoBase.ExtraData.Position;
 		}
 
+		/// <summary>
+		/// The child index in either NPC_Manager.shelvesOBJ or NPC_Manager.storageOBJ 
+		///		of the object that this SlotInfoBase references.
+		///	It must be immutable as its value is used in hashcode calculation.
+		/// </summary>
+		public int ShelfIndex { get; init; }
 
-		public int ShelfIndex { get; set; }
-
-		public int SlotIndex { get; set; }
+		/// <summary>
+		/// The index in the productInfoArray that references the specific space
+		/// of a product in a shelf object.
+		///	It must be immutable as its value is used in hashcode calculation.
+		/// </summary>
+		public int SlotIndex { get; init; }
 
 		private ExtraDataClass _extraData;
 
@@ -63,7 +69,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 		}
 
 		public override string ToString() {
-			return $"Shelf {this.ShelfIndex}, Slot {this.SlotIndex} (PID: {this.ExtraData.ProductId}, Amount: {this.ExtraData.Quantity}, Position: {this.ExtraData.Position})";
+			return $"Shelf {this.ShelfIndex}, Slot {this.SlotIndex} (ProdID: {this.ExtraData.ProductId}, Amount: {this.ExtraData.Quantity}, Position: {this.ExtraData.Position})";
 		}
 
 	}

@@ -70,13 +70,38 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		/// <summary>
 		/// Gets the max number of products that can fit in the subcontainer of the shelf type.
+		/// This method is not inherently thread-safe, it just behaves differently if coming from
+		/// a threaded method.
+		/// </summary>
+		/// <param name="dataContainer">Data of the container.</param>
+		/// <param name="shelfProductId">Id of the product to put in.</param>
+		/// <param name="shelfIndex">Index of the shelf. This is only used in case of failure.</param>
+		public static int GetMaxProductsPerRowCachedThreaded(Data_Container dataContainer, 
+				int shelfProductId, int shelfIndex) {
+			return GetMaxProductsPerRowCached(null, dataContainer, shelfProductId, shelfIndex, isThreaded: true);
+		}
+
+		/// <summary>
+		/// Gets the max number of products that can fit in the subcontainer of the shelf type.
+		/// </summary>
+		/// <param name="__instance"></param>	
+		/// <param name="dataContainer">Data of the container.</param>
+		/// <param name="shelfProductId">Id of the product to put in.</param>
+		/// <param name="shelfIndex">Index of the shelf. This is only used in case of failure.</param>
+		public static int GetMaxProductsPerRowCached(NPC_Manager __instance,
+				Data_Container dataContainer, int shelfProductId, int shelfIndex) {
+			return GetMaxProductsPerRowCached(null, dataContainer, shelfProductId, shelfIndex, isThreaded: false);
+		}
+
+		/// <summary>
+		/// Gets the max number of products that can fit in the subcontainer of the shelf type.
 		/// </summary>
 		/// <param name="__instance"></param>
 		/// <param name="dataContainer">Data of the container.</param>
 		/// <param name="shelfProductId">Id of the product to put in.</param>
 		/// <param name="shelfIndex">Index of the shelf. This is only used in case of failure.</param>
 		public static int GetMaxProductsPerRowCached(NPC_Manager __instance, 
-				Data_Container dataContainer, int shelfProductId, int shelfIndex) {
+				Data_Container dataContainer, int shelfProductId, int shelfIndex, bool isThreaded) {
 			bool exists = false;
 			int maxProductsPerRow = 0;
 
@@ -92,10 +117,16 @@ namespace SuperQoLity.SuperMarket.Patches {
 					$"and productId: {shelfProductId}. Attempting to obtain it manually.", LogCategories.Loading);
 				if (Container<PerformanceCachingPatch>.Instance.IsPatchActive) {
 					maxProductsPerRow = GetMaxProductsPerRow(dataContainer, shelfProductId);
-				} else {
+				} else if (__instance != null) {
 					maxProductsPerRow = __instance.GetMaxProductsPerRow(shelfIndex, shelfProductId);
+				} else if (isThreaded){
+					TimeLogger.Logger.LogTimeWarning($"This method is threaded and the amount cannot " +
+						$"be calculated from the source Unity objects. Returning 0.", LogCategories.Loading);
+				} else {
+					TimeLogger.Logger.LogTimeError($"The NPC_Manager instance is null " +
+						$"and the value could not be obtained manually.", LogCategories.Loading);
 				}
-				
+
 				maxProductsPerRowCache.Add((dataContainer.containerClass, dataContainer.containerID, shelfProductId), maxProductsPerRow);
 			}
 

@@ -1,12 +1,13 @@
 ﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models {
 
 	public struct RestockJobInfo {
 
-		public ProductShelfSlotInfo ProdShelf { get; set; }
+		public ProductShelfSlotInfo ProdShelf { get; private set; }
 
-		public StorageSlotInfo Storage { get; set; }
+		public StorageSlotInfo Storage { get; private set; }
+
 
 		public int ShelfProdInfoIndex {
 			get {
@@ -23,7 +24,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch {
 		public int MaxProductsPerRow { get; set; }
 
 
-
 		public static RestockJobInfo Default { get; } = new RestockJobInfo();
 
 		public RestockJobInfo() {
@@ -33,9 +33,18 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch {
 		}
 
 		public RestockJobInfo(ProductShelfSlotInfo ProductShelf, StorageSlotInfo Storage, int MaxProductsPerRow) {
-			this.ProdShelf = ProductShelf;
+			ProdShelf = ProductShelf;
 			this.Storage = Storage;
 			this.MaxProductsPerRow = MaxProductsPerRow;
+		}
+
+		public void SetProductShelfExtraData(ProductShelfSlotInfo productShelf, int maxProductsPerRow) {
+			ProdShelf.ExtraData = productShelf.ExtraData;
+			MaxProductsPerRow = maxProductsPerRow;
+		}
+
+		public override string ToString() {
+			return $"Product shelf: {ProdShelf} - Storage: {Storage} - MaxProductsPerRow: {MaxProductsPerRow}";
 		}
 
 	}

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Damntry.Utils.Logging;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees {
@@ -29,7 +29,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees {
 			SetProductAvailableArray(npcInfo, jobInfo);
 		}
 
-		public static bool UpdateRestockJobInfo(this NPC_Info npcInfo, ProductShelfSlotInfo shelfSlotInfo) {
+		public static bool UpdateRestockJobInfo(this NPC_Info npcInfo, ProductShelfSlotInfo shelfSlotInfo, int maxProductsPerRow) {
 			if (shelfSlotInfo == null) {
 				TimeLogger.Logger.LogTimeFatal($"The parameter shelfSlotInfo is null for npc {npcInfo.netId}", 
 					LogCategories.AI);
@@ -42,10 +42,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees {
 					LogCategories.AI);
 				return false;
 			}
-			
-			jobInfo.ProdShelf = shelfSlotInfo;
 
-			SetProductAvailableArray(npcInfo, jobInfo);
+			//Cant change the ProductShelf indexes since they are used as hashcodes, so
+			//	a new RestockJobInfo is created to substitute it.
+			npcRestockJobInfo.Remove(npcInfo);
+			RestockJobInfo jobInfoNew = new (shelfSlotInfo, jobInfo.Storage, jobInfo.MaxProductsPerRow);
+			npcRestockJobInfo.Add(npcInfo, jobInfoNew);
+
+			SetProductAvailableArray(npcInfo, jobInfoNew);
 
 			return true;
 		}

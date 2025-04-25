@@ -1,10 +1,7 @@
-﻿using System;
-using Damntry.Utils.Logging;
-using Damntry.Utils.Reflection;
+﻿using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
-using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
 using SuperQoLity.SuperMarket.PatchClassHelpers;
@@ -24,6 +21,12 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 
 		public override void OnPatchFinishedVirtual(bool IsActive) {
 			if (IsActive) {
+				WorldState.BuildingsEvents.OnStorageLoadedOrUpdated += (instance) => 
+					AddHighlightsMarkerToStorageSlots.OnStorageLoadedOrUpdated(instance);
+
+				WorldState.BuildingsEvents.OnShelfBuilt += (instance, prefabID) => 
+					AddHighlightsMarkerToStorageSlots.NewBuildableConstructed(instance, prefabID);
+
 				WorldState.OnGameWorldChange += (ev) => {
 					if (ev == GameWorldEvent.WorldStarted) {
 						ShelfHighlighting.InitHighlightCache();
@@ -65,17 +68,11 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 
 		private class AddHighlightsMarkerToStorageSlots {
 
-			/// <summary>Storage object loaded</summary>
-			[HarmonyPatch(typeof(Data_Container), nameof(Data_Container.BoxSpawner))]
-			[HarmonyPostfix]
-			private static void BoxSpawnerPatch(Data_Container __instance) {
+			public static void OnStorageLoadedOrUpdated(Data_Container __instance) {
 				ShelfHighlighting.AddHighlightMarkersToStorage(__instance.transform);
 			}
 
-			/// <summary>New buildable constructed</summary>
-			[HarmonyPatch(typeof(NetworkSpawner), "UserCode_CmdSpawn__Int32__Vector3__Vector3")]
-			[HarmonyPostfix]
-			private static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
+			public static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
 				GameObject buildable = __instance.buildables[prefabID];
 
 				//TODO 2 - There is now "GetComponent<InteractableContainer>().isStorageShelf"
@@ -165,17 +162,17 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 			///Old C#:
 			///		PlayerNetworkPatch.HighlightShelfTypeByProduct(productID, 
 			///			Color.yellow, 
-			///			PlayerNetworkPatch.ShelfType.ProductDisplay);
+			///			PlayerNetworkPatch.ShelfHighlightType.ProductDisplay);
 			///		PlayerNetworkPatch.HighlightShelfTypeByProduct(productID, 
 			///			Color.red, 
-			///			PlayerNetworkPatch.ShelfType.Storage);
+			///			PlayerNetworkPatch.ShelfHighlightType.Storage);
 			///New C#:
 			///		PlayerNetworkPatch.HighlightShelfTypeByProduct(productID, 
 			///			ModConfig.Instance.BetterSMT_ShelfHighlightColor.Value, 
-			///			PlayerNetworkPatch.ShelfType.ProductDisplay);
+			///			PlayerNetworkPatch.ShelfHighlightType.ProductDisplay);
 			///		PlayerNetworkPatch.HighlightShelfTypeByProduct(productID, 
 			///			ModConfig.Instance.BetterSMT_StorageHighlightColor.Value, 
-			///			PlayerNetworkPatch.ShelfType.Storage);
+			///			PlayerNetworkPatch.ShelfHighlightType.Storage);
 			///		}
 
 			//First color
@@ -217,7 +214,7 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 			///Old C#:
 			///		HighlightShelf(specificHighlight, true, Color.yellow);
 			///New C#:
-			///		Color slotColor = shelfType == ShelfType.Storage ? 
+			///		Color slotColor = shelfType == ShelfHighlightType.Storage ? 
 			///			ModConfig.Instance.BetterSMT_StorageSlotHighlightColor.Value : 
 			///			ModConfig.Instance.BetterSMT_ShelfLabelHighlightColor.Value;
 			///		HighlightShelf(specificHighlight, true, slotColor);

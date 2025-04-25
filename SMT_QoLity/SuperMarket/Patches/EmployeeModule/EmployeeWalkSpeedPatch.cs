@@ -44,7 +44,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						}
 						ChangeEmployeesSpeed(walkSpeedMult);
 					}
-				}; 
+				};
 
 				//Whenever the slider of the setting ClosedStoreEmployeeWalkSpeedMultiplier moves, we wait
 				//	a bit before applying the changes, to avoid spamming calls to UpdateEmployeeStats.

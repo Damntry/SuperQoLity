@@ -1,5 +1,4 @@
 ﻿using System;
-using Damntry.Utils.Logging;
 using Damntry.UtilsUnity.Components;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.UI;
@@ -35,7 +34,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler {
 			ModConfig.Instance.CustomMaximumFrequencyReduction.SettingChanged += ForceUpdateAutoMode;
 			ModConfig.Instance.CustomMaximumFrequencyIncrease.SettingChanged += ForceUpdateAutoMode;
 
-			if (Plugin.IsSolutionInDebugMode) {
+			if (Plugin.IsSolutionInDebugMode && ModConfig.Instance.EnabledDevMode.Value) {
 				InitializePerformancePanel();
 			}
 		}
