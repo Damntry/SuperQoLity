@@ -7,16 +7,16 @@ using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
-	public class ContainerSearch {
+	public enum EnumFreeStoragePriority {
+		[Description("1.Assigned storage > 2.Labeled > 3.Unlabeled")]
+		Labeled,
+		[Description("1.Assigned storage > 2.Unlabeled > 3.Labeled")]
+		Unlabeled,
+		[Description("1.Assigned storage > 2.Any other storage")]
+		Any
+	}
 
-		public enum EnumFreeStoragePriority {
-			[Description("1.Assigned storage > 2.Labeled > 3.Unlabeled")]
-			Labeled,
-			[Description("1.Assigned storage > 2.Unlabeled > 3.Labeled")]
-			Unlabeled,
-			[Description("1.Assigned storage > 2.Any other storage")]
-			Any
-		}
+	public class ContainerSearch {
 
 		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, 
 				int productIDToCheck, NPC_Info npcInfoComponent, 

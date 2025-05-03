@@ -1,4 +1,5 @@
-﻿using Damntry.Utils.Reflection;
+﻿using Damntry.Utils.Logging;
+using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
@@ -73,13 +74,13 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 			}
 
 			public static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
+				;
 				GameObject buildable = __instance.buildables[prefabID];
 
 				//TODO 2 - There is now "GetComponent<InteractableContainer>().isStorageShelf"
 				//	but Im not sure if its 100% trustworthy yet.
-				if (buildable.name.Contains("StorageShelf")) {    //Hopefully this makes it so new storage shelfs in the future are still supported.
-					int index = buildable.GetComponent<Data_Container>().parentIndex;
-					Transform buildableParent = __instance.levelPropsOBJ.transform.GetChild(index);
+				if (AuxUtils.GetContainerType(prefabID, out int parentIndex) == DataContainerType.StorageShelf) {
+					Transform buildableParent = __instance.levelPropsOBJ.transform.GetChild(parentIndex);
 					GameObject lastStorageObject = buildableParent.GetChild(buildableParent.childCount - 1).gameObject;
 
 					ShelfHighlighting.AddHighlightMarkersToStorage(lastStorageObject.transform);
@@ -87,6 +88,7 @@ namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
 			}
 
 		}
+
 
 		/// <summary>
 		/// If BetterSMT is loaded, patch his methods so we use our highlighting instead.

@@ -11,7 +11,7 @@ using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using SuperQoLity.SuperMarket.Patches.Misc;
-using static SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch.ContainerSearch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 

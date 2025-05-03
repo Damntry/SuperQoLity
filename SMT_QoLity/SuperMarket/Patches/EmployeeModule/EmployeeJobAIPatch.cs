@@ -923,6 +923,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 							case 32: {
 									float fundsToAdd = 15f * (float)GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
+									AchievementsManager.Instance.CmdAddAchievementPoint(16, 1);
 									SMTAntiCheat_Helper.Instance.CmdAlterFunds(fundsToAdd);
 									employee.state = 5;
 									return true;
@@ -953,7 +954,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										employee.state = 2;
 										return true;
 									}
-									if (!__instance.IsFirstSecurityEmployee(employeeObj)) {
+									if (!__instance.IsFirstSecurityEmployee(employeeObj) || 
+											(__instance.customersnpcParentOBJ.transform.childCount == 0 
+												&& GameData.Instance.timeOfDay > 22f)) {
 										employee.state = 1;
 										return true;
 									}

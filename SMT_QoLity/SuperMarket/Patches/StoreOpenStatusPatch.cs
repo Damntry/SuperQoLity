@@ -6,6 +6,7 @@ using Damntry.Utils.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
+using Damntry.UtilsUnity.Components;
 using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
@@ -36,9 +37,11 @@ namespace SuperQoLity.SuperMarket.Patches {
 
 		
 		public override void OnPatchFinishedVirtual(bool IsActive) {
-			NetworkSpawnManager.RegisterNetwork<StoreStatusNetwork>(918219);
+			if (IsActive) {
+				NetworkSpawnManager.RegisterNetwork<StoreStatusNetwork>(918219);
 
-			WorldState.OnQuitOrMenu += async () => await storeClosedTask.StopTaskAndWaitAsync(500);
+				WorldState.OnQuitOrMenu += async () => await storeClosedTask.StopTaskAndWaitAsync(500);
+			}
 		}
 
 		[HarmonyPatch(typeof(GameData), nameof(GameData.NetworkisSupermarketOpen), MethodType.Setter)]

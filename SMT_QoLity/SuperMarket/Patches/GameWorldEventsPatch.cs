@@ -65,7 +65,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 			[HarmonyPatch(typeof(GameCanvas), "Awake")]
 			[HarmonyPostfix]
 			private static void GameCanvasAwake(GameCanvas __instance) {
-				WorldState.SetGameWorldState(GameWorldEvent.CanvasLoaded);
+				WorldState.SetGameWorldState(GameWorldEvent.CanvasAwake);
 			}
 
 			[HarmonyPatch(typeof(GameCanvas), "Update")]

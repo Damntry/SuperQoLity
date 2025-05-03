@@ -48,8 +48,12 @@ namespace SuperQoLity.SuperMarket.Patches {
 					continue;
 				}
 
-				Data_Container dataContainer = buildable.GetComponent<Data_Container>();
-				if (dataContainer.containerClass < 20) {
+				
+				//TODO 0 - Test this change
+				if (buildable.TryGetComponent(out Data_Container dataContainer) && 
+						dataContainer.GetContainerType() == DataContainerType.ProductShelf) {
+				//Data_Container dataContainer = buildable.GetComponent<Data_Container>();
+				//if (dataContainer.containerClass < 20) {
 					//The Data_Container belongs to a product shelf object. Calculate its capacity for each product.
 					foreach (GameObject prodPrefab in ProductListing.Instance.productPrefabs) {
 

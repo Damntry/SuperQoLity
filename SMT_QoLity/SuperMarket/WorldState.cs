@@ -14,7 +14,7 @@ namespace SuperQoLity.SuperMarket {
 	public enum GameWorldEvent {
 		QuitOrMenu = 0,
 		LoadingWorld = 1,
-		CanvasLoaded = 2,
+		CanvasAwake = 2,
 		FPControllerStarted = 3,
 		WorldStarted = 4,
 	}
@@ -25,7 +25,7 @@ namespace SuperQoLity.SuperMarket {
 
 		public static event Action OnQuitOrMenu;
 		public static event Action OnLoadingWorld;
-		public static event Action OnCanvasLoaded;
+		public static event Action OnCanvasAwake;
 		public static event Action OnFPControllerStarted;
 		public static event Action OnWorldStarted;
 
@@ -74,8 +74,8 @@ namespace SuperQoLity.SuperMarket {
 				case GameWorldEvent.LoadingWorld:
 					OnLoadingWorld += actionOnEvent;
 					break;
-				case GameWorldEvent.CanvasLoaded:
-					OnCanvasLoaded += actionOnEvent;
+				case GameWorldEvent.CanvasAwake:
+					OnCanvasAwake += actionOnEvent;
 					break;
 				case GameWorldEvent.FPControllerStarted:
 					OnFPControllerStarted += actionOnEvent;
@@ -98,7 +98,7 @@ namespace SuperQoLity.SuperMarket {
 			state switch {
 				GameWorldEvent.QuitOrMenu => OnQuitOrMenu,
 				GameWorldEvent.LoadingWorld => OnLoadingWorld,
-				GameWorldEvent.CanvasLoaded => OnCanvasLoaded,
+				GameWorldEvent.CanvasAwake => OnCanvasAwake,
 				GameWorldEvent.FPControllerStarted => OnFPControllerStarted,
 				GameWorldEvent.WorldStarted => OnWorldStarted,
 				_ => null

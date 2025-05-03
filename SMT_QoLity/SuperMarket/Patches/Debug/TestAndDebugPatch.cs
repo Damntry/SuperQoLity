@@ -41,7 +41,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 		 * Should make these as in-game keys with parentScale shitty ingame menu or something that
 			only works on #Debug solution so I dont have to type while doing tests
 			
-			GameData.Instance.UserCode_CmdAlterFunds__Single(ISyncVarBehaviour);
+			GameData.Instance.UserCode_CmdAlterFunds__Single(funds);
 			GameData.Instance.NetworkgameFranchisePoints = XX;
 			Time.timeScale = 1f;
 			timeFactor

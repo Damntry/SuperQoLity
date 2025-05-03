@@ -1,4 +1,8 @@
 ## Changelog
+### 0.8.4.5
+	- Added missing logic from last update: 
+		* Achievement to recycle 40 cardboard bales.
+		* All security employees pick up ground products if no customers are left at closing hours.
 ### 0.8.4.0
 	- Added Carboard Baler logic from last update to employees, so they make use of it.
 	- Potential fix for an employee restocking problem that made them not restock sometimes. Contact me if you still get this bug so I can find how it happens.

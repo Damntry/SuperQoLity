@@ -14,6 +14,11 @@ using SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours;
 
 namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 
+	//TODO 1 - From Ika: Item transfer feature compatible with the product tray. Will share settings with item transfer.
+	//		Make a new hotkey setting that toggles the transfer behaviour between X transfers or 1.
+	//		By default it will transfer X. Though Im not sure if I should make the tray be the opposite? it would be confusing.
+	//		It would be nice to use this opportunity to add an interface element showing the current toggle status while
+	//		holding a box. This could be the start for showing other types of stuff.
 
 	//After the employee leveling patch, enabling item transfer for employees would break progression.
 	public enum EnumItemTransferMode {

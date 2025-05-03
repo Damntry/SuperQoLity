@@ -13,7 +13,10 @@ using UnityEngine.SceneManagement;
 
 namespace SuperQoLity.SuperMarket.Patches.Misc {
 
-	
+	//TODO 1 - Bug from Mitche. If you have a employee cashier on the register, and you click all the items to ring
+	//		them up before they click one, they employee won't finish the transaction
+	//		This could be a vanilla bug.
+
 	public class CheckoutAutoClickScanner : FullyAutoPatchedInstance {
 
 		public override bool IsAutoPatchEnabled => ModConfig.Instance.EnableMiscPatches.Value;

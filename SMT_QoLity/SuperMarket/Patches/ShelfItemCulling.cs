@@ -4,8 +4,12 @@ using UnityEngine;
 namespace SuperQoLity.SuperMarket.Patches {
 
 
+	//TODO 0 Culling - On 11_ProduceShelf.asset mesh, from which new shelves are instantiated, I found the private
+	//	field m_LocalAABB. So it seems like its already calculated? I could use that one.
+	//	There is also one from m_SubMeshes.localAABB. It has different values.
+
 	/*TODO 0 Culling 
- 
+
 	Ok so Unity automatically performs frustum culling apparently. So what is the point of this?? 
 		Anyway, it doesnt performa culling of object behind each other (nor GpuInstancingFrustumCulling), so
 		I would have to create my own implementation.
@@ -32,7 +36,7 @@ namespace SuperQoLity.SuperMarket.Patches {
 		In our case we are going to use it on shelf containers that are never going to rotate, except when repositioned 
 		manually (in which case we can simply reconstruct the bounding box) so this approach is not great.
 		Alternatives: Oriented Bounding Boxes (OBB), or bounding volume hierarchy (BVH).
- */
+	*/
 
 	public class ShelfItemCulling {
 
@@ -62,8 +66,9 @@ namespace SuperQoLity.SuperMarket.Patches {
 			/*
 			GameObject buildable = __instance.buildables[prefabID];
 
-			if (buildable.name.Contains("StorageShelf")) {    //Hopefully this makes it so new storage shelfs in the future are still supported.
-				int index = buildable.GetComponent<Data_Container>().parentIndex;
+			if (buildable.TryGetComponent(out Data_Container dataContainer) && 
+					dataContainer.GetContainerType() == DataContainerType.StorageShelf) {
+				int index = dataContainer.parentIndex;
 				Transform buildableParent = __instance.levelPropsOBJ.transform.GetChild(index);
 				GameObject lastStorageObject = buildableParent.GetChild(buildableParent.childCount - 1).gameObject;
 
