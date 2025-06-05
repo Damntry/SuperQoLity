@@ -1,4 +1,6 @@
 ## Changelog
+### 0.8.4.7
+	- Updated baler logic to avoid exception introduced with last update.
 ### 0.8.4.5
 	- Added missing logic from last update: 
 		* Achievement to recycle 40 cardboard bales.

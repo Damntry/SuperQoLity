@@ -27,10 +27,6 @@
     </PackageReference>
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="HarmonyX" Version="2.9.0" />
-    <PackageReference Include="UnityEngine.Modules" Version="2023.1.9">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -38,9 +34,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj" />
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj" />
-    <ProjectReference Include="..\..\!Global Libraries\Damntry Globals\Damntry Globals.csproj" />
+    <ProjectReference Include="..\..\..\!!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj" />
+    <ProjectReference Include="..\..\..\!!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj" />
+    <ProjectReference Include="..\..\..\!!Global Libraries\Damntry Globals\Damntry Globals.csproj" />
   </ItemGroup>
   
   <ItemGroup>
@@ -50,59 +46,79 @@
     <Reference Include="Assembly-CSharp-firstpass" Publicize="true">
       <HintPath>lib\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
+    <Reference Include="glTFast">
+      <HintPath>..\..\CustomFurniture\lib\glTFast.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Build.Utilities.v4.0">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Microsoft.Build.Utilities.v4.0.dll</HintPath>
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Microsoft.Build.Utilities.v4.0.dll</HintPath>
     </Reference>
     <Reference Include="Mirror">
       <HintPath>lib\Mirror.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PlayMaker">
       <HintPath>lib\PlayMaker.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>lib\Rewired_Core.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Rewired_Windows">
       <HintPath>lib\Rewired_Windows.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UniTask">
       <HintPath>lib\UniTask.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Unity.StarterAssets">
       <HintPath>lib\Unity.StarterAssets.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>lib\Unity.TextMeshPro.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>lib\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AIModule">
-      <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
-      <HintPath>lib\UnityEngine.AudioModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>lib\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>..\..\!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>lib\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
-      <HintPath>lib\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule">
-      <HintPath>lib\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>lib\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   
@@ -144,6 +160,6 @@
     <PropertyGroup Condition="'$(Configuration)'=='zLaptop'">
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPath=SoundEffects&#xD;&#xA;set AssetsPath=Assets&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.md&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\$(TargetName)-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;xcopy &quot;$(TargetDir)\%25SoundEffectsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25SoundEffectsPath%25&quot; /Y /I /E&#xD;&#xA;xcopy &quot;$(TargetDir)\%25AssetsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25AssetsPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\README.md&quot; &quot;%25copyTargetPath%25\!README.md&quot;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\Changelog.md&quot; &quot;%25copyTargetPath%25\!Changelog.md&quot;&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; NEQ &quot;Release&quot; (&#xD;&#xA;    copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;    copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;)" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPath=SoundEffects&#xD;&#xA;set AssetsPath=Assets&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.md&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\$(TargetName)-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;xcopy &quot;$(TargetDir)\%25SoundEffectsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25SoundEffectsPath%25&quot; /Y /I /E&#xD;&#xA;xcopy &quot;$(TargetDir)\%25AssetsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25AssetsPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\README.md&quot; &quot;%25copyTargetPath%25\!README.md&quot;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\Changelog.md&quot; &quot;%25copyTargetPath%25\!Changelog.md&quot;&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; NEQ &quot;Release&quot; (&#xD;&#xA;    copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;    copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;)" />
   </Target>
 </Project>

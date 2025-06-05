@@ -50,6 +50,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler {
 			Other
 		}
 
+		//TODO 0 - If I increase the TimeScale, they idle a lot more and the multiplier wont increase for some reason.
+
 		private const int LoopMultRounding = 3;
 
 		private static SchedulerSessionVars sessionVars;
@@ -211,7 +213,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler {
 					sessionVars.ShowSchedulerInactiveError = false;
 				}
 
-					return;
+				return;
 			}
 
 			StopwatchDiag processTime = StopwatchDiag.StartNew();

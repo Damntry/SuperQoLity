@@ -51,10 +51,10 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			
 		*/
 
-		private static ActiveDebugPatches activeDebugPatches = 
+		private static ActiveDebugPatches activeDebugPatches =
 			ActiveDebugPatches.None;
 
-		private static ActiveDebugUtilities activeDebugUtilities = 
+		private static ActiveDebugUtilities activeDebugUtilities =
 			ActiveDebugUtilities.None;
 
 
@@ -106,7 +106,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 						KeyPressDetection.RemoveHotkey(KeyCode.Mouse2);
 					};
 				}
-				
+
 			}
 		}
 
@@ -156,7 +156,47 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 
 		}
+		/*
+		public class aaaaa {
 
+			static bool ReplaceCommasWithPeriods = true;
+
+			[HarmonyPatch(typeof(ManagerBlackboard), nameof(ManagerBlackboard.CalculateShoppingListTotal))]
+			[HarmonyPostfix]
+			public static IEnumerator CalculateShoppingListTotalOverride(IEnumerator __result, ManagerBlackboard __instance) {
+				LOG.TEMPWARNING("1");
+				while (__result.MoveNext()) {
+					yield return __result.Current;
+					LOG.TEMPWARNING("2");
+				}
+
+				LOG.TEMPWARNING("3");
+				if (ReplaceCommasWithPeriods) {
+					yield return new WaitForEndOfFrame();
+					__instance.shoppingTotalCharge = 0f;
+					if (__instance.shoppingListParent.transform.childCount > 0) {
+						foreach (Transform item in __instance.shoppingListParent.transform) {
+							string text = item.transform.Find("BoxPrice").GetComponent<TextMeshProUGUI>().text;
+
+							if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float price)) {
+								__instance.shoppingTotalCharge += price;
+							}
+						}
+					}
+					__instance.totalChargeOBJ.text = ProductListing.Instance.ConvertFloatToTextPrice(__instance.shoppingTotalCharge);
+				}
+			}
+
+			[HarmonyPatch(typeof(TMP_Text), "text", MethodType.Setter)]
+			public static class TMPTextPatch {
+				private static void Prefix(ref string value) {
+					if (ReplaceCommasWithPeriods && !string.IsNullOrEmpty(value)) {
+						value = value.Replace(',', '.');
+					}
+				}
+			}
+		}
+		*/
 		public class DifferentSizesNPC {
 
 			[HarmonyPrepare]
@@ -287,7 +327,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 					if (spawnCustomers) {
 						for (int i = 0; i < count; i++) {
-							IEnumerator enumCust = NPC_Manager.Instance.SpawnCustomerNCP();
+							IEnumerator enumCust = NPC_Manager.Instance.SpawnCustomerNPC();
 							while (enumCust.MoveNext()) ;
 						}
 						TimeLogger.Logger.LogTimeWarning($"Total customers on map: {NPC_Manager.Instance.customersnpcParentOBJ.transform.childCount}",
@@ -295,6 +335,18 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 					}
 				}
 			}
+
+			private static void RotateShelfs() {
+				foreach (Transform shelf in NPC_Manager.Instance.shelvesOBJ.transform) {
+					shelf.position += new Vector3(0, UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.08f, 0.08f));
+					shelf.localScale = new Vector3(UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f));
+					shelf.rotation = Quaternion.Euler(
+						shelf.rotation.x + UnityEngine.Random.Range(0f, 8f),
+						shelf.rotation.y + UnityEngine.Random.Range(0f, 17f),
+						shelf.rotation.z + UnityEngine.Random.Range(0f, 4f));
+				}
+			}
+
 		}
 
 		#endregion
@@ -385,12 +437,12 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 			public static async void StartProductSpawnLoop() {
 				if (NPC_Manager.Instance == null || NPC_Manager.Instance.checkoutOBJ)
-				WorldState.OnQuitOrMenu += () => { loopActive = false; };
+					WorldState.OnQuitOrMenu += () => { loopActive = false; };
 
 				loopActive = true;
 
-				while (loopActive && NPC_Manager.Instance != null && 
-						NPC_Manager.Instance.checkoutOBJ != null && 
+				while (loopActive && NPC_Manager.Instance != null &&
+						NPC_Manager.Instance.checkoutOBJ != null &&
 						NPC_Manager.Instance.checkoutOBJ.transform.childCount > 0) {
 
 					PlaceProductOnBelt();
@@ -428,8 +480,8 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				float num3 = 0f;
 				float num4 = 0f;
 				foreach (int item in productsIDInCheckout) {
-					float num5 = ((!ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().hasTrueCollider) 
-						? ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x 
+					float num5 = ((!ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().hasTrueCollider)
+						? ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x
 						: ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().trueCollider.x);
 					if (productsIDInCheckout.Count == 1) {
 						num3 = num5 / 2f;
@@ -454,7 +506,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 		public static class TheDuckening {
 
-			private static readonly string[] duckPrefabSufixes = ["Black", "Blue", "Cyan", "GreenDark", "GreenNeon", 
+			private static readonly string[] duckPrefabSufixes = ["Black", "Blue", "Cyan", "GreenDark", "GreenNeon",
 				"LightPurple", "Orange", "Pink", "Pond", "Purple", "Red", "RedEye", "White", "Yellow", "YinYang"];
 
 			private static Shader generalShader;
@@ -473,7 +525,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 				string basePath = "Snowconesolid Assets/Super Rubber Duck Pack/Rubber Duck PREFABS/RubberDuck_";
 				string randomDuckSuffix = duckPrefabSufixes[UnityEngine.Random.Range(0, duckPrefabSufixes.Length)];
-				if (bundleElement.TryLoadNewInstance(basePath + randomDuckSuffix, out GameObject superQolDuck)) {
+				if (bundleElement.TryLoadNewPrefabInstance(basePath + randomDuckSuffix, out GameObject superQolDuck)) {
 					superQolDuck.GetComponent<MeshRenderer>().material.shader = GetGameShader(superQolDuck.transform);
 					superQolDuck.transform.SetParent(SMTComponentInstances.GameDataManagerInstance().transform);
 					superQolDuck.transform.position = raycastHit.point;
@@ -485,7 +537,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 							out RaycastHit raycastHit2, 5f, 1)) {
 						superQolDuck.transform.position += new Vector3(0, raycastHit2.point.y + 0.1f, 0);
 					}
-					
+
 					superQolDuck.transform.Rotate(0, 0, UnityEngine.Random.Range(0, 360));
 				}
 			}
@@ -527,7 +579,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 
 		}
-		
+
 
 		#endregion
 	}

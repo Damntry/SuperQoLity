@@ -92,5 +92,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public static FirstPersonController FirstPersonControllerInstance() => FirstPersonController.Instance;
 		public static PlayerNetwork PlayerNetworkInstance() => FirstPersonControllerInstance()?.GetComponent<PlayerNetwork>();
 		public static GameData GameDataManagerInstance() => GameData.Instance;
+		public static Builder_Main BuilderMainInstance() => GameCanvasInstance()?.GetComponent<Builder_Main>();
 	}
 }

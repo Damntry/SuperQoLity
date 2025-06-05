@@ -33,7 +33,7 @@ namespace SuperQoLity.SuperMarket.ModUtils.UI {
 				bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\{UIPanelPrefabName}");
 			}
 			
-			if (bundleElement.TryLoadNewInstance(UIPanelName, out superQolUIPanel)) {
+			if (bundleElement.TryLoadNewPrefabInstance(UIPanelName, out superQolUIPanel)) {
 				IsPanelLoaded = true;
 
 				barMaxHeight = GetBarHeight(GetContainerTop(), 0);  //By default all bars have maxed out values.

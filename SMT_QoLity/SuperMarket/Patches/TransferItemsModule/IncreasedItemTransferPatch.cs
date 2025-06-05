@@ -76,6 +76,10 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			return GetNumTransferItems(giverItemCount, receiverItemCount, receiverMaxCapacity, charType, 1);
 		}
 
+		//TODO 0 - Test what happens in volume restricted shelves.
+		//	If its not doing it correctly, I need to do this with those shelves:
+		//		if (isVolumeRestricted && size.x * size.y * size.z < productVolumeLimit){  Can add more  }
+
 		/// <summary>
 		/// Gets the total number of products to move from the equipped box into the shelf, or viceversa.
 		/// Parameter meanings change depending on the direction of transfer:

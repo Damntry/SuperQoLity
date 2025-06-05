@@ -3,7 +3,7 @@
 
 ## Features 
 - NPC job coordination. Employees wont go for the same jobs anymore.
-- Many performance optimisations to employees to remove freezes. The expensive restock background method is now lighting fast and multithreaded. Idle storage workers wont freeze big stores like they used to, and more.
+- Many performance optimisations to employe logic to remove game stuttering. The expensive restock background method is now lighting fast and multithreaded. Idle storage workers wont freeze big stores like they used to, and more.
 - Shelf/storage highlighting functionality, inherited from BetterSMT, with customizable colors. BetterSMT is not needed for this.
 - Configurable employee movement speed while the store is closed. Faster, less laggy than the star perk, and you move at normal speed so you can actually do work when you want to.
 - Configurable, faster item transfer to/from shelves, for players and/or employees.
@@ -12,10 +12,10 @@
 - Restockers will now decide which box to restock from, based on box content quantity and distance from the product shelf.
 - Configurable employee wait time after finishing a job step.
 - Added an employee job scheduler that lets you choose their workload performance. This is the foundation for future employee behaviour customization.
-- In the Manager Blackboard, you can click anywhere on a product to add it to the shopping list, instead of just the plus button.
+- In the Manager Blackboard, you can click anywhere on a product to add it to the shopping list, and not just the small plus button.
 - Storage employees prioritise the closest box on the floor, not a random one.
 - Pricing gun fixed so doubling the price no longer makes customers complain (Check 0.8.2 changelog on why I see this as a bug).
-- And tons of my own bugs that I missed.
+- And tons of my own bugs that I missed and will wreak havok on your game ha ha. Just kidding of course. Unless...?
 
 #### All features are optional
 

@@ -89,7 +89,7 @@ namespace SuperQoLity {
 			RestockMatcher.Enable();
 #if DEBUG
 			//Compare method signatures and log results
-			StartMethodSignatureCheck().LogResultMessage(LogTier.Debug, false, true);
+			StartMethodSignatureCheck().LogResultMessage(LogTier.Warning, false, true);
 #endif
 			StartingMessage.InitStartingMessages(allPatchsOK);
 

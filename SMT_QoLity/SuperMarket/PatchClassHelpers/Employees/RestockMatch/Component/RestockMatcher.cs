@@ -111,7 +111,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Compo
 			
 
 			int maxJobsRestockCycle = CalculateMaxQueuedJobsForCycle(__instance);
-			LOG.TEMPWARNING("maxJobsRestockCycle " + maxJobsRestockCycle.ToString() + " - timeScale " + Time.timeScale.ToString());
 
 			restockTask = restockJobGen.StartAwaitableThreadedTaskAsync(
 				() => RestockJobGeneration(maxJobsRestockCycle, listStorageShelf, listProdShelf),

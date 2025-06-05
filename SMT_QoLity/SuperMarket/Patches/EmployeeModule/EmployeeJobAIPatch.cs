@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -57,6 +58,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			Storage = 3,
 			Security = 4
 		}
+
+		//TODO 0 - Mitche report: superqolity makes staff happiness not update in real time, gotta close store/reopen.
 
 		//TODO 1 - Create something to try and detect when an employee is stuck in some kind of loop, so
 		//	I can fix the vanilla error I ve been seeing of employees going back and forth in place.
@@ -668,7 +671,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								}
 							case 30: {
 									if (employee.closestCardboardBaler) {
-										employee.closestCardboardBaler.GetComponent<CardboardBaler>().AuxiliarAddBoxToBaler();
+										employee.closestCardboardBaler.GetComponent<CardboardBaler>().AuxiliarAddBoxToBaler(employee.boxProductID);
 										UnequipBox(employee);
 									} else {
 										employee.StartWaitState(1f, 0);
@@ -721,6 +724,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 								}
 
+								//The base game changed its logic so 10 is now the bale packer logic to fix some bug, but
+								//	I dont need to overcomplicate the code since my own way of doing it already fixed that.
 								employee.state = 10;
 								return true;
 							case 1: {
@@ -922,7 +927,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								}
 								return true;
 							case 32: {
-									float fundsToAdd = 15f * (float)GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
+									float fundsToAdd = 18f * (float)GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
 									AchievementsManager.Instance.CmdAddAchievementPoint(16, 1);
 									SMTAntiCheat_Helper.Instance.CmdAlterFunds(fundsToAdd);
 									employee.state = 5;
@@ -930,7 +935,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								}
 							case 33:
 								if (employee.closestCardboardBaler) {
-									employee.closestCardboardBaler.GetComponent<CardboardBaler>().AuxiliarAddBoxToBaler();
+									employee.closestCardboardBaler.GetComponent<CardboardBaler>().AuxiliarAddBoxToBaler(employee.boxProductID);
 									UnequipBox(employee);
 								} else {
 									employee.StartWaitState(1f, 0);

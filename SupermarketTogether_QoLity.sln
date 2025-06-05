@@ -5,7 +5,7 @@ VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SuperQoLity", "SMT_QoLity\SuperQoLity.csproj", "{41BCAF60-6308-47A6-80D0-4DD206F1D8C0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Damntry Globals", "..\!Global Libraries\Damntry Globals\Damntry Globals.csproj", "{C50E4BA0-23CB-4D55-BF35-024917E7730D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Damntry Globals", "..\..\!!Global Libraries\Damntry Globals\Damntry Globals.csproj", "{C50E4BA0-23CB-4D55-BF35-024917E7730D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{09336125-EB57-48C1-913A-CC6D2487F246}"
 	ProjectSection(SolutionItems) = preProject
@@ -13,9 +13,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{09336125-E
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Damntry Globals BepInEx", "..\!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj", "{D3817371-BAE8-48D8-A465-00274515A94E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Damntry Globals BepInEx", "..\..\!!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj", "{D3817371-BAE8-48D8-A465-00274515A94E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Damntry Globals Unity", "..\!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj", "{24B51AC0-6C5B-4A37-83B8-2343FBBBAE02}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Damntry Globals Unity", "..\..\!!Global Libraries\Damntry Globals Unity\Damntry Globals Unity.csproj", "{24B51AC0-6C5B-4A37-83B8-2343FBBBAE02}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

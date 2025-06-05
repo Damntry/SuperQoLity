@@ -96,7 +96,7 @@ public class AncientRestockLogic {
 		}
 		Performance.StopAndLog("MainRestockUpdate");
 
-		LOG.TEMPWARNING($"{instance.lowProductCountList.Count + instance.mediumProductCountList.Count + instance.highProductCountList.Count + instance.veryHighProductCountList.Count} jobs generated the vanilla way.");
+		//LOG.TEMPWARNING($"{instance.lowProductCountList.Count + instance.mediumProductCountList.Count + instance.highProductCountList.Count + instance.veryHighProductCountList.Count} jobs generated the vanilla way.");
 
 		instance.lowProductCountList.Clear();
 		instance.mediumProductCountList.Clear();
@@ -189,7 +189,7 @@ public class AncientRestockLogic {
 			IsRestockGenerationWorking = false;
 			Performance.StopAndLog("2. productsThresholdArray", true);
 			Performance.StopAndLog("ThresholdCalculation", true);
-			LOG.TEMPWARNING($"{queueRestockJobsOld.Count} jobs generated.");
+			//LOG.TEMPWARNING($"{queueRestockJobsOld.Count} jobs generated.");
 		}
 	}
 	public static bool GetAvailableRestockJob(NPC_Manager __instance, NPC_Info employee, out RestockJobInfo restockJob) {
