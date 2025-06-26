@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -304,9 +303,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				}
 			}
 
-			NavMeshAgent component2 = employeeObj.GetComponent<NavMeshAgent>();
+			NavMeshAgent employeeNavAgent = employeeObj.GetComponent<NavMeshAgent>();
 
-			if (IsEmployeeAtDestination(component2)) {
+			if (IsEmployeeAtDestination(employeeNavAgent)) {
 				switch (taskPriority) {
 					case 0:
 						//Shouldnt be needed, but acts as extra safety for clearing reservations
@@ -709,23 +708,10 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										return true;
 									}
 								}
-								GameObject closestBale = __instance.GetClosestBale(employeeObj);
-								if ((bool)closestBale) {
-									if (NavMesh.SamplePosition(new Vector3(closestBale.transform.position.x, 0f, 
-											closestBale.transform.position.z), out NavMeshHit val2, 1f, -1)) {
-										employee.currentCardboardBale = closestBale;
-										employee.MoveEmployeeTo(val2.position);
-										employee.state = 30;
-										return true;
-									}
-								} else {
-									
-									//TODO !0 AI IMPROVEMENTS - Find boxes in storage that can be merged (fully or partially) into another.
 
-								}
+								//TODO !0 AI IMPROVEMENTS - Instead of going to rest, find boxes in
+								//	storage that can be merged (fully or partially) into another.
 
-								//The base game changed its logic so 10 is now the bale packer logic to fix some bug, but
-								//	I dont need to overcomplicate the code since my own way of doing it already fixed that.
 								employee.state = 10;
 								return true;
 							case 1: {
@@ -851,18 +837,19 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								}
 							case 10:
-								if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 3f) {
+								if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5) {
 									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Moving to rest spot.", LogEmployeeActions);
 									employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
 									return true;
 								}
 
 								//Though it makes sense to clear reservations here anyway, it was put specifically to solve these 2 cases:
-								//	- Boxes still falling out of the sky will sometimes not set a new destination for the storage worker. This makes it
-								//		so they stay at the rest spot and go to the next step, which is.. going to the rest spot. Since they dont need to
-								//		call a MoveEmployeeTo... method, which clears targets, its reservations get stuck.
-								//	- Like above, but happens when a box is dropped next to the rest spot, but then it gets pushed away before the
-								//		employee reaches it. Employee is already at the rest spot, so no need to move that clears reservations.
+								//	- Boxes still falling out of the sky will sometimes not set a new destination for the storage worker.
+								//		This makes it so they stay at the rest spot and go to the next step, which is.. going to the rest spot.
+								//		Since they dont need to call a MoveEmployeeTo... method, which clears targets, its reservations get stuck.
+								//	- Like above, but happens when a box is dropped next to the rest spot, ant then gets pushed away before the
+								//		employee reaches it. Employee is already at the rest spot, so it doesnt call the move method that
+								//		clears reservations.
 								employee.ClearNPCReservations();
 								employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 								employee.state = -1;
@@ -910,7 +897,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 							case 31:
 								if (__instance.closestRecyclePerk) {
-									component2.destination = __instance.trashSpotOBJ.transform.position;
+									employee.MoveEmployeeTo(__instance.trashSpotOBJ.transform.position);
 									employee.state = 32;
 								} else if (__instance.employeeRecycleBoxes && !__instance.interruptBoxRecycling) {
 									float num4 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
@@ -1021,20 +1008,134 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 						}
 						break;
+					case 5:
+						switch (state) {
+							case 0: {
+									if (employee.equippedItem > 0) {
+										__instance.DropBoxOnGround(employee);
+										UnequipBox(employee);
+										return true;
+									}
+									GameObject furnitureToFix = __instance.GetFurnitureToFix(employeeObj);
+									if (furnitureToFix) {
+										employee.currentFurnitureToFix = furnitureToFix;
+										employee.MoveEmployeeTo(furnitureToFix.transform.Find("Standspot").position);
+										employee.state = 1;
+									} else {
+										employee.state = 10;
+									}
+									return true;
+								}
+							case 10: {
+									if (!TryMoveToClosestBale(__instance, employee, employeeObj)) {
+										if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5f) {
+											LOG.TEMPDEBUG_FUNC(() => $"Technician #{GetUniqueId(employee)}: Moving to rest spot.", LogEmployeeActions);
+											employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+										} else {
+											employee.StartWaitState(2f, 0);
+											employee.state = -1;
+										}
+									}
+									return true;
+								}
+							case 1:
+								if (employee.currentFurnitureToFix && __instance.RetrieveFurnitureRepairState(employee.currentFurnitureToFix)) {
+									employee.StartWaitState(8f, 2);
+									employee.state = -1;
+									return true;
+								}
+								break;
+							case 2:
+								if (employee.currentFurnitureToFix && __instance.RetrieveFurnitureRepairState(employee.currentFurnitureToFix)) {
+									if (employee.currentFurnitureToFix.GetComponent<Data_Container>()) {
+										employee.currentFurnitureToFix.GetComponent<Data_Container>().CmdFixBreakingEvent();
+									} else if (employee.currentFurnitureToFix.GetComponent<CardboardBaler>()) {
+										employee.currentFurnitureToFix.GetComponent<CardboardBaler>().CmdFixBreakingEvent();
+									}
+								}
+								employee.StartWaitState(2f, 0);
+								employee.state = -1;
+								return true;
+							case 3:
+								UnequipBox(employee);
+								return true;
+							case 30:
+								if (employee.currentCardboardBale) {
+									Vector3 val2 = new (employee.currentCardboardBale.transform.position.x, 0f, employee.currentCardboardBale.transform.position.z);
+									Vector3 val3 = new (employee.transform.position.x, 0f, employee.transform.position.z);
+									if (Vector3.Distance(val2, val3) < 2f) {
+										employee.EquipNPCItem(2);
+										GameData.Instance.GetComponent<NetworkSpawner>().EmployeeDestroyBox(employee.currentCardboardBale);
+										employee.state = 31;
+										return true;
+									}
+								}
+								employee.StartWaitState(1f, 0);
+								employee.state = -1;
+								return false;
+							case 31:
+								Vector3 destination = Vector3.zero;
+								if (__instance.closestRecyclePerk) {
+									destination = __instance.trashSpotOBJ.transform.position;
+									employee.state = 32;
+								} else if (__instance.employeeRecycleBoxes && !__instance.interruptBoxRecycling) {
+									float num = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
+									float num2 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
+									if (num < num2) {
+										destination = __instance.recycleSpot1OBJ.transform.position;
+										employee.state = 32;
+									} else {
+										destination = __instance.recycleSpot2OBJ.transform.position;
+										employee.state = 32;
+									}
+								} else {
+									destination = __instance.trashSpotOBJ.transform.position;
+									employee.state = 3;
+								}
+
+								employee.MoveEmployeeTo(destination);
+								return true;
+							case 32: {
+									float fundsToAdd = 18f * GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
+									AchievementsManager.Instance.CmdAddAchievementPoint(16, 1);
+									GameData.Instance.CmdAlterFunds(fundsToAdd);
+									employee.state = 3;
+									return true;
+								}
+							default:
+								employee.state = 0;
+								break;
+						}
+						break;
 					default:
 						UnityEngine.Debug.Log("Impossible employee current task case. Check logs.");
 						break;
 				}
-			} else if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && !component2.pathPending) {
+			} else if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && !employeeNavAgent.pathPending) {
 
 				//See EmployeeTargetReservation.LastDestinationSet for an explanation on this
-				component2.Warp(EmployeeTargetReservation.LastDestinationSet[employee]);
+				employeeNavAgent.Warp(EmployeeTargetReservation.LastDestinationSet[employee]);
 
 				EmployeeWarpSound.PlayEmployeeWarpSound(employee);
 
 				employee.StartWaitState(0.5f, state);
 				employee.state = -1;
 				return true;
+			}
+			return false;
+		}
+
+		private static bool TryMoveToClosestBale(NPC_Manager __instance, NPC_Info employee, GameObject employeeObj) {
+			GameObject closestBale = __instance.GetClosestBale(employeeObj);
+			if (closestBale) {
+				if (NavMesh.SamplePosition(new Vector3(closestBale.transform.position.x, 0f, 
+						closestBale.transform.position.z), out NavMeshHit navHit, 1f, -1)) {
+
+					employee.currentCardboardBale = closestBale;
+					employee.MoveEmployeeTo(navHit.position);
+					employee.state = 30;
+					return true;
+				}
 			}
 
 			return false;

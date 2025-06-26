@@ -16,6 +16,23 @@ using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Component
 
 namespace SuperQoLity {
 
+	/*TODO 0 - POSSIBLE HUGE PERFORMANCE OPTIMIZATION
+		This is an early alternative to the idea of hiding products that are not visible using AABB.
+		Shelf labels have this gameobjeci hierarchy:
+
+		Shelf
+			Labels
+				LabelSign
+				LabelSign 2
+				...
+
+		Each LabelSign contains a component called LODGroup in charge of the lod levels. 
+			Right now its just for dissapearing after a certain distance.
+		So the question is, can I do the same thing at runtime for the products? Ideally there 
+		would be a 2d object at max distance instead of just dissapearing, but how would I 
+		automate 2d billboard creation, I have no idea.
+	*/
+
 	//TODO 1 - Find things Im loading on WorldStart and try to move them earlier if possible.
 	//	There is noticeable lag when starting compared to base game, specially on big stores.
 
