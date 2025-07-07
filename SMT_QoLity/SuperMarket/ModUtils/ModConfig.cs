@@ -48,7 +48,10 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<Color> ShelfLabelHighlightColor { get; private set; }
 		public ConfigEntry<Color> StorageHighlightColor { get; private set; }
 		public ConfigEntry<Color> StorageSlotHighlightColor { get; private set; }
-
+#if DEBUG
+		public ConfigEntry<bool> BroomShotgunModeEnabled { get; private set; }
+		public ConfigEntry<KeyboardShortcut> BroomShotgunModeHotkey { get; private set; }
+#endif
 		public ConfigEntry<bool> EnableMiscPatches { get; private set; }
 		public ConfigEntry<bool> EnableCheckoutAutoClicker { get; private set; }
 		public ConfigEntry<bool> EnablePriceGunFix { get; private set; }
@@ -113,6 +116,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			InitializeEmployeePerformanceModule();
 			InitializeItemTransferSpeedModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
 			InitializeHighlightExtensionModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
+#if DEBUG
+			InitializeBroomShotgunMode(moduleGenericEnablerKey, moduleGenericEnablerDescription);
+#endif
 			InitializeMiscModule(moduleGenericEnablerKey, moduleGenericEnablerDescription);
 			InitializeNotificationModule();
 			InitializeDisplayAutoSettingsModule();
@@ -339,6 +345,19 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				modInstallSide: MultiplayerModInstallSide.Any
 			);
 		}
+
+#if DEBUG
+		private void InitializeBroomShotgunMode(string moduleGenericEnablerKey, string moduleGenericEnablerDescription) {
+			string broomShotgunModuleText = "American Module";
+
+			BroomShotgunModeEnabled = configManagerControl.AddConfig(
+				sectionName: broomShotgunModuleText,
+				key: string.Format(moduleGenericEnablerKey, broomShotgunModuleText),
+				defaultValue: true,
+				description: string.Format(moduleGenericEnablerDescription, broomShotgunModuleText)
+			);
+		}
+#endif
 
 		private void InitializeMiscModule(string moduleGenericEnablerKey, string moduleGenericEnablerDescription) {
 			string miscModuleText = "Misc. Module";

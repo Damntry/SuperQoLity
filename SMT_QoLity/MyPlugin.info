@@ -6,14 +6,14 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.8.5.0</Version>
+    <Version>0.8.5.4</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
   </PropertyGroup>
 
   <PropertyGroup>
-    <BetterSMTSupportedVersion>1.9.9</BetterSMTSupportedVersion>
+    <BetterSMTSupportedVersion>2.4.0</BetterSMTSupportedVersion>
   </PropertyGroup>
   <!-- Full debug for old Unity runtimes, instead of the modern portable one.
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -53,6 +53,30 @@ namespace $(RootNamespace)
     <WriteLinesToFile Lines="$(GeneratedText)" File="$(GeneratedFilePath)" WriteOnlyWhenDifferent="true" Overwrite="true" />
   </Target>
 
+  <!-- Generate manifest.json file for Thunderstore -->
+  <Target Name="GenerateManifest" BeforeTargets="BeforeCompile;CoreCompile" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.json">
+    <PropertyGroup>
+
+      <GeneratedJson>
+        <![CDATA[
+{
+  "name": "Damntry",
+  "version_number": "$(Version)",
+  "website_url": "https://github.com/Damntry/SuperQoLity",
+  "description": "AI, performance, and QoL changes for Supermarket Together",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2100"
+  ]
+}
+      ]]>
+      </GeneratedJson>
+      <GeneratedJsonFilePath>$(MSBuildStartupDirectory)/Docs/manifest.json</GeneratedJsonFilePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <FileWrites Include="$(GeneratedJsonFilePath)" />
+    </ItemGroup>
+    <WriteLinesToFile Lines="$(GeneratedJson)" File="$(GeneratedJsonFilePath)" WriteOnlyWhenDifferent="true" Overwrite="true" />
+  </Target>
   
   <!-- This is to remind myself to change versions in case I build a new release milestone -->
   <Target Name="WriteToFileXXX" AfterTargets="PostBuildEvent">

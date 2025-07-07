@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -157,7 +157,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static void MoveEmployee(this NPC_Info NPC, Vector3 destination, GameObject gameObjectTarget,
-				SlotInfoBase shelfTarget, TargetType targetType) {
+				GenericShelfSlotInfo shelfTarget, TargetType targetType) {
 			NavMeshAgent navMesh = NPC.gameObject.GetComponent<NavMeshAgent>();
 			
 			if (LastDestinationSet.ContainsKey(NPC)) {
@@ -180,7 +180,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			UpdateTargetMarkStatus(NPC, null, shelfTarget, TargetType.ProdShelfSlot);
 		}
 
-		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
+		private static void UpdateNPCItemMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, GenericShelfSlotInfo shelfTarget, TargetType targetType) {
 			DeleteAllNPCTargets(NPC);
 
 			UpdateTargetMarkStatus(NPC, gameObjectTarget, shelfTarget, targetType);
@@ -218,7 +218,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			NPCTargets.Remove(NPC);
 		}
 
-		private static void UpdateTargetMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, SlotInfoBase shelfTarget, TargetType targetType) {
+		private static void UpdateTargetMarkStatus(NPC_Info NPC, GameObject gameObjectTarget, GenericShelfSlotInfo shelfTarget, TargetType targetType) {
 			switch (targetType) {
 				case TargetType.GroundBox:
 					AddTarget(NPC, gameObjectTarget, NpcBoxTargets, groundboxesTargeted, targetType);

@@ -131,6 +131,18 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Update="Assets\EquipWeapon.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\EquipWeapon.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\ShotgunShotAndPump.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\ShotgunShotAndPump.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -146,7 +158,7 @@
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Folder Include="SuperMarket\Patches\Debug\" />
   </ItemGroup>
@@ -160,6 +172,6 @@
     <PropertyGroup Condition="'$(Configuration)'=='zLaptop'">
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
     </PropertyGroup>
-    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPath=SoundEffects&#xD;&#xA;set AssetsPath=Assets&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.md&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\$(TargetName)-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;xcopy &quot;$(TargetDir)\%25SoundEffectsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25SoundEffectsPath%25&quot; /Y /I /E&#xD;&#xA;xcopy &quot;$(TargetDir)\%25AssetsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25AssetsPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\README.md&quot; &quot;%25copyTargetPath%25\!README.md&quot;&#xD;&#xA;copy &quot;$(TargetDir)\..\..\..\..\Changelog.md&quot; &quot;%25copyTargetPath%25\!Changelog.md&quot;&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; NEQ &quot;Release&quot; (&#xD;&#xA;    copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;    copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;)" />
+    <Exec Command="set copyTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set SoundEffectsPath=SoundEffects&#xD;&#xA;set AssetsPath=Assets&#xD;&#xA;del &quot;%25copyTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;del &quot;%25copyTargetPath%25\*.md&quot; /s /q&#xD;&#xA;md &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25copyTargetPath%25&quot;\$(TargetName)-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;xcopy &quot;$(TargetDir)\%25SoundEffectsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25SoundEffectsPath%25&quot; /Y /I /E&#xD;&#xA;xcopy &quot;$(TargetDir)\%25AssetsPath%25\*.*&quot; &quot;%25copyTargetPath%25\%25AssetsPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;copy &quot;$(MSBuildStartupDirectory)\Docs\README.md&quot; &quot;%25copyTargetPath%25\!README.md&quot;&#xD;&#xA;copy &quot;$(MSBuildStartupDirectory)\Docs\Changelog.md&quot; &quot;%25copyTargetPath%25\!Changelog.md&quot;&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; NEQ &quot;Release&quot; (&#xD;&#xA;    copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25copyTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;    copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25copyTargetPath%25&quot;&#xD;&#xA;)" />
   </Target>
 </Project>

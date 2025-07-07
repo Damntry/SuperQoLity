@@ -2,7 +2,7 @@
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
 using System.Collections.Generic;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
@@ -19,11 +19,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 		/// Skip shelf slots that have zero quantity, regardless of having a product assigned or not.
 		/// </summary>
 		SkipEmptySlots = 1 << 1,
-	}
-
-	public enum ShelfType {
-		StorageSlot,
-		ProdShelfSlot
 	}
 
 	public class ContainerSearchLambdas {
@@ -127,7 +122,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 					if (loopStorageAction == LoopStorageAction.SaveHighPrio || loopStorageAction == LoopStorageAction.SaveAndExit) {
 						freeStorageSlot = new(storageId, slotId, productId, quantity, storageObjT.position);
-					} else if (loopStorageAction == LoopStorageAction.SaveLowPrio && !freeStorageSlot.FreeStorageFound) {
+					} else if (loopStorageAction == LoopStorageAction.SaveLowPrio && !freeStorageSlot.ShelfFound) {
 						//Save only if it was empty
 						freeStorageSlot = new(storageId, slotId, productId, quantity, storageObjT.position);
 					}

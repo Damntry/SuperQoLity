@@ -2,22 +2,36 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
+namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo {
 
-	public abstract class SlotInfoBase {
+	//HACK Dont change the order in this enum, as it is the same fixed order 
+	//	used in ContainerSearch.GetFirstOfAnyShelfWithProduct, and then 
+	//	converted to int elsewhere for the the base game.
+	//	The correct fix would be to save the values for the NPC, including the
+	//	ShelfType enum value, and then use that send the appropiate int.
+	public enum ShelfType {
+		StorageSlot,
+		ProdShelfSlot
+	}
 
-		public SlotInfoBase(int shelfIndex, int slotIndex, int productId, int quantity, Vector3 position) {
+	public abstract class GenericShelfSlotInfo {
+
+		public GenericShelfSlotInfo(int shelfIndex, int slotIndex, 
+				int productId, int quantity, Vector3 position, ShelfType shelfType) {
 			ShelfIndex = shelfIndex;
 			SlotIndex = slotIndex;
+			ShelfType = shelfType;
 			ExtraData.ProductId = productId;
 			ExtraData.Quantity = quantity;
 			ExtraData.Position = position;
 		}
 
-		public SlotInfoBase(int shelfIndex, int slotIndex) {
+		public GenericShelfSlotInfo(int shelfIndex, int slotIndex, ShelfType shelfType) {
 			ShelfIndex = shelfIndex;
 			SlotIndex = slotIndex;
+			ShelfType = shelfType;
 		}
+
 
 		
 		public void SetExtraDataValues(int shelfIndex, int slotIndex, int productId, int Quantity, Vector3 Position) {
@@ -26,7 +40,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 			ExtraData.Position = Position;
 		}
 
-		public void SetExtraDataValues(SlotInfoBase SlotInfoBase) {
+		public void SetExtraDataValues(GenericShelfSlotInfo SlotInfoBase) {
 			ExtraData.ProductId = SlotInfoBase.ExtraData.ProductId;
 			ExtraData.Quantity = SlotInfoBase.ExtraData.Quantity;
 			ExtraData.Position = SlotInfoBase.ExtraData.Position;
@@ -34,7 +48,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 
 		/// <summary>
 		/// The child index in either NPC_Manager.shelvesOBJ or NPC_Manager.storageOBJ 
-		///		of the object that this SlotInfoBase references.
+		///		of the object that this GenericShelfSlotInfo references.
 		///	It must be immutable as its value is used in hashcode calculation.
 		/// </summary>
 		public int ShelfIndex { get; init; }
@@ -45,6 +59,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 		///	It must be immutable as its value is used in hashcode calculation.
 		/// </summary>
 		public int SlotIndex { get; init; }
+
+		public ShelfType ShelfType { get; init; }
+
+
+		public bool ShelfFound { get { return ShelfIndex >= 0 && SlotIndex >= 0; } }
+
 
 		private ExtraDataClass _extraData;
 
@@ -75,18 +95,18 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo {
 	}
 
 
-	public class TargetContainerSlotComparer : IEqualityComparer<SlotInfoBase> {
+	public class TargetContainerSlotComparer : IEqualityComparer<GenericShelfSlotInfo> {
 
-		public bool Equals(SlotInfoBase o1, SlotInfoBase o2) {
+		public bool Equals(GenericShelfSlotInfo o1, GenericShelfSlotInfo o2) {
 			return o1.ShelfIndex == o2.ShelfIndex && o1.SlotIndex == o2.SlotIndex;
 		}
 
 		/// <summary>
 		/// Taken from https://stackoverflow.com/a/263416/739345 by Jon Skeet
 		/// </summary>
-		public int GetHashCode(SlotInfoBase o) {
+		public int GetHashCode(GenericShelfSlotInfo o) {
 			if (o == null) {
-				throw new ArgumentNullException("The SlotInfoBase object cant be null.");
+				throw new ArgumentNullException("The GenericShelfSlotInfo object cant be null.");
 			}
 
 			unchecked { // Overflow is fine, just wrap

@@ -153,7 +153,7 @@ namespace SuperQoLity {
 				mSigCheck.AddMethod(typeof(NPC_Manager), "EmployeeNPCControl", [typeof(int)]);
 				mSigCheck.AddMethod(typeof(NPC_Manager), "GetFreeStorageContainer", [typeof(int)]);
 				mSigCheck.AddMethod(typeof(NPC_Manager), "MainRestockUpdate");
-				mSigCheck.AddMethod(typeof(NPC_Manager), "CheckIfShelfWithSameProduct");
+				mSigCheck.AddMethod(typeof(NPC_Manager), "CheckIfProdShelfWithSameProduct");
 				mSigCheck.AddMethod(typeof(NPC_Manager), "GetRandomGroundBox");
 				mSigCheck.AddMethod(typeof(NPC_Manager), "GetRandomGroundBoxAllowedInStorage");
 

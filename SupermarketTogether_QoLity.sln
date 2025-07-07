@@ -9,8 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Damntry Globals", "..\..\!!
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{09336125-EB57-48C1-913A-CC6D2487F246}"
 	ProjectSection(SolutionItems) = preProject
-		Changelog.md = Changelog.md
-		README.md = README.md
+		Docs\Changelog.md = Docs\Changelog.md
+		Docs\manifest.json = Docs\manifest.json
+		Docs\icon.png = Docs\icon.png
+		Docs\README.md = Docs\README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Damntry Globals BepInEx", "..\..\!!Global Libraries\Damntry Globals BepInEx\Damntry Globals BepInEx.csproj", "{D3817371-BAE8-48D8-A465-00274515A94E}"

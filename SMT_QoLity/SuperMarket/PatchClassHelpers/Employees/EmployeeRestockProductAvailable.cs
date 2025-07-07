@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Damntry.Utils.Logging;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees {
 

@@ -1,4 +1,8 @@
 ## Changelog
+### 0.8.5.4
+	- Updated employee logic to add the packager (for online orders) from last update.
+### 0.8.5.0
+	- Updated employee logic to add the technician from last update.
 ### 0.8.4.7
 	- Updated baler logic to avoid exception introduced with last update.
 ### 0.8.4.5

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using SuperQoLity.SuperMarket.ModUtils;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.Patches;
 using UnityEngine;
 
@@ -18,7 +18,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 	public class ContainerSearch {
 
-		public static bool CheckIfShelfWithSameProduct(NPC_Manager __instance, 
+		/// <summary>
+		/// Returns one of the most empty product shelf slots that are assigned to the product passed by parameter.
+		/// </summary>
+		public static bool CheckIfProdShelfWithSameProduct(NPC_Manager __instance, 
 				int productIDToCheck, NPC_Info npcInfoComponent, 
 				out (ProductShelfSlotInfo productShelfSlotInfo, int maxProductsPerRow) result) {
 			result.productShelfSlotInfo = null;
@@ -26,9 +29,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 
 			List<(ProductShelfSlotInfo shelfSlotInfo, int maxProductsPerRow)> productsPriority = new();
 
-			foreach (var currentLoopProdThreshold in NPC_Manager.Instance.productsThreshholdArray) {
+			foreach (var currentLoopProdThreshold in __instance.productsThreshholdArray) {
 
-				ContainerSearchLambdas.ForEachProductShelfSlotLambda(__instance, true,
+				ContainerSearchLambdas.ForEachProductShelfSlotLambda(__instance, checkNPCProdShelfTarget: true,
 					(prodShelfIndex, slotIndex, productId, quantity, prodShelfObjT) => {
 
 						if (productId == productIDToCheck) {
@@ -49,6 +52,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 				);
 
 				if (productsPriority.Count > 0) {
+					//TODO 1 - Why return a random one? Why not return the
+					//	one with less items since it needs it the most?
 					result = productsPriority[UnityEngine.Random.Range(0, productsPriority.Count)];
 					return true;
 				}
@@ -57,8 +62,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			return false;
 		}
 
+		/// <summary>
+		/// Returns the first storage shelf slot whose box has some empty space in it, and has the same product 
+		/// assigned as the one passed by parameter.
+		/// </summary>
 		public static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
-			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, true,
+			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, checkNPCStorageTarget: true,
 				(storageId, slotId, productId, quantity, storageObjT) => {
 
 					if (productId == boxIDProduct && quantity > 0 &&
@@ -71,8 +80,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			);
 		}
 
+		/// <summary>
+		/// Gets an empty storage shelf slot that has not product assigned, prioritizing 
+		/// first by the FreeStoragePriority setting, and then by the closest shelf.
+		/// </summary>
 		public static StorageSlotInfo FreeUnassignedStorageContainer(NPC_Manager __instance, Transform employeeT) {
-			return GetFreeStorageContainer(__instance, employeeT , - 1);
+			return GetFreeStorageContainer(__instance, employeeT , -1);
 		}
 
 		public static bool MoreThanOneBoxToMergeCheck(NPC_Manager __instance, int boxIDProduct) {
@@ -93,6 +106,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			return boxCount > 1;
 		}
 
+		/// <summary>
+		/// Gets an empty storage shelf slot assigned to the product passed by parameter (unassigned if
+		/// negative), prioritizing first by the FreeStoragePriority setting, and then by the closest shelf.
+		/// </summary>
 		public static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, Transform employeeT, int boxIDProduct) {
 			StorageSlotInfo foundStorage = StorageSlotInfo.Default;
 			List<StorageSlotInfo> assignedPriorityStorage = null;
@@ -147,6 +164,41 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 			}
 
 			return foundStorage;
+		}
+
+		/// <summary>
+		/// Search the storage slots, and then the shelf slots, to find the first 
+		/// slot that has some of the product passed by parameter available for pick-up.
+		/// </summary>
+		public static GenericShelfSlotInfo GetFirstOfAnyShelfWithProduct(NPC_Manager __instance, int boxIDProduct) {
+			GenericShelfSlotInfo shelfSlotInfo = ContainerSearchLambdas.FindStorageSlotLambda(
+				__instance, checkNPCStorageTarget: true, (storageId, slotId, productId, quantity, storageObjT) => {
+
+					if (productId == boxIDProduct && quantity > 0) {
+						return ContainerSearchLambdas.LoopStorageAction.SaveAndExit;
+					}
+
+					return ContainerSearchLambdas.LoopStorageAction.Nothing;
+				}
+			);
+			if (shelfSlotInfo.ShelfFound) {
+				return shelfSlotInfo;
+			}
+
+			ContainerSearchLambdas.ForEachProductShelfSlotLambda(__instance, checkNPCProdShelfTarget: true,
+				(prodShelfIndex, slotIndex, productId, quantity, prodShelfObjT) => {
+
+					if (productId == boxIDProduct && quantity > 0) {
+						shelfSlotInfo = new ProductShelfSlotInfo(prodShelfIndex, slotIndex, productId, quantity, prodShelfObjT.position);
+
+						return ContainerSearchLambdas.LoopAction.Exit;
+					}
+
+					return ContainerSearchLambdas.LoopAction.Nothing;
+				}
+			);
+
+			return shelfSlotInfo;
 		}
 
 		private static StorageSlotInfo GetClosestStorage(List<StorageSlotInfo> listStorage, Transform employee) {

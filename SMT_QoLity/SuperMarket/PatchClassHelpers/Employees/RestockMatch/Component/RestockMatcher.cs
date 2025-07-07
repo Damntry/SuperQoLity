@@ -12,6 +12,7 @@ using Mirror;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Helpers;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
 using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.Patches;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using UnityEngine;

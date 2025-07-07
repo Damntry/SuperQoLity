@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
@@ -33,7 +33,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch {
 				//No assigned free slot. Check if there is unassigned or unlabeled space in storage.
 				StorageSlotInfo freeUnassignedStorage = ContainerSearch.FreeUnassignedStorageContainer(__instance, employeeT);
 
-				if (freeUnassignedStorage.FreeStorageFound) {
+				if (freeUnassignedStorage.ShelfFound) {
 					//Generate list of existing boxes on the ground
 					pickableGroundBoxes = new GroundBoxStorageList(untargetedGroundBoxes, freeUnassignedStorage);
 				}

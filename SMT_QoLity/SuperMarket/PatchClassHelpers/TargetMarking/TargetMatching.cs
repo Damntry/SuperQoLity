@@ -1,6 +1,6 @@
 ﻿using System;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
@@ -11,7 +11,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 				bool clearReservation, out StorageSlotInfo storageSlotInfo) {
 
 			bool isValid = RefreshAndCheckTargetedShelf(NPC, __instance, clearReservation, -1, TargetType.StorageSlot,
-				out SlotInfoBase slotInfoBase);
+				out GenericShelfSlotInfo slotInfoBase);
 			storageSlotInfo = (StorageSlotInfo)slotInfoBase;
 			return isValid;
 		}
@@ -27,7 +27,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 				bool clearReservation, RestockJobInfo jobInfo) {
 
 			bool isValid = RefreshAndCheckTargetedShelf(NPC, __instance, clearReservation,
-				jobInfo.MaxProductsPerRow, TargetType.ProdShelfSlot, out SlotInfoBase slotInfoBase);
+				jobInfo.MaxProductsPerRow, TargetType.ProdShelfSlot, out GenericShelfSlotInfo slotInfoBase);
 
 			//Refresh from the new product shelf data.
 			jobInfo.SetProductShelfExtraData((ProductShelfSlotInfo)slotInfoBase, jobInfo.MaxProductsPerRow);
@@ -36,7 +36,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 
 		private static bool RefreshAndCheckTargetedShelf(NPC_Info NPC, NPC_Manager __instance,
-				bool clearReservation, int maxProductsPerRow, TargetType targetType, out SlotInfoBase slotInfoBase) {
+				bool clearReservation, int maxProductsPerRow, TargetType targetType, out GenericShelfSlotInfo slotInfoBase) {
 
 			bool hasTarget;
 			bool contentsValid;
@@ -90,7 +90,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 			return match;
 		}
 
-		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, SlotInfoBase slotInfoBase, out int currentTargetQuantity, TargetType targetType) {
+		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, GenericShelfSlotInfo slotInfoBase, out int currentTargetQuantity, TargetType targetType) {
 			//Check that the saved target values still match the current content of the product shelf/storage slot.
 			int[] productInfoArray = gameObjectShelf.transform.GetChild(slotInfoBase.ShelfIndex)
 				.GetComponent<Data_Container>().productInfoArray;
@@ -118,11 +118,11 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking {
 		}
 		
 
-		private class ProductShelfSlotMatch : SlotInfoBase {
+		private class ProductShelfSlotMatch : GenericShelfSlotInfo {
 
 			public ProductShelfSlotMatch(ProductShelfSlotInfo shelfSlotInfo, int maxProductsPerRow)
 				: base(shelfSlotInfo.ShelfIndex, shelfSlotInfo.SlotIndex, shelfSlotInfo.ExtraData.ProductId,
-						shelfSlotInfo.ExtraData.Quantity, shelfSlotInfo.ExtraData.Position) {
+						shelfSlotInfo.ExtraData.Quantity, shelfSlotInfo.ExtraData.Position, ShelfType.ProdShelfSlot) {
 
 				MaxProductsPerRow = maxProductsPerRow;
 			}

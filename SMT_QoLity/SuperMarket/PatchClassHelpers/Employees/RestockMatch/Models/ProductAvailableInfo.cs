@@ -1,4 +1,4 @@
-﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.SlotInfo;
+﻿using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models {
 
