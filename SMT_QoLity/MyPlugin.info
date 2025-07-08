@@ -6,7 +6,7 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.8.5.4</Version>
+    <Version>0.8.5.5</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
@@ -60,7 +60,7 @@ namespace $(RootNamespace)
       <GeneratedJson>
         <![CDATA[
 {
-  "name": "Damntry",
+  "name": "SuperQoLity",
   "version_number": "$(Version)",
   "website_url": "https://github.com/Damntry/SuperQoLity",
   "description": "AI, performance, and QoL changes for Supermarket Together",

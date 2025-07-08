@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using GLTFast.Schema;
 using Mirror;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
@@ -407,7 +405,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										int num4 = 0;
 										for (int i = 0; i < internalProductListForEmployees.Count; i++) {
 											GameObject val = internalProductListForEmployees[i];
-											if (!val) {
+											if (val) {
 												employee.cashierExperience += num3;
 												val.GetComponent<ProductCheckoutSpawn>().AddProductFromNPCEmployee();
 												num4++;

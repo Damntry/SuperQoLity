@@ -1,4 +1,6 @@
 ## Changelog
+### 0.8.5.5
+	- Fucked up previous patch and cashiers werent working. Fixed now.
 ### 0.8.5.4
 	- Updated employee logic to add the packager (for online orders) from last update.
 ### 0.8.5.0
