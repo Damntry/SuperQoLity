@@ -1,6 +1,19 @@
 ## Changelog
+### 0.8.7.0
+	- Employees will now try and look in the direction of the object they are interacting with. 
+		This will not slow them down, its only a visual change that cancels once they have a new move order.
+		Customers are planned later.
+	- Higher leveled security employees will now be able to pick up more than 1 stolen product from the ground, and in a bigger area around them.
+		At first they can only pick up a single product in a very small area. Every extra level, the area increases very slightly, and every 5 levels (5, 10, 15, etc) they can take an extra product.
+		This can be disabled or modified in the settings.
+	- Fixed elusive error that sometimes made restockers not work, even though there were product shelves with missing products that were available in storage.
+	- Fixed fuck up where security employees were not working at night.
+	- Added fixes from previous updates of the base game that I needed to add manually:
+		Technician employees receiving too little xp from their work. This wasnt fixed in the base game yet, but probably on their next update
+		Packagers employees experience was being added to restockers instead.
+	- Lots of reorganization and clean up of employee code, let me know if something I missed breaks catastrophically.
 ### 0.8.5.5
-	- Fucked up previous patch and cashiers werent working. Fixed now.
+	- Fucked up my previous patch and cashiers werent working. Fixed now.
 ### 0.8.5.4
 	- Updated employee logic to add the packager (for online orders) from last update.
 ### 0.8.5.0
@@ -31,7 +44,7 @@
 		This one needs a bit of an explanation on why I consider it a bug:
 
 		A customer only complains if something is over 2 times the price.
-		Yet when you double an item´s market price with the pricing gun, sometimes customers still complain. 
+		Yet when you double an item s market price with the pricing gun, sometimes customers still complain. 
 		Why? Because the market price is a lie: The pricing gun might show you a market price of 1.25, so you would think 2.5 should be fine. 
 		In reality its something like 1.2453, which doubled results in 2,4906. 
 		When a customer comes and checks the price, 2.5 is greater than 2,4906, so they complain.
@@ -45,7 +58,7 @@
 		Now you can trust the pricing gun and stop doing -1 cent on everything.
 
 		At least until they change it to something else. Or I do.
-	- Reworked the entire mod network communication. Tell me if something goes wrong with item transfer not using the host´s value.
+	- Reworked the entire mod network communication. Tell me if something goes wrong with item transfer not using the host's value.
 #### 0.8.1.0
 	- Main restocker process optimized and shouldnt stutter anymore, alike to base game.
 		Much better optimizations are already planned to make it not just faster than base game, but also have restockers find jobs sooner.
@@ -68,4 +81,4 @@
 #### 0.8.0.1
 	- Fixed bug where box items would be lost if there were more than 2 boxes to merge by storage workers.
 #### 0.8
-	- Initial Release
+	- Initial GitHub commit. Who knows what changed before? Not me, fish memory.

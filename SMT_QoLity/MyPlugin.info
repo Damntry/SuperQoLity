@@ -6,7 +6,7 @@
     <RootNamespace>$(AssemblyName)</RootNamespace>
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
-    <Version>0.8.5.5</Version>
+    <Version>0.8.7.0</Version>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
@@ -54,14 +54,17 @@ namespace $(RootNamespace)
   </Target>
 
   <!-- Generate manifest.json file for Thunderstore -->
-  <Target Name="GenerateManifest" BeforeTargets="BeforeCompile;CoreCompile" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.json">
+  <Target Name="GenerateManifest" AfterTargets="PostBuildEvent" Inputs="$(MSBuildAllProjects)" Outputs="$(IntermediateOutputPath)GeneratedFile.json">
+    <GetAssemblyIdentity AssemblyFiles="$(TargetDir)\$(AssemblyName).dll">
+      <Output TaskParameter="Assemblies" ItemName="assembInfo"/>
+    </GetAssemblyIdentity>
     <PropertyGroup>
 
       <GeneratedJson>
         <![CDATA[
 {
   "name": "SuperQoLity",
-  "version_number": "$(Version)",
+  "version_number": "$([System.Version]::Parse(%(assembInfo.Version)).Major).$([System.Version]::Parse(%(assembInfo.Version)).Minor).$([System.Version]::Parse(%(assembInfo.Version)).Build)$([System.Version]::Parse(%(assembInfo.Version)).Revision)",
   "website_url": "https://github.com/Damntry/SuperQoLity",
   "description": "AI, performance, and QoL changes for Supermarket Together",
   "dependencies": [

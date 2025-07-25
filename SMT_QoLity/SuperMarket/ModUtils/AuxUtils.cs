@@ -19,7 +19,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 
 		public static bool IsChatOpen() => FsmVariables.GlobalVariables.GetFsmBool("InChat").Value;
 
-		//TODO 0 - Test this
+
 		public static DataContainerType GetContainerType(int containerID, out int parentIndex) {
 			parentIndex = -1;
 			if (GameData.Instance == null) {
@@ -49,7 +49,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			return DataContainerType.Unknown;
 		}
 
-		//TODO 0 - Test this
 		public static DataContainerType GetContainerType(this Data_Container dataContainer) {
 			if (dataContainer.parentIndex >= 0 && dataContainer.parentIndex < 4) {
 				return (DataContainerType)dataContainer.parentIndex;

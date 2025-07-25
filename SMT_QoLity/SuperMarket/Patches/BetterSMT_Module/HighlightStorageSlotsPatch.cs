@@ -1,14 +1,13 @@
-﻿using Damntry.Utils.Logging;
-using Damntry.Utils.Reflection;
+﻿using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
-using SuperQoLity.SuperMarket.PatchClassHelpers;
+using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities;
 using UnityEngine;
 
-namespace SuperQoLity.SuperMarket.Patches.HighlightModule {
+namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 
 	/// <summary>
 	/// Adds highlighting of shelves and storage slots.

@@ -9,7 +9,7 @@ using SuperQoLity.SuperMarket.ModUtils;
 using static Damntry.UtilsBepInEx.Configuration.ConfigurationManager.SettingAttributes.ConfigurationManagerAttributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler;
 
 namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 

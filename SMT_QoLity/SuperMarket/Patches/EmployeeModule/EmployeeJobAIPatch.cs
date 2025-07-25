@@ -1,25 +1,58 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Damntry.Utils.ExtensionMethods;
 using Damntry.Utils.Logging;
+using Damntry.Utils.Tasks;
+using Damntry.Utils.Tasks.AsyncDelay;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using HarmonyLib;
 using Mirror;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Models;
-using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking;
-using SuperQoLity.SuperMarket.PatchClassHelpers.TargetMarking.ShelfSlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
+using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Movement;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Text;
 using UnityEngine;
 using UnityEngine.AI;
 
 
 namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
+
+	public enum EmployeeJob {
+		Unassigned = 0,
+		Cashier = 1,
+		Restocker = 2,
+		Storage = 3,
+		Security = 4,
+		Technician = 5,
+		OnlineOrder = 6,
+		Manufacturer = 7,
+
+		All = 99
+	}
+
+	public enum EnumSecurityPickUp {
+		[Description(nameof(Disabled))]
+		Disabled,
+		[Description(nameof(Reduced))]
+		Reduced,
+		[Description(nameof(Normal))]
+		Normal,
+		[Description("Always Maxed")]
+		AlwaysMaxed
+	}
 
 	/// <summary>
 	/// Changes:
@@ -51,15 +84,6 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 		public override string ErrorMessageOnAutoPatchFail { get; protected set; } = $"{MyPluginInfo.PLUGIN_NAME} - Employee patch failed. Employee Module inactive";
 
-		public enum EmployeeJob {
-			Unassigned = 0,
-			Cashier = 1,
-			Restocker = 2,
-			Storage = 3,
-			Security = 4
-		}
-
-		//TODO 0 - Mitche report: superqolity makes staff happiness not update in real time, gotta close store/reopen.
 
 		//TODO 1 - Create something to try and detect when an employee is stuck in some kind of loop, so
 		//	I can fix the vanilla error I ve been seeing of employees going back and forth in place.
@@ -69,7 +93,33 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		//			Make it send a notification in-game to confirm its enabled/disabled.
 		public const bool LogEmployeeActions = false;
 
-		public static readonly int NumTransferItemsBase = 1;
+
+		private float destroyCounter;
+
+
+		private static Queue<StolenProductSpawn> stolenProdPickups;
+
+		/// <summary>The default number of units that an employee transfers between box and shelf.</summary>
+		public static int NumTransferItemsBase { get; } = 1;
+
+		/// <summary>The level at which Security employees stop getting bonus stats for range and pick-up count.</summary>
+		public static int MaxSecurityPickUpLevel { get; } = 200;
+
+		/// <summary>Multiplier over the extra range provided by security levels.</summary>
+		public static float SecurityPickUpRangeLevelMult { get; } = 1.25f;
+		/// <summary>Layer used to mark stolen products on the ground.</summary>
+		public static int SecurityPickUpLayer { get; } = 25;
+
+		/// <summary>
+		/// The number of Security levels (starting at zero) to get an extra pick-up.
+		/// The max possible pickup count can be calculated as: 
+		/// pickUpCount = MaxSecurityPickUpLevel / LevelsForExtraPickUp
+		/// </summary>
+		public static float LevelsForExtraPickUp { get; } = 10;
+
+
+
+
 
 		//TODO 2 - Instead of the massive and possibly unmaintenable change of a full IA rework, I should go halfway.
 		/* 
@@ -257,6 +307,99 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		}
 		*/
 
+		/* TODO 0 - Fix employee pathfinding
+			First of all, prepare a save properly. Deunlock all franchise products except the starting one. 
+			Only fill certain shelves so I can find which ones make the customer bug out in one or another way so I have perfect test cases.
+
+			 *** Bugs
+
+				pathPending = false, remainingDistance = XXX, hasPath = true, status = PathComplete
+
+				- With the values above for the customer, and yet, it can not really properly reach the self checkout destination. It decides to go the direct path obstructed by a fence, 
+					instead of taking the safe but long route around. Perhaps because it thinks it can squish close enough with the direct route. And its true, eventually it does manage to do it, 
+					but it looks terrible and takes a while.
+		
+				- Another thing that happens is NPCs colliding with each other. For example a customer might want to pass through a small corridor next to a register, 
+					but there is an employee on its register post in the middle of the corridor, and it wont move, and the NPC doesnt count it as an obstacle, so it keeps walking against it.
+					There seems to be an assumption that npcs will avoid each other and a path will eventually open, but this is not true in all cases, for example, the previous one, and also
+					when the other NPC is also stuck for some reason.
+						A patchy fix would be to detect when a customer/employee hasnt moved for a while more than X distance, and in that case make it behave like a moving navmesh obstacle.
+						Another even more patchy way would be to, instead of having it be a navmeshobstacle, just let npcs not moving enough, with a target, just let it think its at the destination
+							like the unity navmesh already kind of does in some cases somehow.
+
+				- Not really a bug but something to take into a account. The navmesh resolution might have been baked with relatively low resolution, so a few cm to a side wont mean much to it.
+					Nothing I can do to solve this, but knowing this I could take alternative approaches.
+	
+
+			 *** Possible overall solutions and useful stuff
+
+				- AI suggest to precalculate if the NPC can really reach the place:
+
+					NavMeshPath path = new NavMeshPath();
+					var agent = NPC_Manager.Instance.customersnpcParentOBJ.transform.GetChild(0)
+						.gameObject.GetComponent<NavMeshAgent>();
+					if (agent.CalculatePath(agent.destination, path)){
+						Log("Path is wrong - " + path.status);
+					}
+
+				- To force a recalculate. This could be useful in the case where an NPC gets stuck but tries to keep moving with little success.
+					agent.ResetPath();
+					agent.SetDestination(targetPosition);
+
+
+				- To test, without opening the store execute this:
+						GameData.Instance.NetworktimeOfDay = 9
+					Customers will come but time will not progress, so they will keep coming infinitely
+		*/
+
+		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.Awake))]
+		[HarmonyPostfix]
+		public static void AwakePatch(NPC_Manager __instance) {
+			stolenProdPickups = new();
+			//Modify the generic employee prefab to make mu own unique GameObject for each type of NPC
+			//npcEmployeeAgentPrefab = UnityEngine.Object.Instantiate(__instance.npcAgentPrefab);
+			//npcEmployeeAgentPrefab.name = __instance.npcAgentPrefab.name;
+			//TODO 3 - My idea was to create an unique npcAgentPrefab for each NPCType, but
+			//	I cant instantiate a scene object using a NetIdentity or Mirror wouldnt know which
+			//	one to use, since they share the same sceneId. I cant change it to be an assetId
+			//	instead because then it wouldnt work for clients that dont have the mod.
+			//	Try to find an alternative so not every NPC has every type of functionality.
+			GenericNPC.AddSuperQolNpcObjects(__instance.npcAgentPrefab, NPCType.Employee);
+
+			GameObject stolenProductPrefab = __instance.npcAgentPrefab?.GetComponent<NPC_Info>()?.stolenProductPrefab;
+			if (!stolenProductPrefab) {
+				TimeLogger.Logger.LogTimeFatal("An object in the chain \"NPC_Manager.npcAgentPrefab." +
+					"NPC_Info.stolenProductPrefab\" is null. It was probably renamed of changed places. " +
+					"The employee patches cant be used and will be disabled.", LogCategories.AI);
+
+				Container<EmployeeJobAIPatch>.Instance.UnpatchInstance();
+
+				TimeLogger.Logger.SendMessageNotificationError("Something changed due to a game update " +
+					"and the employee module can no longer work. It was disabled so the rest of the " +
+					"mod can still work");
+
+				return;
+			}
+
+
+			stolenProductPrefab.layer = SecurityPickUpLayer;
+			//Begin loop to check for stolen products marked for removal.
+			__instance.StartCoroutine(
+				Container<EmployeeJobAIPatch>.Instance.PickupMarkedStolenProductsLoop()
+			);
+		}
+
+		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.SpawnCustomerNPC), MethodType.Enumerator)]
+		[HarmonyTranspiler]
+		public static IEnumerable<CodeInstruction> ChangeStolenProductLayerTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
+			CodeMatcher codeMatcher = new CodeMatcher(instructions);
+
+			AccessTools.Field(typeof(NPC_Manager), nameof(NPC_Manager.npcAgentPrefab));
+
+			return codeMatcher.Instructions();
+		}
+
+
 		/*	No need to patch now that I call this local method from the transpiled FixedUpdate in EmployeePerformancePatch.
 			The original is not called from anywhere else, being effectively abandoned.
 		[HarmonyPatch(typeof(NPC_Manager), "EmployeeNPCControl")]
@@ -286,6 +429,10 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				return false;
 			}
 
+			if (!EmployeeNPC.TryGetEmployeeFrom(employeeObj, out EmployeeNPC employeeSQoL)) {
+				return true;
+			}
+
 			int taskPriority = employee.taskPriority;
 			if (taskPriority == 4 && state == 2) {
 				if (employee.currentChasedThiefOBJ) {
@@ -294,7 +441,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						return true;
 					}
 					if (Vector3.Distance(employeeObj.transform.position, employee.currentChasedThiefOBJ.transform.position) < 2f) {
-						employee.MoveEmployeeTo(employeeObj);
+						//This is basically saying "stop where you are".
+						employeeSQoL.MoveEmployeeTo(employeeObj, employee.currentChasedThiefOBJ);
 						employee.state = 3;
 					} else {
 						employee.CallPathing();
@@ -306,13 +454,16 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 			NavMeshAgent employeeNavAgent = employeeObj.GetComponent<NavMeshAgent>();
 
-			if (IsEmployeeAtDestination(employeeNavAgent)) {
+			if (IsEmployeeAtDestination(employeeNavAgent, out float stoppingDistance)) {
+				//Non limited so NPCs turn fast enough to look at the target before any following order cancels it.
+				employeeSQoL.StartLookProcess(RotationSpeedMode.EmployeeTarget);
+
 				switch (taskPriority) {
-					case 0:	//Unassigned
+					case 0: //Unassigned
 
 						//Shouldnt be needed, but acts as extra safety for clearing reservations
 						//	if they get stuck on this NPC for some reason.
-						employee.ClearNPCReservations();
+						employeeSQoL.ClearNPCReservations();
 
 						if (state != 0) {
 							if (state != 1) {
@@ -326,12 +477,12 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 							}
 
-							employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+							employeeSQoL.MoveEmployeeToRestPosition();
 							employee.state = 1;
 							return true;
 						}
 						break;
-					case 1: {	//Cashier
+					case 1: {   //Cashier
 							switch (state) {
 								case 0:
 								case 1: {
@@ -346,7 +497,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 											employee.employeeAssignedCheckoutIndex = num;
 											__instance.UpdateEmployeeCheckouts();
 											GameObject targetCheckout = __instance.checkoutOBJ.transform.GetChild(num).gameObject;
-											employee.MoveEmployeeTo(targetCheckout.transform.Find("EmployeePosition").transform.position);
+											employeeSQoL.MoveEmployeeTo(targetCheckout.transform.Find("EmployeePosition")
+												.transform.position, targetCheckout);
 											employee.state = 2;
 											return true;
 										}
@@ -383,10 +535,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									employee.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 3);
 									employee.state = -1;
 									return true;
-								case 5:
-									{
-										if (__instance.checkoutOBJ.transform.GetChild(employee.employeeAssignedCheckoutIndex).GetComponent<Data_Container>().productsLeft == 0)
-										{
+								case 5: {
+										if (__instance.checkoutOBJ.transform.GetChild(employee.employeeAssignedCheckoutIndex).GetComponent<Data_Container>().productsLeft == 0) {
 											employee.state = 7;
 											return true;
 										}
@@ -433,7 +583,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								case 10:
 									if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 3f) {
-										employee.MoveEmployeeTo(__instance.restSpotOBJ.transform.position + new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f)));
+										employeeSQoL.MoveEmployeeToRestPosition();
 										return true;
 									}
 									employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
@@ -444,13 +594,12 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 							}
 						}
-					case 2:	//Restocker
+					case 2: //Restocker
 						switch (state) {
 							case 0: {
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)} logic begin.", LogEmployeeActions);
 									if (employee.equippedItem > 0) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Box in hand. Dropping.", LogEmployeeActions);
-										//ReflectionHelper.CallMethod(__instance, "DropBoxOnGround", [employee]);
 										__instance.DropBoxOnGround(employee);
 										UnequipBox(employee);
 										return true;
@@ -463,21 +612,21 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									if (matchFound) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Products available, moving to storage.", LogEmployeeActions);
 										Vector3 destination = __instance.storageOBJ.transform.GetChild(restockJob.Storage.ShelfIndex).Find("Standspot").transform.position;
-										employee.MoveEmployeeToStorage(destination, restockJob.Storage);
+										employeeSQoL.MoveEmployeeToStorage(destination, restockJob.Storage);
 
 										//Reserve too the product shelf slot that will be used for next step.
-										employee.AddExtraProductShelfTarget(restockJob.ProdShelf);
+										employeeSQoL.AddExtraProductShelfTarget(restockJob.ProdShelf);
 										employee.state = 2;
 										return true;
 									}
 									if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5f) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Moving to rest spot.", LogEmployeeActions);
-										
-										employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+
+										employeeSQoL.MoveEmployeeToRestPosition();
 										return true;
 									}
 
-									employee.ClearNPCReservations();
+									employeeSQoL.ClearNPCReservations();
 									employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 									employee.state = -1;
 									return true;
@@ -488,9 +637,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Storage reached.", LogEmployeeActions);
 									RestockJobInfo restockJob = employee.GetRestockJobInfo();
 
-									if (employee.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo) &&
+									if (employeeSQoL.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo) &&
 											//Check that for the next step we can still place items in the shelf.
-											employee.RefreshAndCheckValidTargetedProductShelf(__instance, restockJob)) {
+											employeeSQoL.RefreshAndCheckValidTargetedProductShelf(__instance, restockJob)) {
 
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Picking box.", LogEmployeeActions);
 
@@ -508,7 +657,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										employee.EquipNPCItem(1);
 
 										GameObject targetShelfObj = __instance.shelvesOBJ.transform.GetChild(restockJob.ProdShelf.ShelfIndex).gameObject;
-										employee.MoveEmployeeToShelf(targetShelfObj.transform.Find("Standspot").transform.position, restockJob.ProdShelf);
+										employeeSQoL.MoveEmployeeToShelf(targetShelfObj.transform.Find("Standspot").transform.position, restockJob.ProdShelf);
 										employee.state = 3;
 										return true;
 									}
@@ -520,6 +669,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 3: {
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Product shelf reached.", LogEmployeeActions);
 									RestockJobInfo restockJob = employee.GetRestockJobInfo();
+
 									if (__instance.shelvesOBJ.transform.GetChild(restockJob.ProdShelf.ShelfIndex).GetComponent<Data_Container>().
 											productInfoArray[restockJob.ShelfProdInfoIndex] == restockJob.ProdShelf.ExtraData.ProductId) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Shelf reached has same product as box. So far so good.", LogEmployeeActions);
@@ -531,11 +681,11 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								}
 							case 4: {
-									
+
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Checking if shelf is valid.", LogEmployeeActions);
 									RestockJobInfo restockJob = employee.GetRestockJobInfo();
 
-									if (employee.RefreshAndCheckValidTargetedProductShelf(__instance,
+									if (employeeSQoL.RefreshAndCheckValidTargetedProductShelf(__instance,
 											restockJob)) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Shelf reached fully valid.", LogEmployeeActions);
 
@@ -554,7 +704,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 											numItemsTransfer = IncreasedItemTransferPatch.GetNumTransferItems(
 												employee.boxNumberOfProducts, shelfQuantity, maxProductsPerRow, IncreasedItemTransferPatch.CharacterType.Employee, numItemsTransfer);
 											component4.EmployeeAddsItemToRow(restockJob.ShelfProdInfoIndex, numItemsTransfer);
-											
+
 											employee.NetworkboxNumberOfProducts = employee.boxNumberOfProducts - numItemsTransfer;
 											employee.StartWaitState(__instance.employeeItemPlaceWait, 4);
 											employee.state = -1;
@@ -569,11 +719,11 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									//		this switch case is called repeatedly over and over until the shelf is full.
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Target shelf is already full or not valid. Searching for a different one.", LogEmployeeActions);
 									int productId = restockJob.ProdShelf.ExtraData.ProductId;
-									if (employee.NetworkboxNumberOfProducts > 0 && 
+									if (employee.NetworkboxNumberOfProducts > 0 &&
 											ContainerSearch.CheckIfProdShelfWithSameProduct(__instance, productId, employee, out var result)) {
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Found another different shelf to add products.", LogEmployeeActions);
 										employee.UpdateRestockJobInfo(result.productShelfSlotInfo, result.maxProductsPerRow);
-										employee.MoveEmployeeToShelf(result.productShelfSlotInfo.ExtraData.Position, result.productShelfSlotInfo);
+										employeeSQoL.MoveEmployeeToShelf(result.productShelfSlotInfo.ExtraData.Position, result.productShelfSlotInfo);
 										employee.state = 3;
 										return true;
 									}
@@ -585,48 +735,24 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 5: {
 									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Box in hand but cant restock anymore. Deciding what to do.", LogEmployeeActions);
 									if (employee.NetworkboxNumberOfProducts <= 0) {
-										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Box empty, trying to recycle.", LogEmployeeActions);
-										GameObject closestCardboardBaler2 = __instance.GetClosestCardboardBaler(employeeObj);
-										if (closestCardboardBaler2) {
-											employee.closestCardboardBaler = closestCardboardBaler2;
-											employee.MoveEmployeeTo(closestCardboardBaler2.transform.Find("Standspot"));
-											employee.state = 30;
-											return true;
-										} else if (__instance.closestRecyclePerk) {
-											employee.MoveEmployeeTo(__instance.trashSpotOBJ);
-											employee.state = 9;
-											return true;
-										} else if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
-											LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Move to trash instead.", LogEmployeeActions);
-											employee.MoveEmployeeTo(__instance.trashSpotOBJ);
-											employee.state = 6;
-											return true;
-										}
-										float num5 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
-										float num6 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
-										if (num5 < num6) {
-											employee.MoveEmployeeTo(__instance.recycleSpot1OBJ);
-											employee.state = 9;
-											return true;
-										}
-										employee.MoveEmployeeTo(__instance.recycleSpot2OBJ);
-										employee.state = 9;
+										MoveToBalerOrGarbageContainer(__instance, employeeObj, employee, employeeSQoL,
+											cardboardTargetState: 30, trashTargetState: 6, recycleTargetState: 9);
+										return true;
 									} else {
-										if (GetStorageContainerWithBoxToMerge(__instance, employee)) {
+										if (GetStorageContainerWithBoxToMerge(__instance, employee, employeeSQoL)) {
 											return true;
 										}
 										StorageSlotInfo freeStorageIndexes = ContainerSearch.GetFreeStorageContainer(__instance, employeeObj.transform, employee.NetworkboxProductID);
 										if (freeStorageIndexes.ShelfFound) {
 											LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Moving to storage to place box.", LogEmployeeActions);
 											Vector3 destination = __instance.storageOBJ.transform.GetChild(freeStorageIndexes.ShelfIndex).gameObject.transform.Find("Standspot").transform.position;
-											employee.MoveEmployeeToStorage(destination, freeStorageIndexes);
+											employeeSQoL.MoveEmployeeToStorage(destination, freeStorageIndexes);
 											employee.state = 7;
 											return true;
 										}
 										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Moving to left over boxes spot.", LogEmployeeActions);
-										employee.MoveEmployeeTo(__instance.leftoverBoxesSpotOBJ);
+										employeeSQoL.MoveEmployeeTo(__instance.leftoverBoxesSpotOBJ, null);
 										employee.state = 8;
-										return true;
 									}
 									return true;
 								}
@@ -635,17 +761,17 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								UnequipBox(employee);
 								return true;
 							case 7: {
-									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Arrived at storage, but checking again " +
+									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Arrived at storage, but checking again " +
 										$"if there is some other slot to merge with.", LogEmployeeActions);
 									//This is basically just a "recheck". It couldnt find a merge on the previous step, so
 									//	it just went to storage to place the box. And now it does the same merge check again
 									//	in case something freed up.
-									if (GetStorageContainerWithBoxToMerge(__instance, employee)) {
+									if (GetStorageContainerWithBoxToMerge(__instance, employee, employeeSQoL)) {
 										return true;
 									}
-									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: No merge possible.", LogEmployeeActions);
-									if (employee.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
-										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Placing box in storage.", LogEmployeeActions);
+									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: No merge possible.", LogEmployeeActions);
+									if (employeeSQoL.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
+										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Placing box in storage.", LogEmployeeActions);
 										__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).GetComponent<Data_Container>().
 											EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, employee.NetworkboxProductID, employee.NetworkboxNumberOfProducts);
 										employee.state = 6;
@@ -665,7 +791,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								}
 							case 9: {
-									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Box recycled.", LogEmployeeActions);
+									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Recycling box.", LogEmployeeActions);
 									float num7 = 1.5f * GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
 									AchievementsManager.Instance.CmdAddAchievementPoint(2, 1);
 									SMTAntiCheat_Helper.Instance.CmdAlterFunds(num7);
@@ -674,14 +800,17 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								}
 							case 20: {
-									EmployeeTryMergeBoxContents(__instance, employee, 5);
+									LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Reached storage and merging contents.", LogEmployeeActions);
+									EmployeeTryMergeBoxContents(__instance, employee, employeeSQoL, 5);
 									return true;
 								}
 							case 30: {
 									if (employee.closestCardboardBaler) {
+										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Adding empty box to cardboard baler.", LogEmployeeActions);
 										employee.closestCardboardBaler.GetComponent<CardboardBaler>().AuxiliarAddBoxToBaler(employee.boxProductID);
 										UnequipBox(employee);
 									} else {
+										LOG.TEMPDEBUG_FUNC(() => $"Restocker #{GetUniqueId(employee)}: Cardboard baler not there anymore.", LogEmployeeActions);
 										employee.StartWaitState(1f, 0);
 										employee.state = -1;
 									}
@@ -691,7 +820,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 						employee.state = 0;
 						return true;
-					case 3:	//Storage
+					case 3: //Storage
 						switch (state) {
 							case 0:
 								LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)} logic begin.", LogEmployeeActions);
@@ -709,9 +838,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									if (posOk) {
 										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Going to pick up box.", LogEmployeeActions);
 										employee.randomBox = closestGroundBox.GroundBoxObject;
-										employee.MoveEmployeeToBox(navMeshHit.position, closestGroundBox.GroundBoxObject);
+										employeeSQoL.MoveEmployeeToBox(navMeshHit.position, closestGroundBox.GroundBoxObject);
 										if (closestGroundBox.HasStorageTarget) {
-											employee.AddExtraStorageTarget(closestGroundBox.StorageSlot);
+											employeeSQoL.AddExtraStorageTarget(closestGroundBox.StorageSlot);
 										}
 										employee.state = 1;
 										return true;
@@ -754,9 +883,9 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									Vector3 destination = Vector3.zero;
 
 									bool validStorageFound = false;
-									if (employee.HasTargetedStorage()) {
+									if (employeeSQoL.HasTargetedStorage()) {
 										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Checking pre-reserved storage.", LogEmployeeActions);
-										validStorageFound = employee.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: true, out targetStorage);
+										validStorageFound = employeeSQoL.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: true, out targetStorage);
 										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Pre-reserved storage is {(validStorageFound ? "" : "no longer ")}valid.", LogEmployeeActions);
 									}
 
@@ -772,19 +901,19 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									if (validStorageFound) {
 										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Moving to storage to place box.", LogEmployeeActions);
 										destination = __instance.storageOBJ.transform.GetChild(targetStorage.ShelfIndex).Find("Standspot").transform.position;
-										employee.MoveEmployeeToStorage(destination, targetStorage);
+										employeeSQoL.MoveEmployeeToStorage(destination, targetStorage);
 										employee.state = 3;
 										return true;
 									}
 
 									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Moving to drop box at left over spot.", LogEmployeeActions);
-									employee.MoveEmployeeTo(__instance.leftoverBoxesSpotOBJ);
+									employeeSQoL.MoveEmployeeTo(__instance.leftoverBoxesSpotOBJ, null);
 									employee.state = 4;
 									return true;
 								}
 							case 3: {
 									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Arrived at storage.", LogEmployeeActions);
-									if (employee.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
+									if (employeeSQoL.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
 										LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Placing box in storage.", LogEmployeeActions);
 										__instance.storageOBJ.transform.GetChild(storageSlotInfo.ShelfIndex).GetComponent<Data_Container>().
 											EmployeeUpdateArrayValuesStorage(storageSlotInfo.SlotIndex * 2, employee.NetworkboxProductID, employee.NetworkboxNumberOfProducts);
@@ -810,31 +939,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								UnequipBox(employee);
 								return true;
 							case 6: {
-									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Trying to recycle.", LogEmployeeActions);
-									GameObject closestCardboardBaler = __instance.GetClosestCardboardBaler(employeeObj);
-									if (closestCardboardBaler) {
-										employee.closestCardboardBaler = closestCardboardBaler;
-										employee.MoveEmployeeTo(closestCardboardBaler.transform.Find("Standspot"));
-										employee.state = 33;
-										return true;
-									} else if(__instance.closestRecyclePerk) {
-										employee.MoveEmployeeTo(__instance.trashSpotOBJ);
-										employee.state = 7;
-										return true;
-									} else if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
-										employee.MoveEmployeeTo(__instance.trashSpotOBJ);
-										employee.state = 5;
-										return true;
-									}
-									float num8 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
-									float num9 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
-									if (num8 < num9) {
-										employee.MoveEmployeeTo(__instance.recycleSpot1OBJ);
-										employee.state = 7;
-										return true;
-									}
-									employee.MoveEmployeeTo(__instance.recycleSpot2OBJ);
-									employee.state = 7;
+									MoveToBalerOrGarbageContainer(__instance, employeeObj, employee, employeeSQoL,
+										cardboardTargetState: 33, trashTargetState: 5, recycleTargetState: 7);
 									return true;
 								}
 							case 7: {
@@ -848,7 +954,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 10:
 								if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5) {
 									LOG.TEMPDEBUG_FUNC(() => $"Storage #{GetUniqueId(employee)}: Moving to rest spot.", LogEmployeeActions);
-									employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+									employeeSQoL.MoveEmployeeToRestPosition();
 									return true;
 								}
 
@@ -859,7 +965,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								//	- Like above, but happens when a box is dropped next to the rest spot, ant then gets pushed away before the
 								//		employee reaches it. Employee is already at the rest spot, so it doesnt call the move method that
 								//		clears reservations.
-								employee.ClearNPCReservations();
+								employeeSQoL.ClearNPCReservations();
 								employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 								employee.state = -1;
 								return true;
@@ -876,57 +982,17 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										employee.state = 6;
 										return true;
 									}
-									if (GetStorageContainerWithBoxToMerge(__instance, employee)) {
+									if (GetStorageContainerWithBoxToMerge(__instance, employee, employeeSQoL)) {
 										return true;
 									}
 
 									//Clear current reservation so at step 2 it has to find and create a new one.
-									employee.ClearNPCReservations();
+									employeeSQoL.ClearNPCReservations();
 									employee.state = 2;
 									return true;
 								}
 							case 20: {
-									EmployeeTryMergeBoxContents(__instance, employee, 19);
-									return true;
-								}
-							case 30:
-								if (employee.currentCardboardBale) {
-									Vector3 a2 = new Vector3(employee.currentCardboardBale.transform.position.x, 0f, employee.currentCardboardBale.transform.position.z);
-									Vector3 b2 = new Vector3(employee.transform.position.x, 0f, employee.transform.position.z);
-									if (Vector3.Distance(a2, b2) < 2f) {
-										employee.EquipNPCItem(2);
-										GameData.Instance.GetComponent<NetworkSpawner>().EmployeeDestroyBox(employee.currentCardboardBale);
-										employee.state = 31;
-										return true;
-									}
-								}
-
-								employee.StartWaitState(1f, 0);
-								employee.state = -1;
-								return true;
-							case 31:
-								if (__instance.closestRecyclePerk) {
-									employee.MoveEmployeeTo(__instance.trashSpotOBJ.transform.position);
-									employee.state = 32;
-								} else if (__instance.employeeRecycleBoxes && !__instance.interruptBoxRecycling) {
-									float num4 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
-									float num5 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
-									if (num4 < num5) {
-										employee.MoveEmployeeTo(__instance.recycleSpot1OBJ.transform.position);
-									} else {
-										employee.MoveEmployeeTo(__instance.recycleSpot2OBJ.transform.position);
-									}
-									employee.state = 32;
-								} else {
-									employee.MoveEmployeeTo(__instance.trashSpotOBJ.transform.position);
-									employee.state = 5;
-								}
-								return true;
-							case 32: {
-									float fundsToAdd = 18f * (float)GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
-									AchievementsManager.Instance.CmdAddAchievementPoint(16, 1);
-									SMTAntiCheat_Helper.Instance.CmdAlterFunds(fundsToAdd);
-									employee.state = 5;
+									EmployeeTryMergeBoxContents(__instance, employee, employeeSQoL, 19);
 									return true;
 								}
 							case 33:
@@ -941,7 +1007,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 						}
 						employee.state = 0;
 						return true;
-					case 4:	//Security
+					case 4: //Security
 						switch (state) {
 							case 0: {
 									if (employee.equippedItem > 0) {
@@ -950,24 +1016,24 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										return true;
 									}
 									GameObject thiefTarget = __instance.GetThiefTarget();
-									if (thiefTarget != null) {
+									if (thiefTarget) {
 										employee.currentChasedThiefOBJ = thiefTarget;
 										employee.state = 2;
 										return true;
 									}
-									if (!__instance.IsFirstSecurityEmployee(employeeObj) || 
-											(__instance.customersnpcParentOBJ.transform.childCount == 0 
+									if (__instance.IsFirstSecurityEmployee(employeeObj) ||
+											(__instance.customersnpcParentOBJ.transform.childCount == 0
 												&& GameData.Instance.timeOfDay > 22f)) {
-										employee.state = 1;
-										return true;
+
+										GameObject closestDropProduct = __instance.GetClosestDropProduct(employeeObj);
+										if (closestDropProduct) {
+											employee.droppedProductOBJ = closestDropProduct;
+											employee.state = 4;
+											employeeSQoL.MoveEmployeeTo(closestDropProduct, null);
+											return true;
+										}
 									}
-									GameObject closestDropProduct = __instance.GetClosestDropProduct(employeeObj);
-									if (closestDropProduct != null) {
-										employee.droppedProductOBJ = closestDropProduct;
-										employee.state = 4;
-										employee.MoveEmployeeTo(closestDropProduct);
-										return true;
-									}
+
 									employee.state = 1;
 									return true;
 								}
@@ -980,7 +1046,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										transform = __instance.patrolPositionOBJ.transform.GetChild(0);
 									}
 									if (Vector3.Distance(employee.transform.position, transform.position) > 3f) {
-										employee.MoveEmployeeTo(transform.position);
+										employeeSQoL.MoveSecurityAndScout(transform.position);
 										return true;
 									}
 									employee.StartWaitState(1f, 0);
@@ -1003,8 +1069,21 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								employee.state = -1;
 								return true;
 							case 4:
-								if (employee.droppedProductOBJ != null) {
+								if (employee.droppedProductOBJ) {
+
+									EnumSecurityPickUp pickUpmode = ModConfig.Instance.ImprovedSecurityPickUpMode.Value;
+									if (pickUpmode != EnumSecurityPickUp.Disabled) {
+										if (DoSecurityAreaPickUp(__instance, pickUpmode, employeeObj, employee, stoppingDistance)) {
+											employee.StartWaitState(0.5f, 0);
+											employee.state = -1;
+											return true;
+										}
+									}
+
+									//TODO 0 - Only if the object is not in the deletion list
+									//Also acts as a backup in case the OverlapSphere failed.
 									employee.droppedProductOBJ.GetComponent<StolenProductSpawn>().RecoverStolenProductFromEmployee();
+
 									employee.StartWaitState(0.5f, 0);
 									employee.state = -1;
 									employee.securityExperience++;
@@ -1017,7 +1096,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 						}
 						return true;
-					case 5:	//Technician (repairs + cardboard bale recycling)
+					case 5: //Technician (repairs + cardboard bale recycling)
 						switch (state) {
 							case 0: {
 									if (employee.equippedItem > 0) {
@@ -1028,7 +1107,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									GameObject furnitureToFix = __instance.GetFurnitureToFix(employeeObj);
 									if (furnitureToFix) {
 										employee.currentFurnitureToFix = furnitureToFix;
-										employee.MoveEmployeeTo(furnitureToFix.transform.Find("Standspot").position);
+										employeeSQoL.MoveEmployeeTo(furnitureToFix.transform.Find("Standspot").position, furnitureToFix);
 										employee.state = 1;
 									} else {
 										employee.state = 10;
@@ -1036,10 +1115,10 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									return true;
 								}
 							case 10: {
-									if (!TryMoveToClosestBale(__instance, employee, employeeObj)) {
+									if (!TryMoveToClosestBale(__instance, employee, employeeObj, employeeSQoL)) {
 										if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5f) {
 											LOG.TEMPDEBUG_FUNC(() => $"Technician #{GetUniqueId(employee)}: Moving to rest spot.", LogEmployeeActions);
-											employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+											employeeSQoL.MoveEmployeeToRestPosition();
 										} else {
 											employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 											employee.state = -1;
@@ -1063,7 +1142,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									} else if (employee.currentFurnitureToFix.GetComponent<CardboardBaler>()) {
 										employee.currentFurnitureToFix.GetComponent<CardboardBaler>().CmdFixBreakingEvent();
 									}
-									employee.technicianExperience += employee.technicianLevel * 10;
+									employee.technicianExperience += employee.technicianValue * 10;
 								}
 								employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
 								employee.state = -1;
@@ -1073,8 +1152,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 							case 30:
 								if (employee.currentCardboardBale) {
-									Vector3 val2 = new (employee.currentCardboardBale.transform.position.x, 0f, employee.currentCardboardBale.transform.position.z);
-									Vector3 val3 = new (employee.transform.position.x, 0f, employee.transform.position.z);
+									Vector3 val2 = new(employee.currentCardboardBale.transform.position.x, 0f, employee.currentCardboardBale.transform.position.z);
+									Vector3 val3 = new(employee.transform.position.x, 0f, employee.transform.position.z);
 									if (Vector3.Distance(val2, val3) < 2f) {
 										employee.EquipNPCItem(2);
 										GameData.Instance.GetComponent<NetworkSpawner>().EmployeeDestroyBox(employee.currentCardboardBale);
@@ -1086,32 +1165,14 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								employee.state = -1;
 								return false;
 							case 31:
-								Vector3 destination = Vector3.zero;
-								if (__instance.closestRecyclePerk) {
-									destination = __instance.trashSpotOBJ.transform.position;
-									employee.state = 32;
-								} else if (__instance.employeeRecycleBoxes && !__instance.interruptBoxRecycling) {
-									float num = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
-									float num2 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
-									if (num < num2) {
-										destination = __instance.recycleSpot1OBJ.transform.position;
-										employee.state = 32;
-									} else {
-										destination = __instance.recycleSpot2OBJ.transform.position;
-										employee.state = 32;
-									}
-								} else {
-									destination = __instance.trashSpotOBJ.transform.position;
-									employee.state = 3;
-								}
-
-								employee.MoveEmployeeTo(destination);
+								MoveToGarbageContainer(__instance, employeeObj, employee,
+									employeeSQoL, trashTargetState: 3, recycleTargetState: 32);
 								return true;
 							case 32: {
 									float fundsToAdd = 18f * GameData.Instance.GetComponent<UpgradesManager>().boxRecycleFactor;
 									AchievementsManager.Instance.CmdAddAchievementPoint(16, 1);
 									GameData.Instance.CmdAlterFunds(fundsToAdd);
-									employee.technicianExperience += employee.technicianLevel;
+									employee.technicianExperience += employee.technicianValue;
 									employee.state = 3;
 									return true;
 								}
@@ -1119,7 +1180,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								employee.state = 0;
 								return true;
 						}
-					case 6:	//Online orders
+					case 6: //Online orders
 						switch (state) {
 							case 0:
 								if (employee.equippedItem > 0) {
@@ -1127,14 +1188,14 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									UnequipBox(employee);
 									return true;
 								}
-								if (GameData.Instance.GetComponent<UpgradesManager>().addonsBought[0] && 
+								if (GameData.Instance.GetComponent<UpgradesManager>().addonsBought[0] &&
 										OrderPackaging.Instance.isOrderDepartmentActivated &&
 										__instance.RetrieveAnOrderPickupPoint(checkIfFull: false)) {
 
 									int num7 = __instance.RetrievePackagingFreeOrderIndex();
 									if (num7 >= 0) {
 										employee.packagingAssignedOrderIndex = num7;
-										employee.MoveEmployeeTo(__instance.AttemptToGetOrderingDepartmentPosition());
+										employeeSQoL.MoveEmployeeTo(__instance.AttemptToGetOrderingDepartmentPosition(), __instance.orderingDepartmentSpotOBJ);
 										employee.state = 1;
 										return true;
 									}
@@ -1143,7 +1204,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 							case 10:
 								if (Vector3.Distance(employee.transform.position, __instance.restSpotOBJ.transform.position) > 6.5f) {
-									employee.MoveEmployeeTo(__instance.AttemptToGetRestPosition());
+									employeeSQoL.MoveEmployeeToRestPosition();
 									return true;
 								}
 								employee.StartWaitState(ModConfig.Instance.EmployeeIdleWait.Value, 0);
@@ -1187,14 +1248,15 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 									GenericShelfSlotInfo shelfSlotInfo = ContainerSearch.GetFirstOfAnyShelfWithProduct(__instance, iDProduct);
 									//int[] storageShelfWithProduct = __instance.GetStorageShelfWithProduct(iDProduct);
 									if (shelfSlotInfo.ShelfFound) {
-										GameObject targetObj = shelfSlotInfo.ShelfType == ShelfType.ProdShelfSlot ? 
+										GameObject targetParentObj = shelfSlotInfo.ShelfType == ShelfType.ProdShelfSlot ?
 											__instance.shelvesOBJ : __instance.storageOBJ;
 										employee.orderProductLocationInfoArray = [(int)shelfSlotInfo.ShelfType, shelfSlotInfo.ShelfIndex, shelfSlotInfo.SlotIndex * 2];
-										Vector3 targetPos = targetObj.transform.GetChild(shelfSlotInfo.SlotIndex).transform.Find("Standspot").position;
+										Transform targetShelfTransform = targetParentObj.transform.GetChild(shelfSlotInfo.SlotIndex);
+										Vector3 destinationPos = targetShelfTransform.transform.Find("Standspot").position;
 										//Not going to reserve shelves for these NPCs since they usually only need a single
 										//	one of a product, and I dont feel they deserve to hoard a slot for this job.
 										//	They wont get products from already reserved shelves either.
-										employee.MoveEmployeeTo(targetPos);
+										employeeSQoL.MoveEmployeeTo(destinationPos, targetShelfTransform.gameObject);
 										employee.state = 3;
 									} else {
 										employee.packagingAssignedOrderProducts.RemoveAt(0);
@@ -1230,7 +1292,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							case 4: {
 									GameObject pickupPoint = __instance.RetrieveAnOrderPickupPoint(checkIfFull: true);
 									if (pickupPoint) {
-										employee.MoveEmployeeTo(pickupPoint.transform.Find("Standspot").position);
+										employeeSQoL.MoveEmployeeTo(pickupPoint.transform.Find("Standspot").position, pickupPoint);
 										employee.state = 5;
 									} else {
 										employee.RPCNotificationAboveHead("emplomsgnopckp", "");
@@ -1261,7 +1323,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 											}
 										}
 										AchievementsManager.Instance.CmdAddAchievementPoint(19, 1);
-										employee.restockerExperience += employee.restockerValue * 25;
+										employee.orderingExperience += employee.orderingValue * 25;
 										UnequipBox(employee);
 										employee.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, 0);
 										employee.state = -1;
@@ -1278,7 +1340,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return true;
 						}
 						return true;
-					case 7:	//Manufacturing
+					case 7: //Manufacturing
 						if (state == 0 && employee.equippedItem > 0) {
 							__instance.DropBoxOnGround(employee);
 							UnequipBox(employee);
@@ -1290,8 +1352,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				}
 			} else if (EmployeeWalkSpeedPatch.IsWarpingEnabled() && !employeeNavAgent.pathPending) {
 
-				//See EmployeeTargetReservation.LastDestinationSet for an explanation on this
-				employeeNavAgent.Warp(EmployeeTargetReservation.LastDestinationSet[employee]);
+				//See NPC_Movement.LastDestinationSet for an explanation on this
+				employeeNavAgent.Warp(employeeSQoL.LastDestinationSet);
 
 				EmployeeWarpSound.PlayEmployeeWarpSound(employee);
 
@@ -1302,14 +1364,115 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			return false;
 		}
 
-		private static bool TryMoveToClosestBale(NPC_Manager __instance, NPC_Info employee, GameObject employeeObj) {
+
+		private static bool DoSecurityAreaPickUp(NPC_Manager __instance, EnumSecurityPickUp pickUpmode, 
+				GameObject employeeObj, NPC_Info employee, float stoppingDistance) {
+			//Pick up multiple products in an area, based on the employee security level.
+			int securityLevel = pickUpmode switch {
+				EnumSecurityPickUp.Reduced => (int)Math.Ceiling(employee.securityLevel.ClampReturn(0, MaxSecurityPickUpLevel) / 2d),
+				EnumSecurityPickUp.Normal => employee.securityLevel.ClampReturn(0, MaxSecurityPickUpLevel),
+				EnumSecurityPickUp.AlwaysMaxed => MaxSecurityPickUpLevel,
+				_ => throw new NotImplementedException($"Unknown security pick up mode: {pickUpmode}"),
+			};
+
+			int pickUpCount = (int)Math.Ceiling(securityLevel / LevelsForExtraPickUp);
+			float pickUpRangeFromLevel = (securityLevel / (float)MaxSecurityPickUpLevel) * SecurityPickUpRangeLevelMult;
+			//The base range is the current minimum distance to stop in front of the product, plus a small buffer.
+			float pickUpRange = 0.1f + stoppingDistance + (float)Math.Round(pickUpRangeFromLevel, 2);
+
+			Collider[] possiblePickups = new Collider[pickUpCount];
+			if (Physics.OverlapSphereNonAlloc(employeeObj.transform.position,
+					pickUpRange, possiblePickups, 1 << SecurityPickUpLayer) > 0) {
+
+				float totalPickUpValue = 0f;
+				foreach (Collider col in possiblePickups) {
+					if (col == null) {
+						//No more found.
+						break;
+					}
+
+					GameObject stolenProdObj = col.gameObject;
+					StolenProductSpawn stoleProdSpawn = stolenProdObj.GetComponent<StolenProductSpawn>();
+					if (stoleProdSpawn && stolenProdObj.activeSelf) {
+
+						totalPickUpValue += stoleProdSpawn.productCarryingPrice;
+						
+
+						stolenProdObj.SetActive(false);
+						//Remove product from the parent object so it cant be found again by GetClosestDropProduct.
+						stoleProdSpawn.transform.parent = null;
+						//Remove from layer used in OverlapSphereNonAlloc so it cant be found by other security employees.
+						stolenProdObj.layer = 1 << 0;
+
+						//TODO 0 - Improve this so if I detect that the client has SuperQol mod, it calls a
+						//	new RPC method that deactivates the object on the client, and then it gets
+						//	deleted over time.
+
+						//Enqueue to be deleted later over time.
+						stolenProdPickups.Enqueue(stoleProdSpawn);
+
+
+
+						employee.securityExperience++;
+						pickUpCount--;
+					} else {
+						TimeLogger.Logger.LogTimeDebug($"Security area pick up found a " +
+							$"collider in layer {SecurityPickUpLayer} that is not a " +
+							$"StolenProductSpawn: {col.gameObject.name}", LogCategories.AI);
+					}
+					if (pickUpCount <= 0) {
+						break;
+					}
+				}
+
+				if (totalPickUpValue != 0) {
+					GameData.Instance.AlterFundsFromEmployee(totalPickUpValue);
+				}
+
+				return true;
+			}
+			return false;
+		}
+
+		private IEnumerator PickupMarkedStolenProductsLoop() {
+			//Seems like framerate is a factor in products not being deleted for clients, 
+			//	probably from struggling already. Thus this logic will be fps based instead of time based,
+			//	to execute less Destroy calls per second in low spec systems.
+			const float MaxStolenProdRemoval = 5f; //Objects to destroy per frame.
+
+
+			do {
+				destroyCounter += MaxStolenProdRemoval;
+				while (destroyCounter >= 1) {
+					destroyCounter--;
+					if (stolenProdPickups.Count > 0) {
+						if (stolenProdPickups.TryDequeue(out StolenProductSpawn stolenProdPickup)) {
+							NetworkServer.UnSpawn(stolenProdPickup.gameObject);
+
+							//TODO 0 - Add the unspawned to another different list and make yet another 
+							//	coroutine to call the Destroy on the list, but with a much slower rate.
+							//NetworkServer.Destroy(stolenProdPickup.gameObject);
+						}
+					} else {
+						break;
+					}
+				}
+
+				yield return null;
+			} while (WorldState.CurrentGameWorldState != GameWorldEvent.QuitOrMenu);
+
+			stolenProdPickups.Clear();
+		}
+
+
+		private static bool TryMoveToClosestBale(NPC_Manager __instance, NPC_Info employee, GameObject employeeObj, EmployeeNPC employeeSQoL) {
 			GameObject closestBale = __instance.GetClosestBale(employeeObj);
 			if (closestBale) {
 				if (NavMesh.SamplePosition(new Vector3(closestBale.transform.position.x, 0f, 
 						closestBale.transform.position.z), out NavMeshHit navHit, 1f, -1)) {
 
 					employee.currentCardboardBale = closestBale;
-					employee.MoveEmployeeTo(navHit.position);
+					employeeSQoL.MoveEmployeeTo(navHit.position, closestBale);
 					employee.state = 30;
 					return true;
 				}
@@ -1318,23 +1481,82 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			return false;
 		}
 
-		private static bool GetStorageContainerWithBoxToMerge(NPC_Manager __instance, NPC_Info employee) {
+		private static bool GetStorageContainerWithBoxToMerge(NPC_Manager __instance, NPC_Info employee, EmployeeNPC employeeSQoL) {
 			StorageSlotInfo storageToMerge = ContainerSearch.GetStorageContainerWithBoxToMerge(__instance, employee.NetworkboxProductID);
 			if (storageToMerge.ShelfFound) {
-				LOG.TEMPDEBUG_FUNC(() => $"{(employee.state == 2 ? "Restocker" : "Storage")} " +
+				LOG.TEMPDEBUG_FUNC(() => $"{GetEmployeeTaskName(employee.taskPriority)} " +
 					$"#{GetUniqueId(employee)}: Moving to storage to merge box.", LogEmployeeActions);
+
 				//employee.currentFreeStorageIndex = storageToMerge.SlotIndex;
 				Vector3 destination = __instance.storageOBJ.transform.GetChild(storageToMerge.ShelfIndex).transform.Find("Standspot").transform.position;
-				employee.MoveEmployeeToStorage(destination, storageToMerge);
+				employeeSQoL.MoveEmployeeToStorage(destination, storageToMerge);
 				employee.state = 20;
 				return true;
 			}
 			return false;
 		}
 
-		private static void EmployeeTryMergeBoxContents(NPC_Manager __instance, NPC_Info employee, int returnState) {
-			if (employee.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
-				LOG.TEMPDEBUG_FUNC(() => $"{(employee.state == 2 ? "Restocker" : "Storage")} " +
+
+		public static void MoveToBalerOrGarbageContainer(NPC_Manager __instance, GameObject employeeObj,
+				NPC_Info employee, EmployeeNPC employeeSQoL, int cardboardTargetState, int trashTargetState, int recycleTargetState) {
+
+			MoveToGarbageContainer(__instance, employeeObj, employee, employeeSQoL, 
+				cardboardTargetState, trashTargetState, recycleTargetState, useCardboardBaler: true);
+		}
+
+		public static void MoveToGarbageContainer(NPC_Manager __instance, GameObject employeeObj,
+				NPC_Info employee, EmployeeNPC employeeSQoL, int trashTargetState, int recycleTargetState) {
+
+			MoveToGarbageContainer(__instance, employeeObj, employee, employeeSQoL,
+				cardboardTargetState: -1, trashTargetState, recycleTargetState, useCardboardBaler: false);
+		}
+
+		private static void MoveToGarbageContainer(NPC_Manager __instance, GameObject employeeObj, 
+				NPC_Info employee, EmployeeNPC employeeSQoL, int cardboardTargetState,
+				int trashTargetState, int recycleTargetState, bool useCardboardBaler) {
+
+			string employeeTaskName = GetEmployeeTaskName(employee.taskPriority);
+
+			LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: Box empty, trying to recycle.", LogEmployeeActions);
+			GameObject closestCardboardBaler = null;
+			if (useCardboardBaler) {
+				closestCardboardBaler = __instance.GetClosestCardboardBaler(employeeObj);
+			}
+			
+			if (closestCardboardBaler) {
+				LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: Moving to cardboard baler.", LogEmployeeActions);
+				employee.closestCardboardBaler = closestCardboardBaler;
+				employeeSQoL.MoveEmployeeTo(closestCardboardBaler.transform.Find("Standspot"), closestCardboardBaler);
+				employee.state = cardboardTargetState;
+				return;
+			} else if (__instance.closestRecyclePerk) {
+				LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: Moving to trash container with recycling perk.", LogEmployeeActions);
+				employeeSQoL.MoveEmployeeTo(__instance.trashSpotOBJ, __instance.trashSpotOBJ);
+				employee.state = recycleTargetState;
+				return;
+			} else if (!__instance.employeeRecycleBoxes || __instance.interruptBoxRecycling) {
+				LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: Moving to trash container instead.", LogEmployeeActions);
+				employeeSQoL.MoveEmployeeTo(__instance.trashSpotOBJ, __instance.trashSpotOBJ);
+				employee.state = trashTargetState;
+				return;
+			}
+			LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: Moving to closest non trash recycle spot.", LogEmployeeActions);
+			float num5 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot1OBJ.transform.position);
+			float num6 = Vector3.Distance(employeeObj.transform.position, __instance.recycleSpot2OBJ.transform.position);
+			if (num5 < num6) {
+				employeeSQoL.MoveEmployeeTo(__instance.recycleSpot1OBJ, __instance.recycleSpot1OBJ);
+				employee.state = recycleTargetState;
+				return;
+			}
+			employeeSQoL.MoveEmployeeTo(__instance.recycleSpot2OBJ, __instance.recycleSpot2OBJ);
+			employee.state = recycleTargetState;
+		}
+
+		private static void EmployeeTryMergeBoxContents(NPC_Manager __instance, NPC_Info employee, EmployeeNPC employeeSQoL, int returnState) {
+			string employeeTaskName = GetEmployeeTaskName(employee.taskPriority);
+
+			if (employeeSQoL.RefreshAndCheckValidTargetedStorage(__instance, clearReservation: false, out StorageSlotInfo storageSlotInfo)) {
+				LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} " +
 					$"#{GetUniqueId(employee)}: Merging storage box.", LogEmployeeActions);
 				__instance.EmployeeMergeBoxContents(employee, storageSlotInfo.ShelfIndex, 
 					storageSlotInfo.ExtraData.ProductId, storageSlotInfo.SlotIndex);
@@ -1343,31 +1565,45 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				return;
 			}
 
-			LOG.TEMPDEBUG_FUNC(() => $"{(employee.state == 2 ? "Restocker" : "Storage")} " +
-				$"#{GetUniqueId(employee)}: Couldnt merge storage box.", LogEmployeeActions);
+			LOG.TEMPDEBUG_FUNC(() => $"{employeeTaskName} #{GetUniqueId(employee)}: " +
+				"Couldnt merge storage box.", LogEmployeeActions);
 			employee.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, returnState);
 			employee.state = -1;
 		}
 
-		public static bool HasRestockingEmployeAssigned(NPC_Manager __instance) {
-			return __instance.employeeParentOBJ.transform
+		public static bool HasEmployeAssignedTo(EmployeeJob employeeJob) {
+			if (!NPC_Manager.Instance) {
+				TimeLogger.Logger.LogTimeWarning("The NPC_Manager is null. Make sure " +
+					"to call this method after NPC_Manager Awake", LogCategories.AI);
+			}
+
+			return NPC_Manager.Instance.employeeParentOBJ.transform
 				.Cast<Transform>().Any(
-					(t) => t.GetComponent<NPC_Info>().taskPriority == 2
+					(t) => t.GetComponent<NPC_Info>().taskPriority == (int)employeeJob
 			);
 		}
 
-		public static int GetEmployeeCount(NPC_Manager __instance, int taskPriority = -1) {
-			return __instance.employeeParentOBJ.transform
-				.Cast<Transform>().Count(
-					(t) => taskPriority < 0 || t.GetComponent<NPC_Info>().taskPriority == taskPriority
-			);
-		}
-
-
-		/* I have no idea why I patched this. Some test I imagine?
-			It has been updated many times since.
 		
-		[HarmonyPatch(typeof(NPC_Manager), "CustomerNPCControl")]
+		public static List<Transform> GetEmployeesAssignedTo(EmployeeJob employeeJob) {
+			if (!NPC_Manager.Instance) {
+				TimeLogger.Logger.LogTimeWarning("The NPC_Manager is null. Make sure " +
+					"to call this method after NPC_Manager Awake", LogCategories.AI);
+			}
+
+			return NPC_Manager.Instance.employeeParentOBJ.transform
+				.Cast<Transform>().Where(
+					(t) => employeeJob == EmployeeJob.All || 
+							t.GetComponent<NPC_Info>().taskPriority == (int)employeeJob
+			).ToList();
+		}
+
+		public static int GetEmployeeCount(EmployeeJob employeeJob) => 
+			GetEmployeesAssignedTo(employeeJob).Count;
+
+
+
+		/*
+        [HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.CustomerNPCControl))]
 		[HarmonyPrefix]
 		private static bool CustomerNPCControlPatch(NPC_Manager __instance, int NPCIndex) {
 			GameObject gameObject = __instance.customersnpcParentOBJ.transform.GetChild(NPCIndex).gameObject;
@@ -1384,7 +1620,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 							return false;
 						}
 						int num = component.productsIDToBuy[0];
-						if (ReflectionHelper.CallMethod<bool>(__instance, "IsItemInShelf", [component.shelfThatHasTheItem, num])) {
+						if (__instance.IsItemInShelf(component.shelfThatHasTheItem, num)) {
 							float num2 = ProductListing.Instance.productPlayerPricing[num];
 							Data_Product component3 = ProductListing.Instance.productPrefabs[num].GetComponent<Data_Product>();
 							int productTier = component3.productTier;
@@ -1590,7 +1826,8 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				}
 			}
 			return false;
-		}*/
+		}
+		*/
 
 
 		//TODO 4 - Transpile original method to use EmployeeNextActionWait
@@ -1602,11 +1839,23 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			npcInfo.state = -1;
 		}
 
+		private static string GetEmployeeTaskName(int taskPriority) =>
+			taskPriority switch {
+				2 => "Restocker",
+				3 => "Storage",
+				4 => "Security",
+				5 => "Technician",
+				6 => "Online Order",
+				7 => "Manufacturing",
+				_ => "Unknown"
+			};
+
 		public static string GetUniqueId(NPC_Info NPC) {
 			return $"{NPC.netId} ({NPC.NPCName})";
 		}
 
-		private static bool IsEmployeeAtDestination(NavMeshAgent employeePathing) {
+		private static bool IsEmployeeAtDestination(NavMeshAgent employeePathing, out float stoppingDistance) {
+			stoppingDistance = employeePathing.stoppingDistance;
 			if (EmployeeWalkSpeedPatch.IsEmployeeSpeedIncreased) {
 
 				if (EmployeeWalkSpeedPatch.IsWarpingEnabled() &&
@@ -1618,7 +1867,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				}
 
 				//Mitche was playing around with stoppingDistance, so this is in case he changes it.
-				float stoppingDistance = Math.Max(employeePathing.stoppingDistance, 1);
+				stoppingDistance = Math.Max(employeePathing.stoppingDistance, 1);
 
 				//Reduced "arrive" requirements to avoid employees bouncing around when at high speeds.
 				if (!employeePathing.pathPending && employeePathing.remainingDistance <= 5) {

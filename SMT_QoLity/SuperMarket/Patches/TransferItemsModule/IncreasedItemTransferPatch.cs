@@ -154,7 +154,7 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			int indexStart = -1;
 			int indexEnd = -1;
 
-			FieldInfo extraParameter2 = AccessTools.Field(typeof(PlayerNetwork), "extraParameter2");
+			FieldInfo extraParameter2 = AccessTools.Field(typeof(PlayerNetwork), nameof(PlayerNetwork.extraParameter2));
 			int indexInsideElseBlock = instrList.FindLastIndex(instruction => instruction.LoadsField(extraParameter2));
 			if (indexInsideElseBlock < 0) {
 				throw new TranspilerDefaultMsgException($"Couldnt find the instruction loading the value of the field {nameof(PlayerNetwork.extraParameter2)}");

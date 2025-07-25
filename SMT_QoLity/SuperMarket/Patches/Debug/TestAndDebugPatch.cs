@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsUnity.Components;
@@ -13,11 +8,16 @@ using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using Mirror;
 using SuperQoLity.SuperMarket.ModUtils;
-using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
+using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
+using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
-using static SuperQoLity.SuperMarket.Patches.EmployeeModule.EmployeeJobAIPatch;
 
 namespace SuperQoLity.SuperMarket.Patches.Debug {
 
@@ -44,9 +44,9 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			GameData.Instance.UserCode_CmdAlterFunds__Single(funds);
 			GameData.Instance.NetworkgameFranchisePoints = XX;
 			Time.timeScale = 1f;
+			GameData.Instance.NetworktimeOfDay = 9;
 			timeFactor
 
-			Change timescale
 			Max hireable employees
 			
 		*/
@@ -109,6 +109,68 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 			}
 		}
+
+		public void aaa() {
+			for (int i = 0; i < 100; i++) {
+				NPC_Info employeeNpc = NPC_Manager.Instance.employeeParentOBJ.transform.GetChild(0).GetComponent<NPC_Info>();
+				GameObject obj = UnityEngine.Object.Instantiate(employeeNpc.stolenProductPrefab, NPC_Manager.Instance.droppedProductsParentOBJ.transform);
+				obj.transform.position = StarterAssets.FirstPersonController.Instance.transform.position + new Vector3(UnityEngine.Random.Range(-0.3f, 0.3f), 0f, UnityEngine.Random.Range(-0.3f, 0.3f));
+				obj.GetComponent<StolenProductSpawn>().NetworkproductID = UnityEngine.Random.Range(1, 300);
+				obj.GetComponent<StolenProductSpawn>().NetworkproductCarryingPrice = 1f;
+				Mirror.NetworkServer.Spawn(obj);
+			}
+		}
+
+		/*
+		[HarmonyPatch(typeof(Builder_Main), "AuxiliarSeparationMethod")]
+		[HarmonyPrefix]
+		private static bool AuxiliarSeparationMethodPatch(Builder_Main __instance, int i, bool activateDLCSigns) {
+			foreach (Transform item in ((Component)__instance.tabContainerOBJ.transform.GetChild(i)).transform.Find("Container")) {
+				Transform val = item;
+				if (!val.GetComponent<PlayMakerFSM>()) {
+					continue;
+				}
+				int value = ((Component)val).GetComponent<PlayMakerFSM>().FsmVariables.GetFsmInt("PropIndex").Value;
+				float num;
+				float energyCost;
+				float employeeHappiness;
+				if (i == 0) {
+					Data_Container component = __instance.buildablesArray[value].GetComponent<Data_Container>();
+					num = component.cost;
+					energyCost = component.energyCost;
+					employeeHappiness = component.employeeHappiness;
+				} else {
+					BuildableInfo component2 = __instance.decorationPropsArray[value].GetComponent<BuildableInfo>();
+					num = component2.cost;
+					energyCost = component2.energyCost;
+					employeeHappiness = component2.employeeHappiness;
+					if (activateDLCSigns && component2.isCool) {
+						((Component)((Component)val).transform.Find("DLC")).gameObject.SetActive(true);
+					}
+				}
+				((Component)((Component)val).transform.Find("Prop_Price")).GetComponent<TextMeshProUGUI>().text = "$" + num;
+				if (energyCost > 0f) {
+					((Component)((Component)val).transform.Find("Energy/EnergyCost")).GetComponent<TextMeshProUGUI>().text = energyCost + "kWh";
+					((Component)((Component)((Component)val).transform.Find("Energy")).transform).gameObject.SetActive(true);
+				}
+				if (employeeHappiness > 0f) {
+					((Component)((Component)val).transform.Find("EmployeeHappiness/EmployeeHappinessAmount")).GetComponent<TextMeshProUGUI>().text = "+" + employeeHappiness;
+					((Component)((Component)((Component)val).transform.Find("EmployeeHappiness")).transform).gameObject.SetActive(true);
+				}
+				if (((Component)val).transform.GetSiblingIndex() == 0) {
+					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable0");
+				} else if (((Component)val).transform.GetSiblingIndex() == 1) {
+					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable0a");
+				} else if (i == 0) {
+					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable" + value);
+				} else {
+					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("decorat" + value);
+				}
+			}
+			return false;
+		}
+		*/
+
 
 		//Patches are functionality that, if enabled, will do its logic on their own
 		#region Patches
@@ -336,18 +398,28 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 			}
 
-			private static void RotateShelfs() {
-				foreach (Transform shelf in NPC_Manager.Instance.shelvesOBJ.transform) {
-					shelf.position += new Vector3(0, UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.08f, 0.08f));
-					shelf.localScale = new Vector3(UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f));
-					shelf.rotation = Quaternion.Euler(
-						shelf.rotation.x + UnityEngine.Random.Range(0f, 8f),
-						shelf.rotation.y + UnityEngine.Random.Range(0f, 17f),
-						shelf.rotation.z + UnityEngine.Random.Range(0f, 4f));
-				}
-			}
+			
 
 		}
+
+		private static void RotateShelfs() {
+			foreach (Transform shelf in NPC_Manager.Instance.shelvesOBJ.transform) {
+				shelf.position += new Vector3(0, UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.08f, 0.08f));
+				shelf.localScale = new Vector3(UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f), UnityEngine.Random.Range(0.5f, 1.4f));
+				shelf.rotation = Quaternion.Euler(
+					shelf.rotation.x + UnityEngine.Random.Range(0f, 8f),
+					shelf.rotation.y + UnityEngine.Random.Range(0f, 17f),
+					shelf.rotation.z + UnityEngine.Random.Range(0f, 4f));
+			}
+		}
+
+		/*
+		[HarmonyPatch(typeof(GameData), nameof(GameData.AuxiliarSupermarketOpen))]
+		[HarmonyPostfix]
+		private static void AuxiliarSupermarketOpenPatch(GameData __instance) {
+			__instance.maxCustomersNPCs = 1;
+		}
+		*/
 
 		#endregion
 
@@ -520,7 +592,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 
 				if (bundleElement == null) {
-					bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\rubberducks");
+					bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\Debug\\rubberducks");
 				}
 
 				string basePath = "Snowconesolid Assets/Super Rubber Duck Pack/Rubber Duck PREFABS/RubberDuck_";

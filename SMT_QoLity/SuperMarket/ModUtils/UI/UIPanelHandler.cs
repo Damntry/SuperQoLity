@@ -30,7 +30,7 @@ namespace SuperQoLity.SuperMarket.ModUtils.UI {
 			}
 
 			if (bundleElement == null) {
-				bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\{UIPanelPrefabName}");
+				bundleElement = new AssetBundleElement(typeof(Plugin), $"Assets\\Debug\\{UIPanelPrefabName}");
 			}
 			
 			if (bundleElement.TryLoadNewPrefabInstance(UIPanelName, out superQolUIPanel)) {

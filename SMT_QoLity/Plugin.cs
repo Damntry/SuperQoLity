@@ -10,8 +10,8 @@ using Damntry.UtilsUnity.Components;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.ModUtils.ExternalMods;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.RestockMatch.Component;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Component;
 
 
 namespace SuperQoLity {
@@ -31,7 +31,16 @@ namespace SuperQoLity {
 		So the question is, can I do the same thing at runtime for the products? Ideally there 
 		would be a 2d object at max distance instead of just dissapearing, but how would I 
 		automate 2d billboard creation, I have no idea.
+
+		FIRST OF ALL. Go back to basics, they have been making some LOD optimizations lately.
+		Create a function that deletes all products from all shelves.
+		Go into a big store and look in the direction where most shelves are, regardless of products
+		being visible, then call the product deletion function and see how much FPS improves.
+		If there is a big difference, playing with the lods some more would be a big deal.
 	*/
+
+	//TODO 1 - Btw I dont remember seeing notifications when an auto
+	//	patch fails while launching the game. Recheck that it still works.
 
 	//TODO 1 - Find things Im loading on WorldStart and try to move them earlier if possible.
 	//	There is noticeable lag when starting compared to base game, specially on big stores.
@@ -39,6 +48,12 @@ namespace SuperQoLity {
 	//TODO 2 - Make a method that when debug is enabled and a certain hotkey is pressed, it gathers
 	//	info about installed mods, the current LogOutput and what not, and copies it into the clipboard
 	//	to help users make error reporting easier.
+
+	//TODO 0 - Create an option so boxes ordered spawn in a 3x3 pattern next to each other, instead
+	//	of a single one.
+	//	Wouldnt be cool if a shitty truck with no animations came and started spitting boxes out the back?
+	//	And the motor made a vocalized vroom vroom sound. Once the truck arrives and stops, it plays a horn
+	//	sound and each box should have a sound when spawning too. Not too stupid though or it would be annoying.
 
 	//TODO 0 - Something I noticed is that since I commit to each github project separately, there
 	//	is no good way of getting the entire source code from all projects. It has to be done manually,

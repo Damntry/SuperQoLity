@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Damntry.UtilsUnity.UI.Extensions;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler;
 using TMPro;
 using UnityEngine;
 

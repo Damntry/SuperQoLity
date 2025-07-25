@@ -9,10 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Damntry Globals", "..\..\!!
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{09336125-EB57-48C1-913A-CC6D2487F246}"
 	ProjectSection(SolutionItems) = preProject
-		Docs\Changelog.md = Docs\Changelog.md
-		Docs\icon.png = Docs\icon.png
-		Docs\manifest.json = Docs\manifest.json
+		Docs\CHANGELOG.md = Docs\CHANGELOG.md
+		Docs\icon_256.png = Docs\icon_256.png
 		Docs\icon_400.png = Docs\icon_400.png
+		Docs\manifest.json = Docs\manifest.json
 		Docs\README.md = Docs\README.md
 	EndProjectSection
 EndProject

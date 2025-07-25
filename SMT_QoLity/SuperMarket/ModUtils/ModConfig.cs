@@ -4,14 +4,14 @@ using BepInEx.Configuration;
 using Damntry.Utils.ExtensionMethods;
 using Damntry.UtilsBepInEx.Configuration.ConfigurationManager;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Employees.JobScheduler.AutoMode.DataDefinition;
-using SuperQoLity.SuperMarket.Patches.HighlightModule;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using UnityEngine;
 using SuperQoLity.SuperMarket.Patches.Misc;
-using SuperQoLity.SuperMarket.PatchClassHelpers.EntitySearch;
+using SuperQoLity.SuperMarket.Patches.BetterSMT_Module;
+using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler.AutoMode.DataDefinition;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
@@ -35,6 +35,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<float> EmployeeIdleWait { get; private set; }
 		public ConfigEntry<float> ClosedStoreEmployeeWalkSpeedMultiplier { get; private set; }
 		public ConfigEntry<bool> ClosedStoreEmployeeItemTransferMaxed { get; private set; }
+		public ConfigEntry<EnumSecurityPickUp> ImprovedSecurityPickUpMode { get; private set; }
 		public ConfigEntry<EnumFreeStoragePriority> FreeStoragePriority { get; private set; }
 
 		public ConfigEntry<EnumJobFrequencyMultMode> EmployeeJobFrequencyMode { get; private set; }
@@ -94,7 +95,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public const string PerfCustomSettingsModuleText = "xx Employee AI Custom Settings Module xx";
 		public const string PerfManualSettingsModuleText = "xx Employee AI Manual Settings Module xx";
 		public const string DebugModuleText = "z DEBUG z";
-		public const string WorkloadCapcityDescription = "NOTE: A \"unit\" (a value of 1) of workload capacity, " +
+		public const string WorkloadCapacityDescription = "NOTE: A \"unit\" (a value of 1) of workload capacity, " +
 			"is equal to a total of 50 turns to share between all employees, each second.";
 
 		public void InitializeConfig(BaseUnityPlugin basePlugin) {
@@ -205,6 +206,23 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 								"next job step, like picking up a box or placing it in a storage slot. \nDoes not affect " +
 								"employee checkout speed or restocker item placing.",
 				acceptableValueRange: new AcceptableValueRange<float>(0.1f, 4f),
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
+				modInstallSide: MultiplayerModInstallSide.HostSideOnly
+			);
+
+			ImprovedSecurityPickUpMode = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: EmployeeJobModuleText,
+				key: "Improved security pick-up mode",
+				defaultValue: EnumSecurityPickUp.Disabled,
+				description: "As security employees level up, they will be able to pick up more products at " +
+				$"once, and reach across a larger area. All benefits stop improving at level {EmployeeJobAIPatch.MaxSecurityPickUpLevel} \n" +
+				$"- {EnumSecurityPickUp.Disabled}: Same as base game. Products are picked up one by one." +
+				$"- {EnumSecurityPickUp.Reduced}: All security level benefits halved compared to \"{EnumSecurityPickUp.Normal}\". " +
+				$"A level 100 security employee with the {EnumSecurityPickUp.Reduced} setting, will have the same " +
+				$"pick-up skills as a level 50 with the {EnumSecurityPickUp.Normal} setting" +
+				$"- {EnumSecurityPickUp.Normal}: Security will pick up an additional product every " +
+				$"{EmployeeJobAIPatch.LevelsForExtraPickUp} levels, and slightly increase its range every level" + 
+				$"- {EnumSecurityPickUp.AlwaysMaxed}: All security employees will have the best possible pick-up stats.",
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
 			);
@@ -466,7 +484,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				description: $"{customModeText}\n\n" +
 				"Sets the minimum possible workload capacity. When the job scheduler detects that the target wait time " +
 				"is being sufficiently kept, it will start reducing workload capacity up to this value to save performance." +
-				WorkloadCapcityDescription,
+				WorkloadCapacityDescription,
 				acceptableValueRange: new AcceptableValueRange<float>(AutoModeLimits.MinFreqMult.MinLimit, AutoModeLimits.MinFreqMult.MaxLimit),
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
@@ -480,7 +498,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				"Sets the maximum possible workload capacity. When the job scheduler detects that the employee wait " +
 				"time is higher than the target, it will start increasing workload capacity up to this value. " +
 				"Be careful, since higher values can have a big impact on cpu usage by the employee AI.\n" +
-				WorkloadCapcityDescription,
+				WorkloadCapacityDescription,
 				acceptableValueRange: new AcceptableValueRange<float>(AutoModeLimits.MaxFreqMult.MinLimit, AutoModeLimits.MaxFreqMult.MaxLimit),
 				patchInstanceDependency: Container<EmployeePerformancePatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly

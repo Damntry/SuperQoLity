@@ -49,7 +49,6 @@ namespace SuperQoLity.SuperMarket.Patches {
 				}
 
 				
-				//TODO 0 - Test this change
 				if (buildable.TryGetComponent(out Data_Container dataContainer) && 
 						dataContainer.GetContainerType() == DataContainerType.ProductShelf) {
 				//Data_Container dataContainer = buildable.GetComponent<Data_Container>();

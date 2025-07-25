@@ -6,7 +6,6 @@ using Damntry.Utils.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
-using Damntry.UtilsUnity.Components;
 using Damntry.UtilsUnity.Tasks.AsyncDelay;
 using Damntry.UtilsUnity.Timers;
 using HarmonyLib;
