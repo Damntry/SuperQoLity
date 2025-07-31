@@ -37,6 +37,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 		public ConfigEntry<bool> ClosedStoreEmployeeItemTransferMaxed { get; private set; }
 		public ConfigEntry<EnumSecurityPickUp> ImprovedSecurityPickUpMode { get; private set; }
 		public ConfigEntry<EnumFreeStoragePriority> FreeStoragePriority { get; private set; }
+		public ConfigEntry<EnumSecurityEmployeeThiefChase> SecurityThiefChaseMode { get; private set; }
 
 		public ConfigEntry<EnumJobFrequencyMultMode> EmployeeJobFrequencyMode { get; private set; }
 
@@ -223,6 +224,21 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				$"- {EnumSecurityPickUp.Normal}: Security will pick up an additional product every " +
 				$"{EmployeeJobAIPatch.LevelsForExtraPickUp} levels, and slightly increase its range every level" + 
 				$"- {EnumSecurityPickUp.AlwaysMaxed}: All security employees will have the best possible pick-up stats.",
+				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
+				modInstallSide: MultiplayerModInstallSide.HostSideOnly
+			);
+
+			SecurityThiefChaseMode = configManagerControl.AddConfigWithAcceptableValues(
+				sectionName: EmployeeJobModuleText,
+				key: "Security Thief Chase",
+				defaultValue: EnumSecurityEmployeeThiefChase.Disabled,
+				description: "This sets the mod in which security employees will work:\n" +
+				$"- {EnumSecurityEmployeeThiefChase.Disabled}: Same as base game. All security employees " +
+				$"will target the first thief they can find." +
+				$"- {EnumSecurityEmployeeThiefChase.AllChaseButLastOne}: Same as base game, but if all thieves " +
+				$"are already being chased, one security employee will keep watch for the next thief." +
+				$"- {EnumSecurityEmployeeThiefChase.OnlyOnePerThief}: Recommended mode. Each thief will be " +
+				$"chased by a single security employee and no more. The rest keep watch for the next thief.",
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
 			);

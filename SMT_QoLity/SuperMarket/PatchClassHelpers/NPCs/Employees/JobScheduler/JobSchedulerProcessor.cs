@@ -53,10 +53,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.JobScheduler 
 				UIPanelHandler.InitializePerformancePanel([0, 0]);
 				UIPanelHandler.ShowUIPanel();
 
-				KeyPressDetection.AddHotkey(KeyCode.Insert, () => SetAndUpdatePerformanceUI(true, true));
-				KeyPressDetection.AddHotkey(KeyCode.Delete, () => SetAndUpdatePerformanceUI(false, true));
-				KeyPressDetection.AddHotkey(KeyCode.Home, () => SetAndUpdatePerformanceUI(true, false));
-				KeyPressDetection.AddHotkey(KeyCode.End, () => SetAndUpdatePerformanceUI(false, false));
+				KeyPressDetection.AddHotkey(KeyCode.Insert, KeyPressAction.KeyHeld, () => SetAndUpdatePerformanceUI(true, true));
+				KeyPressDetection.AddHotkey(KeyCode.Delete, KeyPressAction.KeyHeld, () => SetAndUpdatePerformanceUI(false, true));
+				KeyPressDetection.AddHotkey(KeyCode.Home, KeyPressAction.KeyHeld, () => SetAndUpdatePerformanceUI(true, false));
+				KeyPressDetection.AddHotkey(KeyCode.End, KeyPressAction.KeyHeld, () => SetAndUpdatePerformanceUI(false, false));
 			}
 		}
 

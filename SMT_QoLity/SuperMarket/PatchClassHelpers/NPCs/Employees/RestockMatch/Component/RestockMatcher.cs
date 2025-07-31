@@ -66,7 +66,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 		private bool IsRestockPossible(NPC_Manager __instance) {
 			return __instance.storageOBJ.transform.childCount > 0 &&
 				__instance.shelvesOBJ.transform.childCount > 0 &&
-				EmployeeJobAIPatch.HasEmployeAssignedTo(EmployeeJob.Restocker);
+				EmployeeJobAIPatch.HasEmployeeAssignedTo(EmployeeJob.Restocker);
 		}
 
 

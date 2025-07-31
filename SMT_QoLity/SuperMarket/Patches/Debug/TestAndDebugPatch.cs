@@ -7,6 +7,7 @@ using HarmonyLib;
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using Mirror;
+using Rito.RadialMenu_v3;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
 using SuperQoLity.SuperMarket.Patches.EmployeeModule;
@@ -100,26 +101,54 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 				if (activeDebugUtilities == ActiveDebugUtilities.TheDuckening) {
 					WorldState.OnWorldStarted += () => {
-						KeyPressDetection.AddHotkey(KeyCode.Mouse2, 90, () => { TheDuckening.LoadDuck(); });
+						KeyPressDetection.AddHotkey(KeyCode.Mouse2, KeyPressAction.KeyHeld, 90, () => { TheDuckening.LoadDuck(); });
 					};
 					WorldState.OnQuitOrMenu += () => {
 						KeyPressDetection.RemoveHotkey(KeyCode.Mouse2);
 					};
 				}
 
+				//TestRadial.Initialize(KeyCode.K);
+				//LOG.TEMPWARNING(KeyPressDetection.GetRegisteredHotkeys());
 			}
 		}
 
-		public void aaa() {
-			for (int i = 0; i < 100; i++) {
-				NPC_Info employeeNpc = NPC_Manager.Instance.employeeParentOBJ.transform.GetChild(0).GetComponent<NPC_Info>();
-				GameObject obj = UnityEngine.Object.Instantiate(employeeNpc.stolenProductPrefab, NPC_Manager.Instance.droppedProductsParentOBJ.transform);
-				obj.transform.position = StarterAssets.FirstPersonController.Instance.transform.position + new Vector3(UnityEngine.Random.Range(-0.3f, 0.3f), 0f, UnityEngine.Random.Range(-0.3f, 0.3f));
-				obj.GetComponent<StolenProductSpawn>().NetworkproductID = UnityEngine.Random.Range(1, 300);
-				obj.GetComponent<StolenProductSpawn>().NetworkproductCarryingPrice = 1f;
-				Mirror.NetworkServer.Spawn(obj);
+		/*
+		public static class TestRadial {
+
+			private static RadialMenu radialMenu;
+			private static KeyCode key;
+
+
+			public static void Initialize(KeyCode key) {
+				WorldState.OnGameWorldChange += (GameWorldEvent ev) => {
+					if (ev == GameWorldEvent.FPControllerStarted) {
+						radialMenu = SMTComponentInstances.FirstPersonControllerInstance()
+							.gameObject.AddComponent<RadialMenu>();
+
+
+						//TODO 0 - Need to initialize manually those 2 in radialMenu
+						//[SerializeField] private GameObject _pieceSample; // 복제될 조각 게임오브젝트
+						//[SerializeField] private RectTransform _arrow;    // 화살표 이미지의 부모 트랜스폼
+
+
+						TestRadial.key = key;
+
+						//TODO 0 - TEMP TEST
+						string pngTestPath = "C:\\Users\\Damntry\\Visual Studio Projects\\Visual Studio 2019 Projects\\repos\\!!Global Libraries\\Damntry Globals Unity\\UnityRadialMenu\\RadialMenu_v3\\Sprites\\Kenny Animals\\bear.png";
+
+						radialMenu.AddSpriteImageFromFile(pngTestPath);
+						KeyPressDetection.AddHotkey(key, KeyPressAction.KeyDown, 100, () => radialMenu.Show());
+						KeyPressDetection.AddHotkey(key, KeyPressAction.KeyUp, 100, () => {
+							LOG.TEMPWARNING($"Selected : {radialMenu.Hide()}");
+						});
+					}
+				};
 			}
+
 		}
+		*/
+
 
 		/*
 		[HarmonyPatch(typeof(Builder_Main), "AuxiliarSeparationMethod")]
@@ -430,6 +459,17 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 		public async void StartPerformanceTableLogging() {
 			await Performance.PerformanceTableLoggingMethods.StartLogPerformanceTableNewThread(10000);
+		}
+
+		public void SpawnDroppedStolenProducts() {
+			for (int i = 0; i < 100; i++) {
+				NPC_Info employeeNpc = NPC_Manager.Instance.employeeParentOBJ.transform.GetChild(0).GetComponent<NPC_Info>();
+				GameObject obj = UnityEngine.Object.Instantiate(employeeNpc.stolenProductPrefab, NPC_Manager.Instance.droppedProductsParentOBJ.transform);
+				obj.transform.position = StarterAssets.FirstPersonController.Instance.transform.position + new Vector3(UnityEngine.Random.Range(-0.3f, 0.3f), 0f, UnityEngine.Random.Range(-0.3f, 0.3f));
+				obj.GetComponent<StolenProductSpawn>().NetworkproductID = UnityEngine.Random.Range(1, 300);
+				obj.GetComponent<StolenProductSpawn>().NetworkproductCarryingPrice = 1f;
+				Mirror.NetworkServer.Spawn(obj);
+			}
 		}
 
 		/// <summary>Couple ways of handling the cat pet cooldown.</summary>

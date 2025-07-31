@@ -1,7 +1,5 @@
 ﻿using Damntry.Utils.ExtensionMethods;
 using Damntry.Utils.Logging;
-using Damntry.Utils.Tasks;
-using Damntry.Utils.Tasks.AsyncDelay;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
@@ -22,7 +20,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Text;
 using UnityEngine;
 using UnityEngine.AI;
@@ -40,7 +37,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		OnlineOrder = 6,
 		Manufacturer = 7,
 
-		All = 99
+		Any = 99
 	}
 
 	public enum EnumSecurityPickUp {
@@ -52,6 +49,15 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		Normal,
 		[Description("Always Maxed")]
 		AlwaysMaxed
+	}
+
+	public enum EnumSecurityEmployeeThiefChase {
+		[Description(nameof(Disabled))]
+		Disabled,
+		[Description(nameof(AllChaseButLastOne))]
+		AllChaseButLastOne,
+		[Description(nameof(OnlyOnePerThief))]
+		OnlyOnePerThief,
 	}
 
 	/// <summary>
@@ -308,8 +314,13 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 		*/
 
 		/* TODO 0 - Fix employee pathfinding
-			First of all, prepare a save properly. Deunlock all franchise products except the starting one. 
-			Only fill certain shelves so I can find which ones make the customer bug out in one or another way so I have perfect test cases.
+			First of all, prepare a save properly. All franchise products locked except the starting one. 
+			Only fill certain shelves so I can find which ones make the customer bug out in one or 
+				another way so I have perfect test cases.
+			Customers will highlight the target shelf.
+			Create visible waypoints for the next path the customers will take.
+				Use the base game highlighting prefab to show it?
+			
 
 			 *** Bugs
 
@@ -318,6 +329,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				- With the values above for the customer, and yet, it can not really properly reach the self checkout destination. It decides to go the direct path obstructed by a fence, 
 					instead of taking the safe but long route around. Perhaps because it thinks it can squish close enough with the direct route. And its true, eventually it does manage to do it, 
 					but it looks terrible and takes a while.
+					Maybe I need to sample for spaces around it?
 		
 				- Another thing that happens is NPCs colliding with each other. For example a customer might want to pass through a small corridor next to a register, 
 					but there is an employee on its register post in the middle of the corridor, and it wont move, and the NPC doesnt count it as an obstacle, so it keeps walking against it.
@@ -381,22 +393,11 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 				return;
 			}
 
-
 			stolenProductPrefab.layer = SecurityPickUpLayer;
 			//Begin loop to check for stolen products marked for removal.
 			__instance.StartCoroutine(
 				Container<EmployeeJobAIPatch>.Instance.PickupMarkedStolenProductsLoop()
 			);
-		}
-
-		[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.SpawnCustomerNPC), MethodType.Enumerator)]
-		[HarmonyTranspiler]
-		public static IEnumerable<CodeInstruction> ChangeStolenProductLayerTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
-			CodeMatcher codeMatcher = new CodeMatcher(instructions);
-
-			AccessTools.Field(typeof(NPC_Manager), nameof(NPC_Manager.npcAgentPrefab));
-
-			return codeMatcher.Instructions();
 		}
 
 
@@ -549,7 +550,7 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										List<GameObject> internalProductListForEmployees = __instance.checkoutOBJ.transform
 											.GetChild(employee.employeeAssignedCheckoutIndex)
 											.GetComponent<Data_Container>().internalProductListForEmployees;
-										int num2 = employee.cashierLevel / 10;
+										int num2 = employee.cashierLevel / 15;
 										num2 = Mathf.Clamp(num2, 1, 10);
 										int num3 = Mathf.Clamp(employee.cashierValue - num2 - 1, 2, 10);
 										int num4 = 0;
@@ -1015,10 +1016,10 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 										UnequipBox(employee);
 										return true;
 									}
-									GameObject thiefTarget = __instance.GetThiefTarget();
-									if (thiefTarget) {
-										employee.currentChasedThiefOBJ = thiefTarget;
-										employee.state = 2;
+									//Substitutes GetThiefTarget
+									if (GetThiefTarget(__instance)) {
+										//The logic is all inside GetThiefTarget 
+										//	until I rework the thief logic.
 										return true;
 									}
 									if (__instance.IsFirstSecurityEmployee(employeeObj) ||
@@ -1273,14 +1274,25 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 								return false;
 							case 3: {
 									GameObject val4 = (employee.orderProductLocationInfoArray[0] != 0) ? __instance.shelvesOBJ : __instance.storageOBJ;
-									Data_Container employee3 = val4.transform.GetChild(employee.orderProductLocationInfoArray[1]).GetComponent<Data_Container>();
-									int[] productInfoArray = employee3.productInfoArray;
+									Data_Container employeeDC = val4.transform.GetChild(employee.orderProductLocationInfoArray[1]).GetComponent<Data_Container>();
+									int[] productInfoArray = employeeDC.productInfoArray;
 									int num6 = productInfoArray[employee.orderProductLocationInfoArray[2] + 1];
 									if (employee.packagingAssignedOrderProducts[0] == productInfoArray[employee.orderProductLocationInfoArray[2]] && num6 > 0) {
 										if (employee.orderProductLocationInfoArray[0] == 0) {
-											employee3.EmployeeUpdateArrayValuesStorage(employee.orderProductLocationInfoArray[2], employee.packagingAssignedOrderProducts[0], num6 - 1);
-										} else {
-											employee3.NPCGetsItemFromRow(employee.packagingAssignedOrderProducts[0]);
+											if (num6 == 1) {
+												if (employeeDC.transform.Find("CanvasSigns")) {
+													employeeDC.EmployeeUpdateArrayValuesStorage(employee.orderProductLocationInfoArray[2], employee.packagingAssignedOrderProducts[0], -1);
+												} else {
+													employeeDC.EmployeeUpdateArrayValuesStorage(employee.orderProductLocationInfoArray[2], -1, -1);
+												}
+												GameData.Instance.GetComponent<ManagerBlackboard>().SpawnBoxFromEmployee(employeeObj.transform.position, employee.packagingAssignedOrderProducts[0], 0);
+											}
+											else {
+												employeeDC.EmployeeUpdateArrayValuesStorage(employee.orderProductLocationInfoArray[2], employee.packagingAssignedOrderProducts[0], num6 - 1);
+											}
+										}
+										else {
+											employeeDC.NPCGetsItemFromRow(employee.packagingAssignedOrderProducts[0]);
 										}
 										employee.packagingPackedOrderProducts.Add(employee.packagingAssignedOrderProducts[0]);
 										employee.packagingAssignedOrderProducts.RemoveAt(0);
@@ -1552,6 +1564,114 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			employee.state = recycleTargetState;
 		}
 
+		//TODO 0 - Security and thief seeking should be its own process independently of everything else.
+		//	But for now, I can do it so when a thief is detected, it then finds the closest idle employee
+		//	and assigns it, instead of doing all of this for the employee itself.
+		//	Its very counterintuitive to how the entire npc method works, but...
+		//	Ideally instead of checking thief locations and what not, what I need is to change the
+		//	customers method so when its exposed it triggers the closest security to go.
+		public static bool GetThiefTarget(NPC_Manager __instance) {
+			if (__instance.customersnpcParentOBJ.transform.childCount == 0) {
+				return false;
+			}
+
+			int[] securityIdleStates = [0, 1];
+			GameObject targetThief = null;
+			__instance.thievesList.Clear();
+
+			foreach (Transform customer in __instance.customersnpcParentOBJ.transform) {
+				NPC_Info component = customer.GetComponent<NPC_Info>();
+				if (component.isAThief && component.thiefFleeing && component.productsIDCarrying.Count > 0 && 
+						customer.position.z < -3f && customer.position.x > -15f && customer.position.x < 38f) {
+
+					__instance.thievesList.Add(customer.gameObject);
+					if (!component.thiefAssignedChaser) {
+						component.thiefAssignedChaser = true;
+						targetThief = customer.gameObject;
+						break;
+					}
+				}
+			}
+
+			//If thieves were found but all are already being chased,
+			//	check how to proceed depending on user settings.
+			if (targetThief == null && __instance.thievesList.Count > 0) {
+
+				switch (ModConfig.Instance.SecurityThiefChaseMode.Value) {
+					case EnumSecurityEmployeeThiefChase.Disabled:
+						targetThief = GetRandomThief(__instance);
+						break;
+					case EnumSecurityEmployeeThiefChase.AllChaseButLastOne:
+						if (GetEmployeesAssignedTo(EmployeeJob.Security, securityIdleStates).Any()) {
+							targetThief = GetRandomThief(__instance);
+						}
+						break;
+					case EnumSecurityEmployeeThiefChase.OnlyOnePerThief:
+						//All thieves already being chased so no need to do anything.
+						break;
+					default:
+						throw new NotImplementedException(
+							ModConfig.Instance.SecurityThiefChaseMode.Value.GetDescription());
+				};
+			}
+
+			if (targetThief) {
+				Performance.Start("GetClosestEmployeeToTarget");
+				NPC_Info employee = GetClosestEmployeeToTarget(
+					EmployeeJob.Security, securityIdleStates, targetThief.transform);
+				Performance.StopAndLog("GetClosestEmployeeToTarget");
+				employee.currentChasedThiefOBJ = targetThief;
+				employee.state = 2;
+				return true;
+			}
+
+			return false;
+		}
+
+		private static NPC_Info GetClosestEmployeeToTarget(
+				EmployeeJob employeeJob, int[] allowedStates, Transform target) {
+
+			if (!NPC_Manager.Instance) {
+				TimeLogger.Logger.LogTimeWarning("The NPC_Manager is null. Make sure " +
+					"to call this method after NPC_Manager Awake", LogCategories.AI);
+			}
+
+			NPC_Info closestEmployee = null;
+			float closestDistanceSqr = float.MaxValue;
+
+			GetEmployeesAssignedTo(EmployeeJob.Security, allowedStates)
+				.ForEach((employeeT) => {
+					NPC_Info employee = employeeT.GetComponent<NPC_Info>();
+					float sqrDistance = (employeeT.position - target.position).sqrMagnitude;
+					if (sqrDistance < closestDistanceSqr) {
+						closestDistanceSqr = sqrDistance;
+						closestEmployee = employee;
+					}
+				});
+
+			return closestEmployee;
+		}
+
+		private static GameObject GetRandomThief(NPC_Manager __instance) => 
+			__instance.thievesList[UnityEngine.Random.Range(0, __instance.thievesList.Count)];
+
+		/// <summary>
+		/// Checks if the current security employee is the only idle one.
+		/// </summary>
+		/// <remarks>
+		/// This method doesnt check if the employee passed by parameter is idle, and just assumes 
+		/// that is the case. Useful when the employee is not currently idle, but is going to.
+		/// </remarks>
+		private static bool IsLastIdleSecurity(NPC_Info employee) {
+			return GetEmployeesAssignedTo(EmployeeJob.Security)
+				.Where((t) => t != employee.transform)
+				.All((t) => {
+					NPC_Info employee = t.GetComponent<NPC_Info>();
+					return employee.state != 0 && employee.state != 1;
+				}
+			);
+		}
+
 		private static void EmployeeTryMergeBoxContents(NPC_Manager __instance, NPC_Info employee, EmployeeNPC employeeSQoL, int returnState) {
 			string employeeTaskName = GetEmployeeTaskName(employee.taskPriority);
 
@@ -1570,21 +1690,19 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			employee.StartWaitState(ModConfig.Instance.EmployeeNextActionWait.Value, returnState);
 			employee.state = -1;
 		}
-
-		public static bool HasEmployeAssignedTo(EmployeeJob employeeJob) {
-			if (!NPC_Manager.Instance) {
-				TimeLogger.Logger.LogTimeWarning("The NPC_Manager is null. Make sure " +
-					"to call this method after NPC_Manager Awake", LogCategories.AI);
-			}
-
-			return NPC_Manager.Instance.employeeParentOBJ.transform
-				.Cast<Transform>().Any(
-					(t) => t.GetComponent<NPC_Info>().taskPriority == (int)employeeJob
-			);
-		}
-
 		
-		public static List<Transform> GetEmployeesAssignedTo(EmployeeJob employeeJob) {
+
+		public static List<Transform> GetEmployeesAssignedTo(EmployeeJob employeeJob) =>
+			GetEmployeesAssignedTo(employeeJob, null);
+
+		public static bool HasEmployeeAssignedTo(EmployeeJob employeeJob) =>
+			GetEmployeesAssignedTo(employeeJob).Any();
+
+
+		public static int GetEmployeeCount(EmployeeJob employeeJob) => 
+			GetEmployeesAssignedTo(employeeJob).Count;
+
+		public static List<Transform> GetEmployeesAssignedTo(EmployeeJob employeeJob, int[] allowedStates) {
 			if (!NPC_Manager.Instance) {
 				TimeLogger.Logger.LogTimeWarning("The NPC_Manager is null. Make sure " +
 					"to call this method after NPC_Manager Awake", LogCategories.AI);
@@ -1592,15 +1710,18 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 
 			return NPC_Manager.Instance.employeeParentOBJ.transform
 				.Cast<Transform>().Where(
-					(t) => employeeJob == EmployeeJob.All || 
-							t.GetComponent<NPC_Info>().taskPriority == (int)employeeJob
+					(t) => {
+						if (employeeJob == EmployeeJob.Any) {
+							return true;
+						}
+
+						NPC_Info npcInfo = t.GetComponent<NPC_Info>();
+						return npcInfo.taskPriority == (int)employeeJob &&
+							(allowedStates == null || allowedStates.Length == 0 ||
+								allowedStates.Contains(npcInfo.state));
+					}
 			).ToList();
 		}
-
-		public static int GetEmployeeCount(EmployeeJob employeeJob) => 
-			GetEmployeesAssignedTo(employeeJob).Count;
-
-
 
 		/*
         [HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.CustomerNPCControl))]

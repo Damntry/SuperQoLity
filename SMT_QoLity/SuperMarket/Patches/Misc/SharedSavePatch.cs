@@ -19,7 +19,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
 			if (IsPatchActive) {
-				KeyPressDetection.AddHotkey(KeyCode.KeypadDivide, 1000, () => { SaveAsClientX(); });
+				KeyPressDetection.AddHotkey(KeyCode.KeypadDivide, KeyPressAction.KeyDown, 1000, () => { SaveAsClientX(); });
 			}
 		}
 

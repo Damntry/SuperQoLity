@@ -109,8 +109,8 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 		}
 
 		/// <summary>
-		/// Enables or disables the vanilla game implementation to scan checkout
-		/// products, of having to click products one by one.
+		/// Enables or disables the vanilla game implementation 
+		/// of scanning checkout products one by one.
 		/// </summary>
 		private static void SetVanillaCheckoutScanState(bool enable) {
 			//Change the main prefab from which products are instantiated.

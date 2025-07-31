@@ -1,9 +1,0 @@
-{
-  "name": "SuperQoLity",
-  "version_number": "0.8.70",
-  "website_url": "https://github.com/Damntry/SuperQoLity",
-  "description": "AI, performance, and QoL changes for Supermarket Together",
-  "dependencies": [
-    "BepInEx-BepInExPack-5.4.2100"
-  ]
-}

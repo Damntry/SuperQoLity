@@ -12,9 +12,10 @@
  - Shelf/storage highlighting functionality, inherited from BetterSMT, with customizable colors. BetterSMT is not needed for this.
  - Configurable employee speed when the store is closed. Faster and smoother than the star perk, and you move at normal speed so you can do work too.
  - Configurable, faster item transfer to/from shelves, for players and/or employees.
- - Security now picks up more products in an area around them, based on their level. 
-	 - At level 1, they grab 1 product in a small area. Every 5 levels (5, 10, 15, etc) they can take 1 more. The area increases slightly every level.
-	 - This mechanic can be disabled/changed in the settings.
+ - Security employee changes:
+	 - New mechanic and settings so they pick up more products in an area around them, based on their level.
+	 - Setting to control how they chase thieves, instead of all rushing for the first one.
+	 - When a thief is found, the closest idle security employee will be assigned to chase him, instead of one random.
  - Began adding a few changes to improve a bit immersion and polish:
 	 - Employees will now try and look at the object they are interacting with. Customers are planned later.
 	 - Security employees will now look around while standing guard.

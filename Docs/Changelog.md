@@ -1,4 +1,10 @@
 ## Changelog
+### 0.8.7.6
+	- New setting to control how security employees chase thieves, instead of all rushing the first one.
+	- When a thief is found, the closest idle security employee will be assigned to chase him, instead of one random.
+	- Added employee changes from last base game update
+		- Online order employees will now drop empty boxes instead of putting them back in storage.
+		- Slowed down cashier leveling.
 ### 0.8.7.0
 	- Employees will now try and look in the direction of the object they are interacting with. 
 		This will not slow them down, its only a visual change that cancels once they have a new move order.
