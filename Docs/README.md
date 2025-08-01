@@ -15,7 +15,7 @@
  - Security employee changes:
 	 - New mechanic and settings so they pick up more products in an area around them, based on their level.
 	 - Setting to control how they chase thieves, instead of all rushing for the first one.
-	 - When a thief is found, the closest idle security employee will be assigned to chase him, instead of one random.
+	 - When a thief is spotted, the security employee assigned to chase it will be the nearest one available, and not one random.
  - Began adding a few changes to improve a bit immersion and polish:
 	 - Employees will now try and look at the object they are interacting with. Customers are planned later.
 	 - Security employees will now look around while standing guard.
