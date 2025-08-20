@@ -66,7 +66,7 @@ For suggestions or bug reports, you can use the [Issues section on GitHub](https
 
 Like my work and want to support me or buy me a coffee?  
 
-[Well, too bad, because you cant.]() 
+[Well, too bad, because you cant.](#) 
 
 You though it would be a real link didnt you?
 
