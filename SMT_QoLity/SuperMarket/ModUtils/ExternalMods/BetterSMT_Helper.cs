@@ -83,5 +83,10 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 			return message;
 		}
 
-	}
+		public bool IsVersionWithHighlighting() {
+			//Version that removed highlighting.
+			return ModInfo.LoadedVersion < new Version("2.5.0");
+        }
+
+    }
 }

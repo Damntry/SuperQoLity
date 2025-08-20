@@ -1,4 +1,6 @@
 ## Changelog
+### 0.8.7.7
+	- Fix for BetterSMT 2.5.0 update causing errors with highlighting.
 ### 0.8.7.60001
 	- Tiny +0001 version bump just so Thunderstore blesses this humble modder with the groundbreaking ability to upload the correct changelog. Thank you Thunderstore for granting me your infinite mercy.
 ### 0.8.7.6

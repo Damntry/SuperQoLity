@@ -1616,13 +1616,14 @@ namespace SuperQoLity.SuperMarket.Patches.EmployeeModule {
 			}
 
 			if (targetThief) {
-				Performance.Start("GetClosestEmployeeToTarget");
 				NPC_Info employee = GetClosestEmployeeToTarget(
 					EmployeeJob.Security, securityIdleStates, targetThief.transform);
-				Performance.StopAndLog("GetClosestEmployeeToTarget");
+
+				if (employee) {
 				employee.currentChasedThiefOBJ = targetThief;
 				employee.state = 2;
 				return true;
+			}
 			}
 
 			return false;

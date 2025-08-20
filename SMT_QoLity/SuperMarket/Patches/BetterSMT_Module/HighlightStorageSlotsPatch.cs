@@ -1,4 +1,5 @@
-﻿using Damntry.Utils.Reflection;
+﻿using System;
+using Damntry.Utils.Reflection;
 using Damntry.UtilsBepInEx.HarmonyPatching.Attributes;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using HarmonyLib;
@@ -73,8 +74,7 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 			}
 
 			public static void NewBuildableConstructed(NetworkSpawner __instance, int prefabID) {
-				;
-				GameObject buildable = __instance.buildables[prefabID];
+				//GameObject buildable = __instance.buildables[prefabID];
 
 				//TODO 2 - There is now "GetComponent<InteractableContainer>().isStorageShelf"
 				//	but Im not sure if its 100% trustworthy yet.
@@ -95,7 +95,9 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 		private class BetterSMTRemoveHighlighting {
 
 			[HarmonyPrepare]
-			private static bool HarmonyPrepare() => BetterSMT_Helper.Instance.IsModLoadedAndEnabled;
+			private static bool HarmonyPrepare() => 
+					BetterSMT_Helper.Instance.IsModLoadedAndEnabled && 
+						BetterSMT_Helper.Instance.IsVersionWithHighlighting();
 
 			[HarmonyPatchStringTypes($"{ModInfoBetterSMT.PatchesNamespace}.PlayerNetworkPatch", "ChangeEquipmentPatch")]
 			[HarmonyBefore(ModInfoBetterSMT.HarmonyId)]
@@ -127,7 +129,8 @@ namespace SuperQoLity.SuperMarket.Patches.BetterSMT_Module {
 
 			[HarmonyPrepare]
 			private static bool HarmonyPrepare() => 
-				BetterSMT_Helper.Instance.IsModLoadedAndEnabled && IsBetterSMTVersionWithMarkers();
+				BetterSMT_Helper.Instance.IsModLoadedAndEnabled &&
+                    BetterSMT_Helper.Instance.IsVersionWithHighlighting() && IsBetterSMTVersionWithMarkers();
 
 			private static bool IsBetterSMTVersionWithMarkers() =>
 				AssemblyUtils.GetMethodFromLoadedAssembly(

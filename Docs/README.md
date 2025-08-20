@@ -10,7 +10,7 @@
 	 - A configurable employee job scheduler that lets you choose their CPU usage/responsiveness ratio.
 	 - And too many all around to add here.
  - Shelf/storage highlighting functionality, inherited from BetterSMT, with customizable colors. BetterSMT is not needed for this.
- - Configurable employee speed when the store is closed. Faster and smoother than the star perk, and you move at normal speed so you can do work too.
+ - Configurable employee move speed when the store is closed. Faster and smoother than the star perk, and you move at normal speed so you can do work too.
  - Configurable, faster item transfer to/from shelves, for players and/or employees.
  - Security employee changes:
 	 - New mechanic and settings so they pick up more products in an area around them, based on their level.
@@ -56,9 +56,13 @@ Many thanks to Mitche (kinda), Ika, and many others that helped get this thing o
 
 ---
 ### <p align="center"> [<ins> 📝 Full changelog 📝 </ins>](https://github.com/Damntry/SuperQoLity/blob/master/Docs/Changelog.md) </p>
-For suggestions or bug reports, you can use the [Issues section on GitHub](https://github.com/Damntry/SuperQoLity/issues).
+<br>
+
+**Want to get in contact with me, request mod ideas, or get some help in your modding journey? [Come join us at the semi-official SMT modding discord](https://discord.gg/qEZpeJqppY).**
 
 <br>
+
+For suggestions or bug reports, you can use the [Issues section on GitHub](https://github.com/Damntry/SuperQoLity/issues).
 
 Like my work and want to support me or buy me a coffee?  
 

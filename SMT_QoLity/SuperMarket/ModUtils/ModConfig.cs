@@ -466,8 +466,9 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				sectionName: PerfDisplayFreqMultModuleText,
 				key: $"Show workload capacity counter",
 				defaultValue: false,
-				description: $"Shows a counter with the workload capacity used in the last cycle.\n" +
-				$"This will only work while the {EmployeeJobFrequencyMode.Definition.Key} setting is " +
+				description: $"Shows a counter with the workload capacity used in the last cycle (1 second).\n" +
+				$"Lower values means less cpu was used for employee actions. A value of 1 is the same as the base game value.\n" +
+                $"This will only work while the {EmployeeJobFrequencyMode.Definition.Key} setting is " +
 				$"in any of the \"Auto\" modes.",
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
 			);
