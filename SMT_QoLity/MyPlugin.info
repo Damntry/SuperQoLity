@@ -7,13 +7,14 @@
     <PackageId>es.damntry.SuperQoLity</PackageId>
     <Product>$(PackageId)</Product>
     <Version>0.8.7.7</Version>
+    <ThunderstoreVersion>0.8.7.61000</ThunderstoreVersion>
     <Description>Bepinex plugin for Supermarket Together adding extra QoL features</Description>
     <Authors>Damntry</Authors>
     <Company>None</Company>
   </PropertyGroup>
 
   <PropertyGroup>
-    <BetterSMTSupportedVersion>2.4.0</BetterSMTSupportedVersion>
+    <BetterSMTSupportedVersion>2.5.0</BetterSMTSupportedVersion>
   </PropertyGroup>
   <!-- Full debug for old Unity runtimes, instead of the modern portable one.
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -64,7 +65,7 @@ namespace $(RootNamespace)
         <![CDATA[
 {
   "name": "SuperQoLity",
-  "version_number": "$([System.Version]::Parse(%(assembInfo.Version)).Major).$([System.Version]::Parse(%(assembInfo.Version)).Minor).$([System.Version]::Parse(%(assembInfo.Version)).Build)$([System.Version]::Parse(%(assembInfo.Version)).Revision)",
+  "version_number": "$([System.Version]::Parse($(ThunderstoreVersion)).Major).$([System.Version]::Parse($(ThunderstoreVersion)).Minor).$([System.Version]::Parse($(ThunderstoreVersion)).Build)$([System.Version]::Parse($(ThunderstoreVersion)).Revision)",
   "website_url": "https://github.com/Damntry/SuperQoLity",
   "description": "AI, performance, and QoL changes for Supermarket Together",
   "dependencies": [

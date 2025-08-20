@@ -1,6 +1,8 @@
 ## Changelog
-### 0.8.7.7
+### 0.8.7.7 (0.8.7.61000 on thunderstore)
 	- Fix for BetterSMT 2.5.0 update causing errors with highlighting.
+	- From now on, Thunderstore will have a different version number than everywhere else, until I hit 0.9.
+		There are no other changes other than that, I made a mistake in versioning and this is the solution for now.
 ### 0.8.7.60001
 	- Tiny +0001 version bump just so Thunderstore blesses this humble modder with the groundbreaking ability to upload the correct changelog. Thank you Thunderstore for granting me your infinite mercy.
 ### 0.8.7.6
