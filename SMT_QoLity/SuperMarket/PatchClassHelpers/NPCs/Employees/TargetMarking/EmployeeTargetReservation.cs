@@ -1,6 +1,7 @@
-﻿using System;
+﻿using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
+using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
+using System;
 using System.Collections.Generic;
-using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking {
@@ -14,7 +15,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 
 	public static class EmployeeTargetReservation {
 
-		//TODO 1 - Integrate this as a component of GenericNPC, instead of its own thing.
+		//TODO 1 - Integrate this as a component of GenericNPC, instead of it being its own thing.
 
 		//Lists of NPCs targets. The hashsets exist to improve target search performance.
 		private static readonly Dictionary<uint, GameObject> NpcBoxTargets = new();
@@ -173,4 +174,44 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 		}
 
 	}
+
+    public static class EmployeeReservationExtensions {
+
+        public static void ClearNPCReservations(this EmployeeNPC employeeNPC) {
+            EmployeeTargetReservation.ClearNPCReservations(employeeNPC.ParentNetid);
+        }
+
+        public static void AddExtraStorageTarget(this EmployeeNPC employeeNPC, StorageSlotInfo shelfTarget) {
+            EmployeeTargetReservation.AddTargetReservation(employeeNPC.ParentNetid, null, shelfTarget, TargetType.StorageSlot);
+        }
+
+        public static void AddExtraProductShelfTarget(this EmployeeNPC employeeNPC, ProductShelfSlotInfo shelfTarget) {
+            EmployeeTargetReservation.AddTargetReservation(employeeNPC.ParentNetid, null, shelfTarget, TargetType.ProdShelfSlot);
+        }
+
+        public static bool RefreshAndCheckValidTargetedStorage(this EmployeeNPC employeeNPC, NPC_Manager __instance,
+                bool clearReservation, out StorageSlotInfo storageSlotInfo) {
+
+            bool isValid = TargetMatching.RefreshAndCheckTargetedShelf(employeeNPC, __instance,
+                clearReservation, -1, TargetType.StorageSlot, out GenericShelfSlotInfo slotInfoBase);
+            storageSlotInfo = (StorageSlotInfo)slotInfoBase;
+            return isValid;
+        }
+
+
+        public static bool RefreshAndCheckValidTargetedProductShelf(this EmployeeNPC employeeNPC, NPC_Manager __instance,
+                RestockJobInfo jobInfo) {
+
+            return TargetMatching.RefreshAndCheckValidTargetedProductShelf(employeeNPC, __instance, false, jobInfo);
+        }
+
+        public static bool HasTargetedStorage(this EmployeeNPC employeeNPC) {
+            return EmployeeTargetReservation.HasTargetedStorage(employeeNPC.ParentNetid, out _);
+        }
+
+        public static bool HasTargetedProductShelf(this EmployeeNPC employeeNPC) {
+            return EmployeeTargetReservation.HasTargetedProductShelf(employeeNPC.ParentNetid, out _);
+        }
+
+    }
 }

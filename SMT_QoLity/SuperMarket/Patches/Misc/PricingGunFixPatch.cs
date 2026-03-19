@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+﻿using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
 using Damntry.UtilsBepInEx.IL;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using UnityEngine;
+using static ProductListing;
 
 namespace SuperQoLity.SuperMarket.Patches.Misc {
 
@@ -85,11 +86,11 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			codeMatcher.SetInstructionAndAdvance(CodeInstructionNew.LoadLocal(num_refIndex))
 				.Insert(Transpilers.EmitDelegate(GetRandomizedMarketPrice));
 
-			return codeMatcher.InstructionEnumeration();
+            return codeMatcher.InstructionEnumeration();
 		}
 
 		private static float GetRandomizedMarketPrice(int productID) {
-			Data_Product dataProd = ProductListing.Instance.productPrefabs[productID].GetComponent<Data_Product>();
+            ProductData dataProd = ProductListing.Instance.productsData[productID];
 			float marketPrice = dataProd.basePricePerUnit * ProductListing.Instance.tierInflation[dataProd.productTier];
 
 			//Use as base the calculated market price shown in the pricing gun, instead of 

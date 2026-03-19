@@ -99,7 +99,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Movement {
 
 		public void SetLookRotationParams(Vector3 yawVector, Quaternion targetRotation, RotationSpeedMode rotationMode) {
 			if (!rotationSettings.TryGetValue(rotationMode, out rotateSettings)) {
-				TimeLogger.Logger.LogTimeFatal($"Rotation speed mode {rotationMode} " +
+				TimeLogger.Logger.LogFatal($"Rotation speed mode {rotationMode} " +
 					$"not found in rotation settings.", LogCategories.AI);
 				return;
 			}

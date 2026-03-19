@@ -1,21 +1,24 @@
 ﻿using Cysharp.Threading.Tasks;
 using Damntry.Utils.Logging;
+using Damntry.UtilsBepInEx.Debug;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsUnity.Components;
+using Damntry.UtilsUnity.Components.InputManagement;
+using Damntry.UtilsUnity.ExtensionMethods;
 using Damntry.UtilsUnity.Resources;
 using HarmonyLib;
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using Mirror;
-using Rito.RadialMenu_v3;
+using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
-using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
@@ -45,7 +48,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			GameData.Instance.UserCode_CmdAlterFunds__Single(funds);
 			GameData.Instance.NetworkgameFranchisePoints = XX;
 			Time.timeScale = 1f;
-			GameData.Instance.NetworktimeOfDay = 9;
+			GameData.Instance.NetworktimeOfDay = 22.49f;
 			timeFactor
 
 			Max hireable employees
@@ -68,8 +71,11 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			SpawnMoreEmployeesAndAutoAssign = 1 << 2,
 			CustomerMassSpawning = 1 << 3,
 			DifferentSizesNPC = 1 << 4,
+            ExtraMaxEmployees = 1 << 5,
+            CustomerNameplate = 1 << 6,
+            
 
-			All = ~None
+            All = ~None
 		}
 		[Flags]
 		private enum ActiveDebugUtilities {
@@ -97,121 +103,135 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 					};
 				}
 				if (activeDebugUtilities == ActiveDebugUtilities.CheckoutProductFiller) {
-					WorldState.OnWorldStarted += CheckoutProductFiller.StartProductSpawnLoop;
+					WorldState.OnWorldLoaded += CheckoutProductFiller.StartProductSpawnLoop;
 				}
 				if (activeDebugUtilities == ActiveDebugUtilities.TheDuckening) {
-					WorldState.OnWorldStarted += () => {
-						KeyPressDetection.AddHotkey(KeyCode.Mouse2, KeyPressAction.KeyHeld, 90, () => { TheDuckening.LoadDuck(); });
+					WorldState.OnWorldLoaded += () => {
+						InputManagerSMT.Instance.TryAddHotkey("PlaceDuck", KeyCode.Mouse2, 
+							InputState.KeyHeld, HotkeyActiveContext.WorldLoaded, 90, () => { TheDuckening.LoadDuck(); });
 					};
-					WorldState.OnQuitOrMenu += () => {
-						KeyPressDetection.RemoveHotkey(KeyCode.Mouse2);
+					WorldState.OnQuitOrMainMenu += () => {
+                        InputManagerSMT.Instance.RemoveHotkey("PlaceDuck");
 					};
 				}
+				WorldState.OnWorldLoaded += () => {
+					if (WorldState.CurrentOnlineMode == GameOnlineMode.Host) {
+                        //Left Control + Left Alt + Scroll to change
+                        TimeScaleDebug.Initialize<TimeScaleMethods>(SMTInstances.FirstPersonController().GameObject(),
+							showInGameNotification: () => ModConfig.Instance.EnabledDevMode.Value);
+                    }
+                };
+            }
+        }
 
-				//TestRadial.Initialize(KeyCode.K);
-				//LOG.TEMPWARNING(KeyPressDetection.GetRegisteredHotkeys());
+        private class TimeScaleMethods : ITimeScaleMethods {
+
+            //Current vanilla defaults as of 17/11/25 for reference
+            private float vanillaCrouchSpeed = 4f;
+            private float vanillaMoveSpeed = 5f;
+            private float vanillaSprintSpeed = 10f;
+            private float vanillaAirSpeed = 3f;
+            private float vanillaSpeedChangeRate = 10f;
+            private float vanillaGravity = -15f;
+
+            public void ReadVanillaValues() {
+                FirstPersonController fpsControl = SMTInstances.FirstPersonController();
+
+                vanillaCrouchSpeed = fpsControl.CrouchSpeed;
+                vanillaMoveSpeed = fpsControl.MoveSpeed;
+                vanillaSprintSpeed = fpsControl.SprintSpeed;
+                vanillaAirSpeed = fpsControl.airSpeed;
+                vanillaSpeedChangeRate = fpsControl.SpeedChangeRate;
+				//This one is not really working but it doesnt matter that much.
+                vanillaGravity = fpsControl.Gravity;
+                //For the crouch animation speed I would need to transpile PlayerNetwork.CrouchLerpCoroutine. Not worth it.
+            }
+
+            public void SetAdjustedSpeed(float timeScaleDiff) {
+                FirstPersonController fpsControl = SMTInstances.FirstPersonController();
+                fpsControl.CrouchSpeed = vanillaCrouchSpeed * timeScaleDiff;
+                fpsControl.MoveSpeed = vanillaMoveSpeed * timeScaleDiff;
+                fpsControl.SprintSpeed = vanillaSprintSpeed * timeScaleDiff;
+                fpsControl.airSpeed = vanillaAirSpeed * timeScaleDiff;
+                fpsControl.SpeedChangeRate = vanillaSpeedChangeRate * timeScaleDiff;
+                fpsControl.Gravity = vanillaGravity * timeScaleDiff;
+            }
+        }
+
+
+        public static async Task MovePlayerTo(Vector3 position, Vector2 lookRotation) {
+            /* Example call from console
+			SuperQoLity.SuperMarket.Patches.Debug.TestAndDebugPatch.MovePlayerTo(
+				new Vector3(-5.0987f, 0.02f, 43.0458f), 
+				new Vector2(120.1996f, 0f)
+			);
+			*/
+            FirstPersonController fpc = SMTInstances.FirstPersonController();
+			CustomCameraController ccc = SMTInstances.GetCustomCameraController();
+
+			if (!fpc || !ccc) {
+				TimeLogger.Logger.LogDebug("FirstPersonController or CustomCameraController " +
+					"have not awaken yet", LogCategories.Other);
+			}
+
+            fpc.isTeleporting = true;	//Disallow player movement
+			
+			await UniTask.DelayFrame(1, PlayerLoopTiming.FixedUpdate);
+
+			GameObject.Find("LocalGamePlayer").GetComponent<FirstPersonTransform>().transform.position = position;
+            ccc.x = lookRotation.x;
+            ccc.y = lookRotation.y;
+
+            await UniTask.DelayFrame(1, PlayerLoopTiming.FixedUpdate);
+
+            fpc.isTeleporting = false;	//Restore movement
+        }
+
+		public static void DeleteAllFSM() {
+			foreach (var item in Component.FindObjectsByType<PlayMakerFSM>(FindObjectsSortMode.None)) {
+				Component.DestroyImmediate(item);
 			}
 		}
 
-		/*
-		public static class TestRadial {
+        //Patches are functionality that, if enabled, will do its logic on their own
+        #region Patches
 
-			private static RadialMenu radialMenu;
-			private static KeyCode key;
+        public class ShowCustomerNameplateId {
 
-
-			public static void Initialize(KeyCode key) {
-				WorldState.OnGameWorldChange += (GameWorldEvent ev) => {
-					if (ev == GameWorldEvent.FPControllerStarted) {
-						radialMenu = SMTComponentInstances.FirstPersonControllerInstance()
-							.gameObject.AddComponent<RadialMenu>();
-
-
-						//TODO 0 - Need to initialize manually those 2 in radialMenu
-						//[SerializeField] private GameObject _pieceSample; // 복제될 조각 게임오브젝트
-						//[SerializeField] private RectTransform _arrow;    // 화살표 이미지의 부모 트랜스폼
-
-
-						TestRadial.key = key;
-
-						//TODO 0 - TEMP TEST
-						string pngTestPath = "C:\\Users\\Damntry\\Visual Studio Projects\\Visual Studio 2019 Projects\\repos\\!!Global Libraries\\Damntry Globals Unity\\UnityRadialMenu\\RadialMenu_v3\\Sprites\\Kenny Animals\\bear.png";
-
-						radialMenu.AddSpriteImageFromFile(pngTestPath);
-						KeyPressDetection.AddHotkey(key, KeyPressAction.KeyDown, 100, () => radialMenu.Show());
-						KeyPressDetection.AddHotkey(key, KeyPressAction.KeyUp, 100, () => {
-							LOG.TEMPWARNING($"Selected : {radialMenu.Hide()}");
-						});
-					}
-				};
-			}
-
-		}
-		*/
-
-
-		/*
-		[HarmonyPatch(typeof(Builder_Main), "AuxiliarSeparationMethod")]
-		[HarmonyPrefix]
-		private static bool AuxiliarSeparationMethodPatch(Builder_Main __instance, int i, bool activateDLCSigns) {
-			foreach (Transform item in ((Component)__instance.tabContainerOBJ.transform.GetChild(i)).transform.Find("Container")) {
-				Transform val = item;
-				if (!val.GetComponent<PlayMakerFSM>()) {
-					continue;
-				}
-				int value = ((Component)val).GetComponent<PlayMakerFSM>().FsmVariables.GetFsmInt("PropIndex").Value;
-				float num;
-				float energyCost;
-				float employeeHappiness;
-				if (i == 0) {
-					Data_Container component = __instance.buildablesArray[value].GetComponent<Data_Container>();
-					num = component.cost;
-					energyCost = component.energyCost;
-					employeeHappiness = component.employeeHappiness;
-				} else {
-					BuildableInfo component2 = __instance.decorationPropsArray[value].GetComponent<BuildableInfo>();
-					num = component2.cost;
-					energyCost = component2.energyCost;
-					employeeHappiness = component2.employeeHappiness;
-					if (activateDLCSigns && component2.isCool) {
-						((Component)((Component)val).transform.Find("DLC")).gameObject.SetActive(true);
-					}
-				}
-				((Component)((Component)val).transform.Find("Prop_Price")).GetComponent<TextMeshProUGUI>().text = "$" + num;
-				if (energyCost > 0f) {
-					((Component)((Component)val).transform.Find("Energy/EnergyCost")).GetComponent<TextMeshProUGUI>().text = energyCost + "kWh";
-					((Component)((Component)((Component)val).transform.Find("Energy")).transform).gameObject.SetActive(true);
-				}
-				if (employeeHappiness > 0f) {
-					((Component)((Component)val).transform.Find("EmployeeHappiness/EmployeeHappinessAmount")).GetComponent<TextMeshProUGUI>().text = "+" + employeeHappiness;
-					((Component)((Component)((Component)val).transform.Find("EmployeeHappiness")).transform).gameObject.SetActive(true);
-				}
-				if (((Component)val).transform.GetSiblingIndex() == 0) {
-					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable0");
-				} else if (((Component)val).transform.GetSiblingIndex() == 1) {
-					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable0a");
-				} else if (i == 0) {
-					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("buildable" + value);
-				} else {
-					((Component)((Component)val).transform.Find("Prop_Text")).GetComponent<TextMeshProUGUI>().text = LocalizationManager.instance.GetLocalizationString("decorat" + value);
-				}
-			}
-			return false;
-		}
-		*/
-
-
-		//Patches are functionality that, if enabled, will do its logic on their own
-		#region Patches
-
-		public class FasterTimePassing {
 			[HarmonyPrepare]
-			internal static bool IsFasterTimePassingActive() => activeDebugPatches.HasFlag(ActiveDebugPatches.FasterTimePassing);
+			internal static bool IsCustomerNameplate() =>
+					activeDebugPatches.HasFlag(ActiveDebugPatches.CustomerNameplate);
+
+			/// <summary>
+			/// Shows the npcid of customers as text above their model.
+			/// </summary>
+			[HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.SpawnCustomerNPC))]
+			[HarmonyPostfix]
+			public static IEnumerator ShowCustomerNameplateIdPatch(IEnumerator result) {
+				while (result.MoveNext()) {
+					yield return result.Current;
+				}
+
+				Transform customerParent = NPC_Manager.Instance.customersnpcParentOBJ.transform;
+				int customerIndex = customerParent.childCount - 1;
+				GameObject gameObject = customerParent.GetChild(customerIndex).gameObject;
+				Transform nameT = gameObject.transform.Find("NameCanvas");
+				nameT.gameObject.SetActive(true);
+				TextMeshProUGUI nameText = nameT.Find("NPCName").GetComponent<TextMeshProUGUI>();
+				nameText.text = gameObject.GetInstanceID().ToString();
+				nameText.isOverlay = true;
+			}
+		}
+
+        public class FasterTimePassing {
+			[HarmonyPrepare]
+			internal static bool IsFasterTimePassingActive() => 
+				activeDebugPatches.HasFlag(ActiveDebugPatches.FasterTimePassing);
 
 			[HarmonyPatch(typeof(GameData), "FixedUpdate")]
 			[HarmonyPrefix]
 			private static void FixedUpdate(GameData __instance) {
-				if (__instance.isSupermarketOpen && WorldState.CurrenOnlineMode == GameOnlineMode.Host) {
+				if (__instance.isSupermarketOpen && WorldState.CurrentOnlineMode == GameOnlineMode.Host) {
 					__instance.timeFactor = 0.025f; //lower is faster game time.
 				}
 			}
@@ -220,7 +240,8 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 		public class FasterMovingCustomers {
 
 			[HarmonyPrepare]
-			internal static bool IsFasterCustomerActive() => activeDebugPatches.HasFlag(ActiveDebugPatches.FasterMovingCustomers);
+			internal static bool IsFasterCustomerActive() => 
+				activeDebugPatches.HasFlag(ActiveDebugPatches.FasterMovingCustomers);
 
 
 			[HarmonyPatch(typeof(NPC_Manager), "SpawnCustomerNCP")]
@@ -230,7 +251,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 					yield return result.Current;
 				}
 
-				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+				if (WorldState.CurrentOnlineMode != GameOnlineMode.Host) {
 					yield break;
 				}
 
@@ -247,51 +268,12 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 
 		}
-		/*
-		public class aaaaa {
 
-			static bool ReplaceCommasWithPeriods = true;
-
-			[HarmonyPatch(typeof(ManagerBlackboard), nameof(ManagerBlackboard.CalculateShoppingListTotal))]
-			[HarmonyPostfix]
-			public static IEnumerator CalculateShoppingListTotalOverride(IEnumerator __result, ManagerBlackboard __instance) {
-				LOG.TEMPWARNING("1");
-				while (__result.MoveNext()) {
-					yield return __result.Current;
-					LOG.TEMPWARNING("2");
-				}
-
-				LOG.TEMPWARNING("3");
-				if (ReplaceCommasWithPeriods) {
-					yield return new WaitForEndOfFrame();
-					__instance.shoppingTotalCharge = 0f;
-					if (__instance.shoppingListParent.transform.childCount > 0) {
-						foreach (Transform item in __instance.shoppingListParent.transform) {
-							string text = item.transform.Find("BoxPrice").GetComponent<TextMeshProUGUI>().text;
-
-							if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float price)) {
-								__instance.shoppingTotalCharge += price;
-							}
-						}
-					}
-					__instance.totalChargeOBJ.text = ProductListing.Instance.ConvertFloatToTextPrice(__instance.shoppingTotalCharge);
-				}
-			}
-
-			[HarmonyPatch(typeof(TMP_Text), "text", MethodType.Setter)]
-			public static class TMPTextPatch {
-				private static void Prefix(ref string value) {
-					if (ReplaceCommasWithPeriods && !string.IsNullOrEmpty(value)) {
-						value = value.Replace(',', '.');
-					}
-				}
-			}
-		}
-		*/
 		public class DifferentSizesNPC {
 
 			[HarmonyPrepare]
-			internal static bool IsDifferentSizesNPCActive() => activeDebugPatches.HasFlag(ActiveDebugPatches.DifferentSizesNPC);
+			internal static bool IsDifferentSizesNPCActive() => 
+				activeDebugPatches.HasFlag(ActiveDebugPatches.DifferentSizesNPC);
 
 
 			[HarmonyPatch(typeof(NPC_Manager), "SpawnDummyNCP")]
@@ -301,7 +283,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 					yield return result.Current;
 				}
 
-				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+				if (WorldState.CurrentOnlineMode != GameOnlineMode.Host) {
 					yield break;
 				}
 
@@ -321,7 +303,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			[HarmonyPatch(typeof(NPC_Manager), "SetHiredEmployeesNumber")]
 			[HarmonyPostfix]
 			public static void SpawnEmployeeByIndexPostfix() {
-				if (WorldState.CurrenOnlineMode != GameOnlineMode.Host) {
+				if (WorldState.CurrentOnlineMode != GameOnlineMode.Host) {
 					return;
 				}
 
@@ -344,13 +326,14 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 		public class SpawnMoreEmployeesAndAutoAssign {
 
-			internal static bool IsAutoAssignAllEmployeesActive = activeDebugPatches.HasFlag(ActiveDebugPatches.SpawnMoreEmployeesAndAutoAssign);
+			internal static bool IsAutoAssignAllEmployeesActive = 
+				activeDebugPatches.HasFlag(ActiveDebugPatches.SpawnMoreEmployeesAndAutoAssign);
 
 			internal static EmployeeJob employeeAssigment = EmployeeJob.Restocker;
 			internal static int TotalNumberEmployeesTarget = 30;
 
 			public static void SpawnMoreEmployeesAndAutoAssignEvent(GameWorldEvent gameWorldEvent) {
-				if (gameWorldEvent == GameWorldEvent.WorldStarted && WorldState.CurrenOnlineMode == GameOnlineMode.Host) {
+				if (gameWorldEvent == GameWorldEvent.WorldLoaded && WorldState.CurrentOnlineMode == GameOnlineMode.Host) {
 					//This will only work if there is already 1 employee hired.
 
 					int hiredEmployees = NPC_Manager.Instance.hiredEmployeesData.Length;
@@ -394,12 +377,13 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 		public class CustomerMassSpawning {
 			[HarmonyPrepare]
-			internal static bool IsCustomerMassSpawningActive() => activeDebugPatches.HasFlag(ActiveDebugPatches.CustomerMassSpawning);
+			internal static bool IsCustomerMassSpawningActive() =>
+				activeDebugPatches.HasFlag(ActiveDebugPatches.CustomerMassSpawning);
 
 			[HarmonyPatch(typeof(GameData), "Update")]
 			[HarmonyPostfix]
 			private static void UpdatePatch(GameData __instance) {
-				if (WorldState.IsGameWorldStarted && WorldState.CurrenOnlineMode == GameOnlineMode.Host) {
+				if (WorldState.IsWorldLoaded && WorldState.CurrentOnlineMode == GameOnlineMode.Host) {
 					bool spawnCustomers = false;
 					int count = 0;
 
@@ -421,15 +405,26 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 							IEnumerator enumCust = NPC_Manager.Instance.SpawnCustomerNPC();
 							while (enumCust.MoveNext()) ;
 						}
-						TimeLogger.Logger.LogTimeWarning($"Total customers on map: {NPC_Manager.Instance.customersnpcParentOBJ.transform.childCount}",
+						TimeLogger.Logger.LogWarning($"Total customers on map: {NPC_Manager.Instance.customersnpcParentOBJ.transform.childCount}",
 							LogCategories.TempTest);
 					}
 				}
 			}
-
-			
-
 		}
+
+		public class IncreaseMaxEmployees() {
+
+            [HarmonyPrepare]
+            internal static bool IsExtraEmployeesActive() => 
+				activeDebugPatches.HasFlag(ActiveDebugPatches.ExtraMaxEmployees);
+
+            [HarmonyPatch(typeof(UpgradesManager), nameof(UpgradesManager.OnStartClient))]
+            [HarmonyPrefix]
+            public static void AddExtraEmployeesOnLoad(UpgradesManager __instance) {
+                NPC_Manager.Instance.maxEmployees += 1;
+            }
+
+        }
 
 		private static void RotateShelfs() {
 			foreach (Transform shelf in NPC_Manager.Instance.shelvesOBJ.transform) {
@@ -472,8 +467,17 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 			}
 		}
 
-		/// <summary>Couple ways of handling the cat pet cooldown.</summary>
-		private void CatWaitState() {
+        public static void FillAllStorageSlotsWithBoxes() {
+            ContainerSearchLambdas.ForEachStorageSlotLambda(NPC_Manager.Instance, false, false,
+                (storageIndex, slotIndex, productId, quantity, storageObjT) => {
+                    storageObjT.GetComponent<Data_Container>().CmdUpdateArrayValuesStorage(slotIndex, 1, 20);
+                    return ContainerSearchLambdas.LoopAction.Nothing;
+                }
+            );
+        }
+
+        /// <summary>Couple ways of handling the cat pet cooldown.</summary>
+        private void CatWaitState() {
 			GameObject catObj = GameObject.Find("TheCoolRoom/Cats/Cat_NoAlpha_C3/Cat_1");
 			PlayMakerFSM catFsm = ActionHelpers.GetGameObjectFsm(catObj, "Behaviour");
 			RandomWait fsmCatRandomWaitState = catFsm.FsmStates.
@@ -503,7 +507,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				while (true) {
 					AddNewMonoBehavioursFromActiveScene();
 
-					if (WorldState.IsGameWorldStarted) {
+					if (WorldState.IsWorldLoaded) {
 						System.Text.StringBuilder sb = new();
 
 						dict
@@ -518,7 +522,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 						return;
 					}
 
-					await System.Threading.Tasks.Task.Delay(2);
+					await Task.Delay(2);
 				}
 			}
 
@@ -549,7 +553,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 			public static async void StartProductSpawnLoop() {
 				if (NPC_Manager.Instance == null || NPC_Manager.Instance.checkoutOBJ)
-					WorldState.OnQuitOrMenu += () => { loopActive = false; };
+					WorldState.OnQuitOrMainMenu += () => { loopActive = false; };
 
 				loopActive = true;
 
@@ -563,6 +567,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 			}
 
+			
 			/// <summary>
 			/// Generates parentScale product and places it in the belt of the first checkout.
 			/// Based on NPC_Info.PlaceProductsCoroutine.
@@ -592,9 +597,9 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				float num3 = 0f;
 				float num4 = 0f;
 				foreach (int item in productsIDInCheckout) {
-					float num5 = ((!ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().hasTrueCollider)
-						? ProductListing.Instance.productPrefabs[item].GetComponent<BoxCollider>().size.x
-						: ProductListing.Instance.productPrefabs[item].GetComponent<Data_Product>().trueCollider.x);
+					float num5 = ((!ProductListing.Instance.productsData[item].hasTrueCollider)
+						? ProductListing.Instance.productsData[item].productPrefab.GetComponent<BoxCollider>().size.x
+						: ProductListing.Instance.productsData[item].trueColliderSize.x);
 					if (productsIDInCheckout.Count == 1) {
 						num3 = num5 / 2f;
 						break;
@@ -615,13 +620,12 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				NetworkServer.Spawn(gameObject);
 			}
 		}
+		
 
 		public static class TheDuckening {
 
 			private static readonly string[] duckPrefabSufixes = ["Black", "Blue", "Cyan", "GreenDark", "GreenNeon",
 				"LightPurple", "Orange", "Pink", "Pond", "Purple", "Red", "RedEye", "White", "Yellow", "YinYang"];
-
-			private static Shader generalShader;
 
 			private static AssetBundleElement bundleElement;
 
@@ -638,10 +642,10 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				string basePath = "Snowconesolid Assets/Super Rubber Duck Pack/Rubber Duck PREFABS/RubberDuck_";
 				string randomDuckSuffix = duckPrefabSufixes[UnityEngine.Random.Range(0, duckPrefabSufixes.Length)];
 				if (bundleElement.TryLoadNewPrefabInstance(basePath + randomDuckSuffix, out GameObject superQolDuck)) {
-					superQolDuck.GetComponent<MeshRenderer>().material.shader = GetGameShader(superQolDuck.transform);
-					superQolDuck.transform.SetParent(SMTComponentInstances.GameDataManagerInstance().transform);
+					superQolDuck.GetComponent<MeshRenderer>().material.shader = ShaderUtils.SMT_Shader.Value;
+					superQolDuck.transform.SetParent(SMTInstances.GameDataManager().transform);
 					superQolDuck.transform.position = raycastHit.point;
-					//Set random model size
+					//Set stateActionArrayRandom model size
 					float scale = UnityEngine.Random.Range(0.15f, 1f);
 					superQolDuck.transform.localScale = new Vector3(scale, scale, scale);
 					//Very basic check to attempt to reduce number of floating ducks.
@@ -654,25 +658,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 			}
 
-			/// <summary>
-			/// These prefabs use the built-in shader, but this game uses URP. I could convert them in the 
-			///		Unity editor but instead I just copy the currently used shader with all its properties.
-			/// </summary>
-			private static Shader GetGameShader(Transform parentTransform) {
-				if (generalShader == null) {
-					if (GameData.Instance == null) {
-						LOG.TEMPWARNING("GameData instance null");
-						return null;
-					}
-
-					generalShader = GameObject.Find("Level_SupermarketProps/UsableProps").transform.
-						GetChild(0).
-						GetComponent<MeshRenderer>().
-						material.shader;
-				}
-
-				return generalShader;
-			}
+			
 		}
 
 		public static class BoxStorageRemoval {

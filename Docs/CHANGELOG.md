@@ -1,4 +1,38 @@
 ## Changelog
+### 1.0.0.0
+	IMPORTANT: Many existing settings have changed and will be disabled. You have to set them up again.
+
+	* Changes
+		- Highlights reworked and expanded:
+			- 4 visual modes to choose from.
+			- Boxes on the floor or being held by other employee/players will highlight too.
+			- Highlights are now fully updated dynamically as boxes are put by others into storage, picked up, etc.
+			- Brightness configurable via the alpha channel of its highlight color setting.
+			- New hotkey to highlight the product you are aiming at. Clears highlights if no product.
+	* New
+		- Pick up a broom, right click to start aiming, left click to shoot. Have fun.
+			Works on trash too, and by trash I mean your coop friends, but it also destroys the piles of garbage that spawn on your store.
+		- Customers added to the job scheduler to reduce them from standing around as much.
+		- Stuck customers can now free themselves. As an extra last resort, they may teleport a small distance but this will probably never happen.
+		- A custom made visual equipment wheel to select a tool to bring into your hands, with optional hotkeys. Tools wont cheat themselves in, there must be a free one on the map or an organizer.
+		- New setting to restrict customers to only shop for products that had been assigned to shelves, instead of every unlocked product. 
+			Enables store specialization. Customers will still complain if the assigned product runs out of stock.
+		- Adjustable % of customers paying with card vs cash.
+		- Hotkeys to build or move the buildable you are looking at. Saves you opening the build menu and manually looking for it.
+		- Setting to increase the limit of buildables and decorations that the game can load, from 5000 to 100000.
+		- Main menu mod logo
+	* Fixed
+		- Broken mod features after multiple game updates, mostly from the employee module.
+		- Base game bug where products were being put in wrong shelves after other shelves were deleted
+		- Performance loss after first box pick up with highlighting enabled. 
+			Large stores could lose >20% performance or more.
+### 0.8.8.0 (0.8.7.68000 on thunderstore)
+	- Changes from last game update:
+		Fixed item transfer not working correctly when placing items..
+		Added new employee fixes.
+	- Fixed rare exception in restock jobs: "Unable to sort because the IComparer.Compare() method returns inconsistent results", that causes restock employees to stop working.	
+	
+	Huge changes are coming soon.
 ### 0.8.7.7 (0.8.7.61000 on thunderstore)
 	- Fix for BetterSMT 2.5.0 update causing errors with highlighting.
 	- From now on, Thunderstore will have a different version number than everywhere else, until I hit 0.9.

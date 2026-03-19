@@ -72,7 +72,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// <summary>
 		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
 		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
+		/// <param name="__instance">NPC_Manager Instance</param>
 		/// <param name="checkNPCStorageTarget">True to skip the storage slots that are currently being targeted by an employee NPC.</param>
 		/// <param name="skipEmptyBoxes">Small optimization to skip slots with either no box, or an empty box, so they are not passed to the caller.</param>
 		/// <param name="storageSlotLambda">The StorageLoopFunction search lambda. See <see cref="StorageLoopFunction"/> for more information.</param>
@@ -105,7 +105,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// <summary>
 		/// Loops through all storages and its box slots, and executes on each the lambda passed through parameter.
 		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
+		/// <param name="__instance">NPC_Manager Instance</param>
 		/// <param name="checkNPCStorageTarget">True to skip the storage slots that are currently being targeted by an employee NPC.</param>
 		/// <param name="storageSlotLambda">The StorageSlotFunction search lambda. See <see cref="StorageSlotFunction"/> for more information.</param>
 		public static StorageSlotInfo FindStorageSlotLambda(NPC_Manager __instance, bool checkNPCStorageTarget, StorageSlotFunction storageSlotLambda) {
@@ -146,7 +146,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// <summary>
 		/// Loops through all product shelves and its item slots, and executes on each the lambda passed through parameter.
 		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
+		/// <param name="__instance">NPC_Manager Instance</param>
 		/// <param name="checkNPCProdShelfTarget">True to skip the product shelf slots that are currently being targeted by an employee NPC.</param>
 		/// <param name="prodShelfSlotLambda">The ProdShelfLoopFunction search lambda. See <see cref="ProdShelfLoopFunction"/> for more information.</param>
 		/// <returns></returns>
@@ -177,25 +177,25 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		 * with this generic implementation.
 		
 		public static void ForEachProductShelfSlotLambdaNew(NPC_Manager __instance, ShelfSearchOptions searchOptions, ShelfSlotLoopFunction shelfSlotLambda) {
-			ForEachShelfSlotLambda(__instance, ShelfType.ProdShelfSlot, searchOptions, shelfSlotLambda);
+			ForEachShelfSlotLambda(__instance, ParentContainerType.ProdShelfSlot, searchOptions, shelfSlotLambda);
 		}
 
 		public static void ForEachStorageSlotLambdaNew(NPC_Manager __instance, ShelfSearchOptions searchOptions, ShelfSlotLoopFunction shelfSlotLambda) {
-			ForEachShelfSlotLambda(__instance, ShelfType.StorageSlot, searchOptions, shelfSlotLambda);
+			ForEachShelfSlotLambda(__instance, ParentContainerType.StorageSlot, searchOptions, shelfSlotLambda);
 		}
 				
 
 		public delegate LoopAction ShelfSlotLoopFunction(int shelfIndex, int slotIndex, int productId, int quantity, Data_Container dataContainer, Vector3 position);
 
 		
-		public static void ForEachShelfSlotLambda(NPC_Manager __instance, ShelfType shelfType, 
+		public static void ForEachShelfSlotLambda(NPC_Manager __instance, ParentContainerType shelfType, 
 				ShelfSearchOptions searchOptions, ShelfSlotLoopFunction shelfSlotLambda) {
 
 			Transform shelfTransform;
 			Data_Container dataContainer;
 			int[] productInfoArray;
 
-			Transform shelfObjT = shelfType == ShelfType.ProdShelfSlot ? 
+			Transform shelfObjT = shelfType == ParentContainerType.ProdShelfSlot ? 
 				__instance.shelvesOBJ.transform : __instance.storageOBJ.transform;
 			
 			int shelfCount = shelfObjT.childCount;
@@ -233,7 +233,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// <summary>
 		/// Loops through all product shelves and its item slots, and executes on each the lambda passed through parameter.
 		/// </summary>
-		/// <param name="__instance">NPC_Manager instance</param>
+		/// <param name="__instance">NPC_Manager Instance</param>
 		/// <param name="productShelfLambda">The ProdShelfLoopFunction search lambda. See <see cref="ShelfLoopFunction"/> for more information.</param>
 		/// <returns></returns>
 		public static void ForEachShelfLambda(NPC_Manager __instance, 

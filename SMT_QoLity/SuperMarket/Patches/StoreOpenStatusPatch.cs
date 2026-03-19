@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
+using Damntry.Utils.Events;
 using Damntry.Utils.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
@@ -37,9 +38,9 @@ namespace SuperQoLity.SuperMarket.Patches {
 		
 		public override void OnPatchFinishedVirtual(bool IsActive) {
 			if (IsActive) {
-				NetworkSpawnManager.RegisterNetwork<StoreStatusNetwork>(918219);
+				NetworkSpawnManager.RegisterNetwork<StoreStatusNetwork>(StoreStatusNetwork.NetworkAssetId);
 
-				WorldState.OnQuitOrMenu += async () => await storeClosedTask.StopTaskAndWaitAsync(500);
+				WorldState.OnQuitOrMainMenu += async () => await storeClosedTask.StopTaskAndWaitAsync(500);
 			}
 		}
 
@@ -75,17 +76,16 @@ namespace SuperQoLity.SuperMarket.Patches {
 				if (!GameData.Instance.isSupermarketOpen) {
 					await storeClosedTask.StartAwaitableTaskAsync(CheckCustomersPendingActions, "Wait for end of customers actions", true);
 					if (storeClosedTask.IsCancellationRequested) {
-						TimeLogger.Logger.LogTimeDebugFunc(() => "Skipped to next day or quitting to main menu before customers left the store.", LogCategories.Task);
+						TimeLogger.Logger.LogDebugFunc(() => "Skipped to next day or quitting to main menu before customers left the store.", LogCategories.Task);
 					} else {
-						TimeLogger.Logger.LogTimeDebugFunc(() => "All customers are leaving or already left the supermarket.", LogCategories.Task);
+						TimeLogger.Logger.LogDebugFunc(() => "All customers are leaving or already left the supermarket.", LogCategories.Task);
 					}
 					IsOpen = false;
 				}
 
 				StoreStatusNetwork.IsStoreOpenOrCustomersInsideSync.Value = IsOpen;
-				if (OnSupermarketOpenStateChanged != null) {
-					OnSupermarketOpenStateChanged(StoreStatusNetwork.IsStoreOpenOrCustomersInsideSync);
-				}
+
+                EventMethods.TryTriggerEvents(OnSupermarketOpenStateChanged, StoreStatusNetwork.IsStoreOpenOrCustomersInsideSync);
 			} finally {
 				semaphoreLock.Release();
 			}

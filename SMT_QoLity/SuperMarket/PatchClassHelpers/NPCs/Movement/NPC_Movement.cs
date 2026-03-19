@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Damntry.Utils.Logging;
+using UnityEngine;
 using UnityEngine.AI;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Movement {
@@ -30,10 +31,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Movement {
 			if (lookHandler.IsRotationPending) {
 				//Rotate the NPC one step towards the target each FixedUpdate.
 				lookHandler.RotateTowardsTarget(Time.fixedDeltaTime);
-			}		
+			}
 		}
 
-		//TODO 0 - Engineer something so these methods can only be called from GenericNPC and derived.
+		//TODO 1 - Engineer something so these methods can only be called from GenericNPC and derived.
 		public void MoveTo(Vector3 destination, Vector3 targetObjectPosition) {
 			MoveToInternal(destination, toScout: false, targetObjectPosition);
 		}

@@ -1,6 +1,7 @@
-﻿using System;
-using Damntry.Utils.Logging;
+﻿using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.ModHelpers;
+using HutongGames.PlayMaker.Actions;
+using System;
 
 
 namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
@@ -49,14 +50,14 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 			switch (ModStatus) {
 				case ModLoadStatus.DifferentVersion:
 					if (!allPatchsOk) {
-						TimeLogger.Logger.LogTimeWarning(GetDifferentVersionLogMessage(), LogCategories.Loading);
+						TimeLogger.Logger.LogWarning(GetDifferentVersionLogMessage(), LogCategories.Loading);
 					}
 					break;
 				case ModLoadStatus.NotLoaded:
-					TimeLogger.Logger.LogTimeDebug($"Mod {ModInfoBetterSMT.Name} seems to be missing. Skipping its patches.", LogCategories.Loading);
+					TimeLogger.Logger.LogDebug($"Mod {ModInfoBetterSMT.Name} seems to be missing. Skipping its patches.", LogCategories.Loading);
 					break;
 				case ModLoadStatus.LoadedOk:
-					TimeLogger.Logger.LogTimeInfo($"Mod {ModInfoBetterSMT.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied to remove BetterSMT highlighting.", LogCategories.Loading);
+					TimeLogger.Logger.LogInfo($"Mod {ModInfoBetterSMT.Name} exists. {MyPluginInfo.PLUGIN_NAME} patches will be applied to remove BetterSMT highlighting.", LogCategories.Loading);
 					break;
 				default:
 					throw new NotImplementedException($"This switch case {ModStatus} is not implemented.");
@@ -86,6 +87,14 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 		public bool IsVersionWithHighlighting() {
 			//Version that removed highlighting.
 			return ModInfo.LoadedVersion < new Version("2.5.0");
+        }
+
+		public bool IsFasterItemStockingEnabled() {
+			return GetConfigValue("Enables quick stocking", out bool isSettingEnabled) && isSettingEnabled;
+		}
+
+        public bool IsFasterItemRemovingEnabled() {
+            return GetConfigValue("Enables quick removing", out bool isSettingEnabled) && isSettingEnabled;
         }
 
     }

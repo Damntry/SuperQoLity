@@ -13,7 +13,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 	}
 
 
-	public abstract class GenericNPC : NetworkBehaviour {
+	public abstract class GenericNPC : MonoBehaviour {
 
 
 		public Vector3 LastDestinationSet => GetComponent<NPC_Movement>().LastDestinationSet;
@@ -33,31 +33,33 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 
 		public static void AddSuperQolNpcObjects(GameObject npcObj, NPCType npcType) {
 			if (npcObj == null) {
-				TimeLogger.Logger.LogTimeFatal("The parameter npcObj is null", LogCategories.AI);
+				TimeLogger.Logger.LogFatal("The parameter npcObj is null", LogCategories.AI);
 				return;
 			}
 
-			GameObject npcGameObject = new("SuperQolNPC_Data");
+			GameObject npcGameObject;
 
-			//TODO 0 - Before implementing this for customers, change it so instead of using an NPC_Movement
-			//	component for each NPC, create a npc movement manager, much like the base game does, one for
-			//	each NPCType. Its uglier but a necessity for performance.
-			switch (npcType) {
+            //TODO 2 - Make it so customers also look at the object they interact with, like employees.
+            //	Having a dedicated Update per NPC is too expensive, so before implementing this for customers,
+			//	change it so instead of using an NPC_Movement component for each NPC, create a npc movement
+			//	manager, much like the base game does, one for each NPCType. 
+            switch (npcType) {
 				case NPCType.Dummy:
 					throw new NotImplementedException("Dummy NPCs are not implemented.");
 				case NPCType.Employee:
-					npcGameObject.AddComponent<EmployeeNPC>();
-					npcGameObject.AddComponent<NPC_Movement>();
-					break;
+					npcGameObject = EmployeeNPC.CreateEmployeeGameObject();
+                    break;
 				case NPCType.Customer:
 					throw new NotImplementedException("Customer NPCs are not implemented.");
 				default:
-					TimeLogger.Logger.LogTimeFatal($"Unknown NPC type: {npcType}", LogCategories.AI);
+					TimeLogger.Logger.LogFatal($"Unknown NPC type: {npcType}", LogCategories.AI);
 					return;
 			}
 			
 			npcGameObject.transform.SetParent(npcObj.transform);
-		}
+            //Activate now, only after setting the parent, so the NPC_Movement Awake have a reference to it.
+            npcGameObject.SetActive(true);
+        }
 
 	}
 

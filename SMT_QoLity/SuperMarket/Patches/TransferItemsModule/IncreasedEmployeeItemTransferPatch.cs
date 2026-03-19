@@ -108,10 +108,10 @@ namespace SuperQoLity.SuperMarket.Patches.TransferItemsModule {
 			//C#:	int numTransferItems = IncreasedItemTransferPatch.GetNumTransferItems(boxNumberProducts, num2, maxProductsPerRow);
 			List<CodeInstruction> instrs = new();
 
-			instrs.Add(ArgBoxNumberProducts.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper instance to later gets it value.
+			instrs.Add(ArgBoxNumberProducts.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper Instance to later gets it value.
 			instrs.Add(ArgBoxNumberProducts.GetterValue_IL);    //Load what would have been the 2º argument (boxNumProducts), but its now a glorified global static.
 			instrs.Add(loadLocalNum2);                          //Load num2 local var
-			instrs.Add(ArgMaxProductsPerRow.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper instance to later gets it value.
+			instrs.Add(ArgMaxProductsPerRow.LoadFieldArgHelper_IL); //Load static field with the ArgumentHelper Instance to later gets it value.
 			instrs.Add(ArgMaxProductsPerRow.GetterValue_IL);    //Load what would have been the 3º argument (maxProductsPerRow), but its now a glorified global static.
 			instrs.Add(new CodeInstruction(OpCodes.Ldc_I4, (int)CharacterType.Employee));	//Load the corresponding integer value of the enum as 4º parameter
 			instrs.Add(Transpilers.EmitDelegate((int p1, int p2, int p3, CharacterType p4) =>

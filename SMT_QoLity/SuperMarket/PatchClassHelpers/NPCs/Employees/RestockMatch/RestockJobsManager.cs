@@ -2,7 +2,7 @@
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Helpers;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking;
-using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch {
 
@@ -104,7 +104,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch 
 		}
 
 
-		/*	Not worth it in the end. Makes the whole process around 10-20% faster, but adds
+        /*	Not worth it in the end. Makes the whole process around 10-20% faster, but adds
 			more complexity and employees get more false positives the older a job is which 
 			destroys the performance gains.
 		
@@ -148,5 +148,5 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch 
 		}
 		*/
 
-	}
+    }
 }

@@ -12,6 +12,12 @@
     <GenerateDocumentationFile>False</GenerateDocumentationFile>
     <Configurations>Debug;Release;Laptop</Configurations>
   </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Laptop|AnyCPU'" />
 
   <ItemGroup>
     <Compile Remove="lib\**" />
@@ -46,8 +52,17 @@
     <Reference Include="Assembly-CSharp-firstpass" Publicize="true">
       <HintPath>lib\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>lib\com.rlabrecque.steamworks.net.dll</HintPath>
+    </Reference>
     <Reference Include="glTFast">
       <HintPath>..\..\CustomFurniture\lib\glTFast.dll</HintPath>
+    </Reference>
+    <Reference Include="MeshCombinerCore">
+      <HintPath>lib\MeshCombinerCore.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode">
+      <HintPath>lib\Microsoft.Bcl.HashCode.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Build.Utilities.v4.0">
       <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Microsoft.Build.Utilities.v4.0.dll</HintPath>
@@ -72,6 +87,9 @@
       <HintPath>lib\UniTask.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Unity.Animation.Rigging">
+      <HintPath>lib\Unity.Animation.Rigging.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.StarterAssets">
       <HintPath>lib\Unity.StarterAssets.dll</HintPath>
       <Private>False</Private>
@@ -81,48 +99,70 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.AIModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.AIModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.AudioModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.AudioModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.CoreModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.InputLegacyModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.PhysicsModule.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>lib\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.UIModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UIModule.dll</HintPath>
+    <Reference Include="UnityEngine.AIModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.AIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
-      <HintPath>..\..\..\!!Global Libraries\Unity\2023.1.9f1\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <HintPath>..\..\..\!!Global Libraries\Unity\2023.2.22f1\UnityEngine.UnityWebRequestModule.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityHotReload">
+      <HintPath>lib\UnityHotReload.dll</HintPath>
     </Reference>
   </ItemGroup>
   
   <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Update="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>
@@ -131,17 +171,35 @@
   </ItemGroup>
   
   <ItemGroup>
-    <None Update="Assets\Debug\EquipWeapon.mp3">
+    <None Update="Assets\Weapon\EquipWeapon.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Weapon\ShotgunPump.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Weapon\shotgunshell">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Weapon\ShotgunShot.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\EquipmentWheel\WheelIcons">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\EquipWeapon.ogg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Debug\ShotgunShotAndPump.mp3">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\MainMenuLogos\logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\ShotgunShotAndPump.ogg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PostBuildBatch.cmd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -158,20 +216,24 @@
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
-
+  
   <ItemGroup>
-    <Folder Include="SuperMarket\Patches\Debug\" />
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <!-- Desktop -->
-    <PropertyGroup Condition="'$(Configuration)'!='zLaptop'">
+    <PropertyGroup Condition="'$(Configuration)'!='Laptop'">
       <SupermarketTogetherFolder>H:\!SteamLibrary\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
     </PropertyGroup>
     <!-- Laptop -->
-    <PropertyGroup Condition="'$(Configuration)'=='zLaptop'">
+    <PropertyGroup Condition="'$(Configuration)'=='Laptop'">
       <SupermarketTogetherFolder>C:\Program Files (x86)\Steam\steamapps\common\Supermarket Together\BepInEx\plugins</SupermarketTogetherFolder>
     </PropertyGroup>
-    <Exec Command="set SmtTargetPath=$(SupermarketTogetherFolder)\$(PackageId)&#xD;&#xA;set TempSmtTargetPath=$(MSBuildStartupDirectory)\$(PackageId)&#xD;&#xA;set SoundEffectsPath=SoundEffects&#xD;&#xA;set AssetsPath=Assets&#xD;&#xA;set AssetsPathDebug=Assets\Debug&#xD;&#xA;set DocsFolder=$(MSBuildStartupDirectory)\Docs&#xD;&#xA;set readmeSource=%25DocsFolder%25\README.md&#xD;&#xA;set changelogSource=%25DocsFolder%25\CHANGELOG.md&#xD;&#xA;set ReleaseFolder=$(MSBuildStartupDirectory)\!Release&#xD;&#xA;&#xD;&#xA;del &quot;%25TempSmtTargetPath%25&quot;  /s /q&#xD;&#xA;md &quot;%25TempSmtTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25TempSmtTargetPath%25&quot;\$(TargetName)-$(Configuration)$(TargetExt)&#xD;&#xA;copy &quot;$(TargetDir)\Damntry.Globals*.dll&quot; &quot;%25TempSmtTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;copy &quot;$(TargetDir)\UniTask*.dll&quot; &quot;%25TempSmtTargetPath%25&quot;&#xD;&#xA;md &quot;%25TempSmtTargetPath%25\%25AssetsPath%25&quot;&#xD;&#xA;copy &quot;$(TargetDir)\%25AssetsPath%25\*.*&quot; &quot;%25TempSmtTargetPath%25\%25AssetsPath%25&quot;&#xD;&#xA;xcopy &quot;$(TargetDir)\%25SoundEffectsPath%25\*.*&quot; &quot;%25TempSmtTargetPath%25\%25SoundEffectsPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;copy &quot;%25readmeSource%25&quot; &quot;%25TempSmtTargetPath%25\!README.md&quot;&#xD;&#xA;copy &quot;%25changelogSource%25&quot; &quot;%25TempSmtTargetPath%25\!CHANGELOG.md&quot;&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; NEQ &quot;Release&quot; (&#xD;&#xA;    ECHO *** Copying DEBUG files into temp folder&#xD;&#xA;    copy &quot;$(TargetDir)&quot;\&quot;$(TargetName)&quot;.pdb &quot;%25TempSmtTargetPath%25&quot;\&quot;$(TargetName)&quot;-$(Configuration).pdb&#xD;&#xA;    copy &quot;$(TargetDir)\Damntry.Globals*.pdb&quot; &quot;%25TempSmtTargetPath%25&quot;&#xD;&#xA;    md &quot;%25TempSmtTargetPath%25\%25AssetsPathDebug%25&quot;&#xD;&#xA;    copy &quot;$(TargetDir)\%25AssetsPathDebug%25\*.*&quot; &quot;%25TempSmtTargetPath%25\%25AssetsPathDebug%25\&quot;&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;ECHO *** Clearing mod from target plugin folder&#xD;&#xA;del &quot;%25SmtTargetPath%25\*.dll&quot; /s /q&#xD;&#xA;del &quot;%25SmtTargetPath%25\*.pdb&quot; /s /q&#xD;&#xA;del &quot;%25SmtTargetPath%25\*.md&quot; /s /q&#xD;&#xA;rmdir /S /Q &quot;%25SmtTargetPath%25\%25SoundEffectsPath%25&quot;&#xD;&#xA;rmdir /S /Q &quot;%25SmtTargetPath%25\%25AssetsPath%25&quot;&#xD;&#xA;md &quot;%25SmtTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;ECHO *** Copying from temp folder to plugins folder&#xD;&#xA;xcopy &quot;%25TempSmtTargetPath%25\*.*&quot; &quot;%25SmtTargetPath%25&quot; /Y /I /E&#xD;&#xA;&#xD;&#xA;set nexusPath=%25ReleaseFolder%25\Nexus&#xD;&#xA;set thunderstorePath=%25ReleaseFolder%25\Thunderstore&#xD;&#xA;&#xD;&#xA;set ZipFileName=$(SupermarketTogetherFolder)\$(TargetName)_$(Version).zip&#xD;&#xA;set ZipFileNameThunderStore=%25thunderstorePath%25\$(TargetName)_$(Version).zip&#xD;&#xA;&#xD;&#xA;set ZipTempTSPath=%25thunderstorePath%25\Temp&#xD;&#xA;set ZipTempTSModPath=%25ZipTempTSPath%25\BepInEx\plugins\$(PackageId)&#xD;&#xA;&#xD;&#xA;if &quot;$(ConfigurationName)&quot; == &quot;Release&quot; (&#xD;&#xA;    ECHO *** Creating base zip file at %25ZipFileName%25&#xD;&#xA;    tar -a -cf &quot;%25ZipFileName%25&quot; -C &quot;$(MSBuildStartupDirectory)&quot; &quot;$(PackageId)\*.*&quot;&#xD;&#xA; &#xD;&#xA;    md &quot;%25ReleaseFolder%25&quot;&#xD;&#xA;&#xD;&#xA;    ECHO *** Creating Nexus release&#xD;&#xA;    rmdir /S /Q &quot;%25nexusPath%25&quot;&#xD;&#xA;    md &quot;%25nexusPath%25&quot;&#xD;&#xA;    &quot;C:\Users\Damntry\Visual Studio Projects\Visual Studio 2019 Projects\repos\Markdown2NexusBB\bin\Release\net8.0\Markdown2NexusBB.exe&quot; &quot;%25readmeSource%25&quot; &quot;%25nexusPath%25\README.md&quot;&#xD;&#xA;    copy &quot;%25changelogSource%25&quot; &quot;%25nexusPath%25&quot;&#xD;&#xA;    copy &quot;%25ZipFileName%25&quot; &quot;%25nexusPath%25&quot;&#xD;&#xA; &#xD;&#xA;    ECHO *** Creating Thunderstore release&#xD;&#xA;    rmdir /S /Q &quot;%25thunderstorePath%25&quot;&#xD;&#xA;    md &quot;%25thunderstorePath%25&quot; &quot;%25ZipTempTSPath%25&quot; &quot;%25ZipTempTSModPath%25&quot;&#xD;&#xA;    copy &quot;%25readmeSource%25&quot; &quot;%25ZipTempTSPath%25&quot;&#xD;&#xA;    copy &quot;%25changelogSource%25&quot; &quot;%25ZipTempTSPath%25&quot;&#xD;&#xA;    copy &quot;%25DocsFolder%25\icon_256.png&quot; &quot;%25ZipTempTSPath%25\icon.png&quot;&#xD;&#xA;    copy &quot;%25DocsFolder%25\manifest.json&quot; &quot;%25ZipTempTSPath%25&quot;&#xD;&#xA;    copy &quot;%25TempSmtTargetPath%25&quot; &quot;%25ZipTempTSModPath%25&quot;&#xD;&#xA;    tar -a -cf &quot;%25ZipFileNameThunderStore%25&quot; -C &quot;%25ZipTempTSPath%25&quot; &quot;*.*&quot;&#xD;&#xA;    rmdir /S /Q &quot;%25ZipTempTSPath%25&quot;&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;ECHO *** Deleting temp folder to clean up&#xD;&#xA;rmdir /S /Q &quot;%25TempSmtTargetPath%25&quot;&#xD;&#xA;&#xD;&#xA;ECHO *** FINISHED" />
+    <Exec Command="call PostBuildBatch.cmd &quot;$(MSBuildStartupDirectory)&quot; &quot;$(SupermarketTogetherFolder)&quot; &quot;$(PackageId)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)&quot; &quot;$(TargetName)&quot; &quot;$(TargetExt)&quot; &quot;$(Configuration)&quot; &quot;$(Version)&quot; &quot;$(ConfigurationName)&quot;" />
+
   </Target>
 </Project>

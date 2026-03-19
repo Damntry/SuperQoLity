@@ -9,22 +9,47 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
+
 	public class EmployeeNPC : GenericNPC {
 
-		public static Dictionary<uint, EmployeeNPC> AllEmployees = new();
+		public static readonly string QolNPC_GameObjectName = "SuperQolNPC_Data";
 
-		private static readonly string QolNPC_GameObjectName = "SuperQolNPC_Data";
+		public static Dictionary<uint, EmployeeNPC> AllEmployees;
 
+        private uint _parentNetid;
+        public uint ParentNetid { 
+			get {
+				if (_parentNetid <= 0) {
+                    _parentNetid = this.GetParentNetid();
+                }
+                return _parentNetid;
+            }
+		}
+
+		public EmployeeNPC() {
+			AllEmployees = new();
+		}
+
+
+        public static GameObject CreateEmployeeGameObject() {
+            GameObject npcGameObject = new(QolNPC_GameObjectName);
+			npcGameObject.SetActive(false);
+            npcGameObject.AddComponent<EmployeeNPC>();
+            npcGameObject.AddComponent<NPC_Movement>();
+			return npcGameObject;
+        }
+
+		
 
 		public static bool TryGetEmployeeFrom(GameObject employeeObj, out EmployeeNPC employeeNPC) {
 			employeeNPC = null;
 
 			if (!employeeObj) {
-				TimeLogger.Logger.LogTimeDebug("Employee object cannot be null", LogCategories.AI);
+				TimeLogger.Logger.LogDebug("Employee object cannot be null", LogCategories.AI);
 				return false;
 			}
 
-			uint netid = employeeObj.GetComponent<NetworkIdentity>().netId;
+            uint netid = employeeObj.GetComponent<NetworkIdentity>().netId;
 			if (AllEmployees.TryGetValue(netid, out employeeNPC)) {
 				if (employeeNPC) {
 					return true;
@@ -35,11 +60,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 					//	does some strange replacement.
 					AllEmployees.Remove(netid);
 				}
-			}
-
+			} else {
+				AllEmployees.RemoveDeadValueReferences();
+            }
+			
 			GameObject employeeQolObj = employeeObj.transform.Find(QolNPC_GameObjectName).GameObject();
 			if (!employeeQolObj) {
-				TimeLogger.Logger.LogTimeDebug($"Couldnt find GameObject \"{QolNPC_GameObjectName}\" " +
+				TimeLogger.Logger.LogDebug($"Couldnt find GameObject \"{QolNPC_GameObjectName}\" " +
 					$"as a children of {employeeObj}", LogCategories.AI);
 				return false;
 			}
@@ -47,14 +74,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 			employeeNPC = employeeQolObj.GetComponent<EmployeeNPC>();
 
 			if (!employeeNPC) {
-				TimeLogger.Logger.LogTimeError("Could not find EmployeeNPC component " +
+				TimeLogger.Logger.LogError("Could not find EmployeeNPC component " +
 					$"on the \"{QolNPC_GameObjectName}\" GameObject.", LogCategories.AI);
 				return false;
 			}
 
-			AllEmployees.Add(netid, employeeNPC);
+            AllEmployees.Add(netid, employeeNPC);
 
-			return true;
+            return true;
 		}
 
 
@@ -75,8 +102,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 		}
 
 		public void MoveEmployeeToRestPosition() {
-			//TODO 1 - The target object will be the closest happiness furniture to the destination point.
-			MoveEmployee(NPC_Manager.Instance.AttemptToGetRestPosition(), null, null, TargetType.NonReservable);
+            MoveEmployee(NPC_Manager.Instance.AttemptToGetRestPosition(), null, null, TargetType.NonReservable);
 		}
 
 		public void MoveEmployeeToShelf(Vector3 destination, ProductShelfSlotInfo prodShelfTarget) {
@@ -118,9 +144,9 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 			}
 
 			//Update targeted status of objects related to this NPC.
-			EmployeeTargetReservation.DeleteAllNPCTargets(this.netId);
+            EmployeeTargetReservation.DeleteAllNPCTargets(ParentNetid);
 			if (targetType != TargetType.NonReservable) {
-				EmployeeTargetReservation.AddTargetReservation(this.netId, gameObjectTarget, shelfTarget, targetType);
+				EmployeeTargetReservation.AddTargetReservation(ParentNetid, gameObjectTarget, shelfTarget, targetType);
 			}
 		}
 
@@ -136,45 +162,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs {
 			GetComponent<NPC_Movement>().SetLookTowardsPosition(lookPosition, rotationMode);
 		}
 
-	}
+    }
 
-	public static class EmployeeReservationExtensions {
+    public static class EmployeeNPC_Extension {
+        public static uint GetParentNetid(this EmployeeNPC employeeNPC) =>
+			employeeNPC.transform.parent.GetComponent<NetworkBehaviour>().netId;
 
-		public static void ClearNPCReservations(this EmployeeNPC employeeNPC) {
-			EmployeeTargetReservation.ClearNPCReservations(employeeNPC.netId);
-		}
+    }
 
-		public static void AddExtraStorageTarget(this EmployeeNPC employeeNPC, StorageSlotInfo shelfTarget) {
-			EmployeeTargetReservation.AddTargetReservation(employeeNPC.netId, null, shelfTarget, TargetType.StorageSlot);
-		}
-
-		public static void AddExtraProductShelfTarget(this EmployeeNPC employeeNPC, ProductShelfSlotInfo shelfTarget) {
-			EmployeeTargetReservation.AddTargetReservation(employeeNPC.netId, null, shelfTarget, TargetType.ProdShelfSlot);
-		}
-
-		public static bool RefreshAndCheckValidTargetedStorage(this EmployeeNPC employeeNPC, NPC_Manager __instance,
-				bool clearReservation, out StorageSlotInfo storageSlotInfo) {
-
-			bool isValid = TargetMatching.RefreshAndCheckTargetedShelf(employeeNPC, __instance, 
-				clearReservation, -1, TargetType.StorageSlot, out GenericShelfSlotInfo slotInfoBase);
-			storageSlotInfo = (StorageSlotInfo)slotInfoBase;
-			return isValid;
-		}
-
-
-		public static bool RefreshAndCheckValidTargetedProductShelf(this EmployeeNPC employeeNPC, NPC_Manager __instance,
-				RestockJobInfo jobInfo) {
-
-			return TargetMatching.RefreshAndCheckValidTargetedProductShelf(employeeNPC, __instance, false, jobInfo);
-		}
-
-		public static bool HasTargetedStorage(this EmployeeNPC employeeNPC) {
-			return EmployeeTargetReservation.HasTargetedStorage(employeeNPC.netId, out _);
-		}
-
-		public static bool HasTargetedProductShelf(this EmployeeNPC employeeNPC) {
-			return EmployeeTargetReservation.HasTargetedProductShelf(employeeNPC.netId, out _);
-		}
-
-	}
 }

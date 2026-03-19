@@ -8,7 +8,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotI
 	//	used in ContainerSearch.GetFirstOfAnyShelfWithProduct, and then 
 	//	converted to int elsewhere for the the base game.
 	//	The correct fix would be to save the values for the NPC, including the
-	//	ShelfType enum value, and then use that send the appropiate int.
+	//	ParentContainerType enum value, and then use that send the appropiate int.
 	public enum ShelfType {
 		StorageSlot,
 		ProdShelfSlot

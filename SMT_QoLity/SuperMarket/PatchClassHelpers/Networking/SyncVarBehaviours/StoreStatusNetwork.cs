@@ -6,7 +6,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours
 
 	public class StoreStatusNetwork : SyncVarNetworkBehaviour<StoreStatusNetwork> {
 
-		[SyncVarNetwork]
+        public static uint NetworkAssetId => 918219;
+
+
+        [SyncVarNetwork]
 		public static SyncVar<bool> IsStoreOpenOrCustomersInsideSync { get; private set; } = new(false);
 
 	}

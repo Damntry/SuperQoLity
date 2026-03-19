@@ -25,7 +25,7 @@ namespace SuperQoLity.SuperMarket.ModUtils.UI {
 
 		public static bool LoadUIPanel() {
 			if (IsPanelLoaded) {
-				TimeLogger.Logger.LogTimeWarning("Performance panel was already loaded.", LogCategories.PerfTest);
+				TimeLogger.Logger.LogWarning("Performance panel was already loaded.", LogCategories.PerfTest);
 				return true;
 			}
 

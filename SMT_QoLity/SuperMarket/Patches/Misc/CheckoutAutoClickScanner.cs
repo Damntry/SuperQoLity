@@ -7,15 +7,11 @@ using HarmonyLib;
 using Rewired;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
-using SuperQoLity.SuperMarket.PatchClassHelpers.Components;
+using SuperQoLity.SuperMarket.Standalone.Components;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace SuperQoLity.SuperMarket.Patches.Misc {
-
-	//TODO 1 - Bug from Mitche. If you have a employee cashier on the register, and you click all the items to ring
-	//		them up before they click one, they employee won't finish the transaction
-	//		This could be a vanilla bug.
 
 	public class CheckoutAutoClickScanner : FullyAutoPatchedInstance {
 
@@ -104,7 +100,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			SetVanillaCheckoutScanState(!ModConfig.Instance.EnableCheckoutAutoClicker.Value);
 
 			if (interactableMask < 0) {
-				interactableMask = SMTComponentInstances.PlayerNetworkInstance().interactableMask;
+				interactableMask = SMTInstances.LocalPlayerNetwork().interactableMask;
 			}
 		}
 
@@ -207,12 +203,12 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 				//	This lets you fluidly mouse over products to pick them up, instead of having
 				//	to jerk the mouse over every item and wait for the click cooldown to end.
 				if (productBelt.isFinished) {
-					//The check interval is short enough that it can queue an object that was already clicked and 
-					//	scheduled to be destroyed, which eventually makes it try to process a GameObject with netid 0.
-					//	To avoid this I ll just use ProductCheckoutSpawn.isFinished to flag this product as "processed",
-					//	since isFinished is now unused after I disabled the FSM that accessed it.
-					//	I ll probably regret this decision in the future.
-					return;
+                    //The check interval is short enough that it can queue an object that was already clicked and 
+                    //	scheduled to be destroyed, which eventually makes it try to process a GameObject with netid 0.
+                    //	To avoid this I ll just use ProductCheckoutSpawn.isFinished to flag this product as "processed",
+                    //	since isFinished is now unused after I disabled the FSM that accessed it.
+                    //	I ll probably regret this decision in the future.
+                    return;
 				}
 
 				if (checkoutItemQueue.TryEnqueue(productBelt, out _)) {
@@ -228,7 +224,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			if (productBelt.netId == 0) {
 				//Related to my use of productBelt.isFinished, in case I missed some case.
 				//	I ll still show errors so it doesnt get forgotten.
-				TimeLogger.Logger.LogTimeWarning($"Attempted to scan product " +
+				TimeLogger.Logger.LogWarning($"Attempted to scan product " +
 					$"with netId 0. Skipping.", LogCategories.Other);
 				return;
 			}

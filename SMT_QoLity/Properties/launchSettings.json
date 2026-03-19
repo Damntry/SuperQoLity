@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "SuperQoLity": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    },
+    "Launch SMT": {
+      "commandName": "Executable",
+      "executablePath": "H:\\!SteamLibrary\\steamapps\\common\\Supermarket Together\\Supermarket Together.exe",
+      "commandLineArgs": "-debugger-agent=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:56000",
+      "workingDirectory": "H:\\!SteamLibrary\\steamapps\\common\\Supermarket Together\\",
+      "nativeDebugging": false
+    }
+  }
+}

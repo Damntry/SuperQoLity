@@ -52,7 +52,7 @@ namespace SuperQoLity.SuperMarket.ModUtils.ExternalMods {
 					return;
 				} catch (Exception e) {
 					methodCallFailed = true;
-					TimeLogger.Logger.LogTimeExceptionWithMessage("Error calling UserCode_CmdAlterFunds__Single directly. " +
+					TimeLogger.Logger.LogExceptionWithMessage("Error calling UserCode_CmdAlterFunds__Single directly. " +
 						"Reverting to networked version of the method.", e, LogCategories.OtherMod);
 				}
 			}

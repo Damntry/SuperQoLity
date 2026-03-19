@@ -26,11 +26,11 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 			bool contentsValid;
 
 			if (targetType == TargetType.StorageSlot) {
-				hasTarget = EmployeeTargetReservation.HasTargetedStorage(employeeNPC.netId, out StorageSlotInfo storageSlotInfo);
+				hasTarget = EmployeeTargetReservation.HasTargetedStorage(employeeNPC.ParentNetid, out StorageSlotInfo storageSlotInfo);
 				contentsValid = RefreshAndCheckStorageContents(__instance.storageOBJ, storageSlotInfo);
 				slotInfoBase = storageSlotInfo;
 			} else if (targetType == TargetType.ProdShelfSlot) {
-				hasTarget = EmployeeTargetReservation.HasTargetedProductShelf(employeeNPC.netId, out ProductShelfSlotInfo productShelfSlotInfo);
+				hasTarget = EmployeeTargetReservation.HasTargetedProductShelf(employeeNPC.ParentNetid, out ProductShelfSlotInfo productShelfSlotInfo);
 				contentsValid = RefreshAndCheckProdShelfContents(__instance.shelvesOBJ, productShelfSlotInfo, maxProductsPerRow);
 				slotInfoBase = productShelfSlotInfo;
 			} else {
@@ -38,7 +38,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 			}
 
 			if (clearReservation && hasTarget) {
-				EmployeeTargetReservation.DeleteNPCTarget(employeeNPC.netId, targetType);
+				EmployeeTargetReservation.DeleteNPCTarget(employeeNPC.ParentNetid, targetType);
 			}
 
 			return hasTarget && contentsValid;
@@ -76,7 +76,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 
 		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, GenericShelfSlotInfo slotInfoBase, out int currentTargetQuantity, TargetType targetType) {
 			//Check that the saved target values still match the current content of the product shelf/storage slot.
-			int[] productInfoArray = gameObjectShelf.transform.GetChild(slotInfoBase.ShelfIndex)
+			if (gameObjectShelf.transform.childCount <= slotInfoBase.ShelfIndex) {
+				//Can happen when shelves get deleted in the middle of a job
+				currentTargetQuantity = -1;
+                return false;
+			}
+
+            int[] productInfoArray = gameObjectShelf.transform.GetChild(slotInfoBase.ShelfIndex)
 				.GetComponent<Data_Container>().productInfoArray;
 
 			int productId = productInfoArray[slotInfoBase.SlotIndex * 2];

@@ -1,20 +1,23 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
-using SuperQoLity.SuperMarket.Patches;
+using SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 
-	public enum EnumFreeStoragePriority {
-		[Description("1.Assigned storage > 2.Labeled > 3.Unlabeled")]
+    public enum EnumFreeStoragePriority {
+		[Description("1.Assigned labeled > 2.Labeled > 3.Unlabeled")]
 		Labeled,
-		[Description("1.Assigned storage > 2.Unlabeled > 3.Labeled")]
+        [Description("1.Assigned labeled > 2.Unlabeled > 3.Labeled")]
 		Unlabeled,
-		[Description("1.Assigned storage > 2.Any other storage")]
-		Any
-	}
+        [Description("1.Assigned labeled > 2.Labeled")]
+        OnlyLabeled,
+        [Description("1.Unlabeled")]
+        OnlyUnlabeled,
+    }
 
 	public class ContainerSearch {
 
@@ -52,9 +55,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 				);
 
 				if (productsPriority.Count > 0) {
-					//TODO 1 - Why return a random one? Why not return the
-					//	one with less items since it needs it the most?
-					result = productsPriority[Random.Range(0, productsPriority.Count)];
+                    //Return emptiest shelf
+                    result = productsPriority.OrderBy(p => p.shelfSlotInfo.ExtraData.Quantity).First();
 					return true;
 				}
 			}
@@ -67,11 +69,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// assigned as the one passed by parameter.
 		/// </summary>
 		public static StorageSlotInfo GetStorageContainerWithBoxToMerge(NPC_Manager __instance, int boxIDProduct) {
-			return ContainerSearchLambdas.FindStorageSlotLambda(__instance, checkNPCStorageTarget: true,
-				(storageId, slotId, productId, quantity, storageObjT) => {
+			int maxItemsPerBox = ProductListing.Instance.productsData[boxIDProduct].maxItemsPerBox;
 
-					if (productId == boxIDProduct && quantity > 0 &&
-							quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
+            return ContainerSearchLambdas.FindStorageSlotLambda(__instance, checkNPCStorageTarget: true,
+				(storageId, slotId, productId, quantity, storageObjT) => {
+					
+					if (productId == boxIDProduct && quantity > 0 && quantity < maxItemsPerBox &&
+							IsStorageAllowedForMerge(__instance, storageObjT)) {
+
 						return ContainerSearchLambdas.LoopStorageAction.SaveAndExit;
 					}
 
@@ -89,12 +94,13 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		}
 
 		public static bool MoreThanOneBoxToMergeCheck(NPC_Manager __instance, int boxIDProduct) {
-			int boxCount = 0;
-
-			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
+            int maxItemsPerBox = ProductListing.Instance.productsData[boxIDProduct].maxItemsPerBox;
+            int boxCount = 0;
+            
+            ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
-					if (productId == boxIDProduct && quantity < ProductListing.Instance.productPrefabs[productId].GetComponent<Data_Product>().maxItemsPerBox) {
+				if (productId == boxIDProduct && quantity < maxItemsPerBox && IsStorageAllowedForMerge(__instance, storageObjT)) {
 						boxCount++;
 						if (boxCount > 1) {
 							return ContainerSearchLambdas.LoopAction.Exit;
@@ -108,15 +114,19 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 
 		/// <summary>
 		/// Gets an empty storage shelf slot assigned to the product passed by parameter (unassigned if
-		/// negative), prioritizing first by the FreeStoragePriority setting, and then by the closest shelf.
+		/// negative), prioritizing first by the FreeStoragePriority setting, and then by closest shelf.
 		/// </summary>
 		public static StorageSlotInfo GetFreeStorageContainer(NPC_Manager __instance, Transform employeeT, int boxIDProduct) {
 			StorageSlotInfo foundStorage = StorageSlotInfo.Default;
-			List<StorageSlotInfo> assignedPriorityStorage = null;
+			List<StorageSlotInfo> assignedPriorityStorage = new();
 			List<StorageSlotInfo> highPriorityStorage = new();
 			List<StorageSlotInfo> lowPriorityStorage = new();
 
-			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
+			bool allowsAssignedStorage = IsAssignedStorageAllowed();
+			bool allowsLowPriorityStorage = IsAllStorageTypesAllowed();
+
+
+            ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
 
 					//Ìf boxIDProduct parameter is zero or positive, this method needs to find free storage with the
@@ -125,28 +135,16 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 					//Ìf boxIDProduct is negative, the assigned storage slots are skipped, and only the priority setting
 					//	matters on the unassigned vs unlabeled choice.
 
-					//TODO 2 - I can improve performance by avoiding adding less prioritized
-					//	storage when we already found something more prioritized
-					//	It could also be faster to save the closest distance added to each type 
-					//	of priority, and skip adding any further away storages, but then I would 
-					//	be doing distance calculations on potentially less prioritized storages 
-					//	for nothing, if product more prioritized storage exists at the end of the loop.
-					//	But at the very least I need to do it for assignedPriorityStorage, and for
-					//	highPriorityStorage if productId == -1. Zero loss doing it like that.
-
-					if (boxIDProduct >= 0 && productId == boxIDProduct && quantity < 0) {
+					if (allowsAssignedStorage && boxIDProduct >= 0 && productId == boxIDProduct && quantity < 0) {
 						//Empty assigned storage slot of the same product type.
-						if (assignedPriorityStorage == null) {
-							assignedPriorityStorage = new();
-						}
-						assignedPriorityStorage.Add(new StorageSlotInfo(storageIndex, slotIndex, productId, quantity, storageObjT.position));
-					} else if (productId == -1) {
+						assignedPriorityStorage.Add(new (storageIndex, slotIndex, productId, quantity, storageObjT.position));
+					} else if (productId == -1 && assignedPriorityStorage.Count == 0) {
 						//Search for either an empty unassigned labeled storage, or an unlabeled
 						//	storage, prioritizing whichever the user choose in the settings.
-						StorageSlotInfo storage = new StorageSlotInfo(storageIndex, slotIndex, productId, quantity, storageObjT.position);
+						StorageSlotInfo storage = new (storageIndex, slotIndex, productId, quantity, storageObjT.position);
 						if (IsStorageTypePrioritized(__instance, storageObjT)) {
 							highPriorityStorage.Add(storage);
-						} else {
+						} else if (allowsLowPriorityStorage && highPriorityStorage.Count == 0) {
 							lowPriorityStorage.Add(storage);
 						}
 					}
@@ -156,11 +154,11 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 			);
 
 			if (assignedPriorityStorage?.Count > 0) {
-				foundStorage = GetClosestStorage(assignedPriorityStorage, employeeT);
+				foundStorage = GetClosestStorageFromList(assignedPriorityStorage, employeeT);
 			} else if (highPriorityStorage?.Count > 0) {
-				foundStorage = GetClosestStorage(highPriorityStorage, employeeT);
+				foundStorage = GetClosestStorageFromList(highPriorityStorage, employeeT);
 			} else if (lowPriorityStorage?.Count > 0) {
-				foundStorage = GetClosestStorage(lowPriorityStorage, employeeT);
+				foundStorage = GetClosestStorageFromList(lowPriorityStorage, employeeT);
 			}
 
 			return foundStorage;
@@ -201,7 +199,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 			return shelfSlotInfo;
 		}
 
-		private static StorageSlotInfo GetClosestStorage(List<StorageSlotInfo> listStorage, Transform employee) {
+		private static StorageSlotInfo GetClosestStorageFromList(List<StorageSlotInfo> listStorage, Transform employee) {
 			if (!(listStorage?.Count > 0)) {
 				return null;
 			}
@@ -221,18 +219,40 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		}
 
 		private static bool IsStorageTypePrioritized(NPC_Manager __instance, Transform storageObjT) {
-			if (ModConfig.Instance.FreeStoragePriority.Value == EnumFreeStoragePriority.Any) {
-				return true;
-			} else {
-				bool isLabeledStorage = IsLabeledStorage(__instance, storageObjT);
+			EnumFreeStoragePriority storagePriority = ModConfig.Instance.FreeStoragePriority.Value;
 
-				return ModConfig.Instance.FreeStoragePriority.Value == EnumFreeStoragePriority.Labeled && isLabeledStorage ||
-					ModConfig.Instance.FreeStoragePriority.Value == EnumFreeStoragePriority.Unlabeled && !isLabeledStorage;
-			}
+            bool isLabeledStorage = IsLabeledStorage(__instance, storageObjT);
+
+			return isLabeledStorage && (storagePriority == EnumFreeStoragePriority.Labeled ||
+                    storagePriority == EnumFreeStoragePriority.OnlyLabeled) || 
+				!isLabeledStorage && (storagePriority == EnumFreeStoragePriority.Unlabeled ||
+                    storagePriority == EnumFreeStoragePriority.OnlyUnlabeled);
 		}
 
-		private static bool IsLabeledStorage(NPC_Manager __instance, Transform storageObjT) =>
-			storageObjT.Find("CanvasSigns") != null;
+		/// <summary>
+		/// While merging we only check if the type of storage is allowed, but ignore the priority setting.
+		/// </summary>
+		private static bool IsStorageAllowedForMerge(NPC_Manager __instance, Transform storageObjT) {
+            EnumFreeStoragePriority storagePriority = ModConfig.Instance.FreeStoragePriority.Value;
+
+            if (IsAllStorageTypesAllowed()) {
+				return true;
+			} else {
+                bool isLabeledStorage = IsLabeledStorage(__instance, storageObjT);
+				return isLabeledStorage && storagePriority == EnumFreeStoragePriority.OnlyLabeled ||
+					!isLabeledStorage && storagePriority == EnumFreeStoragePriority.OnlyUnlabeled;
+            }
+        }
+		
+        public static bool IsAssignedStorageAllowed() =>
+			ModConfig.Instance.FreeStoragePriority.Value != EnumFreeStoragePriority.OnlyUnlabeled;
+
+		private static bool IsAllStorageTypesAllowed() =>
+            ModConfig.Instance.FreeStoragePriority.Value != EnumFreeStoragePriority.OnlyLabeled &&
+				ModConfig.Instance.FreeStoragePriority.Value != EnumFreeStoragePriority.OnlyUnlabeled;
+
+        private static bool IsLabeledStorage(NPC_Manager __instance, Transform storageObjT) => 
+			storageObjT.Find("CanvasSigns");
 
 	}
 

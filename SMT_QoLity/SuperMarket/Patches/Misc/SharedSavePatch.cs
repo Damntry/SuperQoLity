@@ -1,12 +1,13 @@
-﻿using System.Globalization;
+﻿using Damntry.Utils.Logging;
+using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
+using Damntry.UtilsUnity.Components.InputManagement;
+using HutongGames.PlayMaker;
+using Mirror;
+using SuperQoLity.SuperMarket.ModUtils;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsUnity.Components;
-using HutongGames.PlayMaker;
-using Mirror;
 using UnityEngine;
 
 namespace SuperQoLity.SuperMarket.Patches.Misc {
@@ -19,11 +20,12 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 
 		public override void OnPatchFinishedVirtual(bool IsPatchActive) {
 			if (IsPatchActive) {
-				KeyPressDetection.AddHotkey(KeyCode.KeypadDivide, KeyPressAction.KeyDown, 1000, () => { SaveAsClientX(); });
+				InputManagerSMT.Instance.TryAddHotkey("hotkeySaveTest", KeyCode.KeypadDivide, 
+					InputState.KeyDown, HotkeyActiveContext.WorldLoaded, 1000, SaveAsClientX);
 			}
 		}
 
-		/* TODO 0 Saving - Not sure I should try the full save thingy. I though of some bad case:
+		/* TODO 1 Saving - Not sure I should try the full save thingy. I though of some bad case:
 
 			I load everything as it is from the extra save file, FSM states, etc, EVERYTHING.
 			A mod changes the original prefab of something that eventually gets instantiated, but 
@@ -41,23 +43,23 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			LOG.TEMPWARNING("Save started");
 
 			if (NetworkManager.singleton == null) {
-				TimeLogger.Logger.LogTimeWarning("You can only save in a loaded world.", LogCategories.Other);
+				TimeLogger.Logger.LogWarning("You can only save in a loaded world.", LogCategories.Other);
 			}
 
-			NetworkSpawner nSpawnerComponent = GameData.Instance.GetComponent<NetworkSpawner>();
+			NetworkSpawner nSpawnerComponent = SMTInstances.NetworkSpawner();
 			if (nSpawnerComponent.isSaving) {
-				TimeLogger.Logger.LogTimeWarning("Saving is already in progress.", LogCategories.Other);
+				TimeLogger.Logger.LogWarning("Saving is already in progress.", LogCategories.Other);
 				return;
 			}
 
 			if (NetworkManager.singleton.mode == NetworkManagerMode.ClientOnly) {
-				//TODO 0 Saving - Once tests are done, move all logic in here
+				//TODO 1 Saving - Once tests are done, move all logic in here
 			}
 
 			string loadedSaveFileName = FsmVariables.GlobalVariables.GetFsmString("CurrentFilename").Value;
 			string newSaveFileName = "StoreFile12.es3";
 
-			//TODO 0 Saving - Should probably be doing this? BetterSMT does it twice for some reason.
+			//TODO 1 Saving - Should probably be doing this? BetterSMT does it twice for some reason.
 			//GameData.Instance.DoDaySaveBackup();
 
 			LOG.TEMPWARNING($"CurrentFilename: {loadedSaveFileName} - " +
@@ -74,7 +76,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 			//For safety more than anything else, since this only gets executed in the client.
 			FsmVariables.GlobalVariables.GetFsmString("CurrentFilename").Value = loadedSaveFileName;
 
-			//TODO 0 Saving - Notify the user of save finished.
+			//TODO 1 Saving - Notify the user of save finished.
 		}
 
 		private static string GetCityName(string loadedSaveFileName) {
@@ -121,7 +123,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 		}
 
 		public static async Task SavePropsCoroutine() {
-			NetworkSpawner instance = GameObject.Find("GameDataManager").GetComponent<NetworkSpawner>();
+			NetworkSpawner instance = SMTInstances.NetworkSpawner();
 
 			instance.isSaving = true;
 

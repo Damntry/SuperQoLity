@@ -74,7 +74,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 		
 		/// <remarks>
 		/// THIS METHOD IS NOT THREAD-SAFE to avoid locking in a case that is never expected to need it. 
-		/// Do not use if another thread could try to access this RestockJob instance.
+		/// Do not use if another thread could try to access this RestockJob Instance.
 		/// </remarks>
 		public void ClearJobs() {
 			InitializePriorities();

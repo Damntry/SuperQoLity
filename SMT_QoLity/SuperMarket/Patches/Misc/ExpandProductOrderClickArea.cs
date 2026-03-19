@@ -46,7 +46,7 @@ namespace SuperQoLity.SuperMarket.Patches.Misc {
 
 		private void ExpandOrderClickableArea() {
 			if (!IsOrderUiPrefabLoaded(out ManagerBlackboard managerBlackboard)) {
-				TimeLogger.Logger.LogTimeError($"{nameof(ManagerBlackboard)}." +
+				TimeLogger.Logger.LogError($"{nameof(ManagerBlackboard)}." +
 					$"{nameof(ManagerBlackboard.UIShopItemPrefab)} should be instanced " +
 					$"by now but its not.", LogCategories.UI);
 				return;

@@ -12,7 +12,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 
 		public static GroundBoxStorageTarget GetClosestGroundBox(NPC_Manager __instance, Transform employeeT) {
 			//Filter list of ground boxes so we skip the ones already targeted by another NPC.
-			List<GameObject> untargetedGroundBoxes = GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
+
+            List<GameObject> untargetedGroundBoxes = GetListUntargetedStationaryBoxes(__instance.boxesOBJ);
 
 			//Check that there are any untargeted boxes lying around to begin with.
 			if (untargetedGroundBoxes.Count == 0) {
@@ -39,7 +40,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 				}
 			}
 
-			//TODO !0 AI IMPROVEMENTS - Find ground boxes that can be merged.
+			//TODO 1 AI Improvements - Find ground boxes that can be merged.
 
 			if (!pickableGroundBoxes.HasItems()) {
 				//No space in storage. Check if any ground boxes are empty and can be trashed.
@@ -64,8 +65,12 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		}
 
 		private static Dictionary<int, StorageSlotInfo> GetProductIdListOfFreeStorage(NPC_Manager __instance) {
-			//Dictionary so we keep a single storage slot for each product id found
-			Dictionary<int, StorageSlotInfo> storableProducts = new();
+            //Dictionary so we keep a single storage slot for each product id found
+            Dictionary<int, StorageSlotInfo> storableProducts = new();
+
+            if (!ContainerSearch.IsAssignedStorageAllowed()) {
+				return storableProducts;
+			}
 
 			ContainerSearchLambdas.ForEachStorageSlotLambda(__instance, checkNPCStorageTarget: true, skipEmptyBoxes: false,
 				(storageIndex, slotIndex, productId, quantity, storageObjT) => {
@@ -115,7 +120,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 			if (!groundBoxesTargets.HasItems()) {
 				return GroundBoxStorageTarget.Default;
 			}
-
 
 			GroundBoxStorageTarget closestBoxTarget = null;
 			float closestDistanceSqr = float.MaxValue;

@@ -3,14 +3,12 @@ using Damntry.Utils.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.Utils.Tasks.AsyncDelay;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
-using HarmonyLib;
 using Mirror;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Helpers;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
-using SuperQoLity.SuperMarket.Patches;
-using SuperQoLity.SuperMarket.Patches.EmployeeModule;
+using SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,14 +29,17 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 
 
 		public static void Enable() {
-			if (Container<EmployeeJobAIPatch>.Instance.IsPatchActive) {
-				WorldState.OnWorldStarted += () => {
-					NPC_Manager.Instance.gameObject.AddComponent<RestockMatcher>();
-					RestockJobsManager.Initialize();
-				};
-			}
+			WorldState.OnWorldLoaded += SetupRestockMatcher;
 		}
 
+        public static void Disable() {
+            WorldState.OnWorldLoaded -= SetupRestockMatcher;
+        }
+
+        private static void SetupRestockMatcher() {
+            NPC_Manager.Instance.gameObject.AddComponent<RestockMatcher>();
+            RestockJobsManager.Initialize();
+        }
 
 		public void Awake() {
 			restockJobGen = new(logEvents: false);
@@ -112,7 +113,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			int jobsPerPriority = (int)Math.Ceiling(maxJobsRestockCycle * RestockJobsManager.NonCriticalJobsPerPriorityMultiplier);
 			RestockJob<ProductShelfInfo> possibleRestockJobs = new();
 
-			//Performance.Start("2. GenerateStorageSlotDictionary");
+			//Performance.Start"2. GenerateStorageSlotDictionary");
 			Dictionary<int, List<ShelfSlotData>> dictStorageSlot = GenerateStorageSlotDictionary(listStorageShelf);
 			//Performance.StopAndLog("2. GenerateStorageSlotDictionary");
 
@@ -163,8 +164,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 				}
 			}
 
-			//If there is still space left to fill the job queue, process the saved jobs that had a lower priority
-			while (RestockJobsManager.JobCount < maxJobsRestockCycle && possibleRestockJobs.HasJobsLeft &&
+            //If there is still space left to fill the job queue, process the saved jobs that had a lower priority
+            while (RestockJobsManager.JobCount < maxJobsRestockCycle && possibleRestockJobs.HasJobsLeft &&
 					possibleRestockJobs.TryExtractPriorityJob(out ProductShelfInfo prodShelf, out RestockPriority priority)) {
 
 				//Find storage shelf from where to restock
@@ -199,7 +200,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			}
 
 			//Sort based on a calculation of box quantity and distance from product shelf.
-			int maxProductsBox = ProductListing.Instance.productPrefabs[prodShelfSlotData.ProductId].GetComponent<Data_Product>().maxItemsPerBox;
+			int maxProductsBox = ProductListing.Instance.productsData[prodShelfSlotData.ProductId].maxItemsPerBox;
 			listNonEmptyStorageSlots.Sort(new RestockStorageComparer(prodShelfSlotData.Quantity, 
 				maxProductsPerRow, prodShelfSlotData.Position, maxProductsBox));
 
@@ -230,7 +231,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 
 			private int prodShelfLeftToFillCount;
 
-			private bool compareAgainstShelfContents;
+			private bool useSimpleBoxQuantityComparison;
 
 
 			private AnimationCurve quantVsDistPriorityThreshold;
@@ -243,8 +244,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 
 				this.shelfPosition = shelfPosition;
 				this.prodShelfLeftToFillCount = maxProductsPerRow - prodShelfQuantity;
-				//No need to compare whats left on the shelf, when a box max capacity is already lower than necessary.
-				compareAgainstShelfContents = prodShelfLeftToFillCount <= boxMaxProductCount;
+
+                //We will skip "box quantity vs shelf remaining" calculations, when
+                //	the box even at max capacity cant fill the shelf to begin with.
+                useSimpleBoxQuantityComparison = prodShelfLeftToFillCount <= boxMaxProductCount;
 
 				quantVsDistPriorityThreshold = new();
 				//This curve (a line in this case) is used as a way to prioritize box quantity over shelf distance.
@@ -280,51 +283,70 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			}
 
 
-			public int Compare(ShelfSlotData x, ShelfSlotData y) {
-				if (compareAgainstShelfContents) {
-					//Prioritize the box that can fill the product shelf. If both can, get the closest one to the product shelf.
-					if (prodShelfLeftToFillCount > x.Quantity && prodShelfLeftToFillCount <= y.Quantity) {
+			public int Compare(ShelfSlotData xStorageSlot, ShelfSlotData yStorageSlot) {
+                if (xStorageSlot.Quantity == yStorageSlot.Quantity) {
+                    //Fast return to avoid expensive calculations.
+                    return CompareShelfDistance(xStorageSlot, yStorageSlot);
+                }
+				
+                if (useSimpleBoxQuantityComparison) {
+                    //Prioritize the box that can fully fill the product shelf. If both can,
+					//	get the closest one to the product shelf.
+                    if (xStorageSlot.Quantity >= prodShelfLeftToFillCount && 
+							yStorageSlot.Quantity >= prodShelfLeftToFillCount) {
+
+                        //Both can fill the shelf. We still care about box size, since a bigger
+						//	one could also fill another product shelf.
+                        return CompareDistanceVsQuantity(xStorageSlot, yStorageSlot);
+                    } else if (xStorageSlot.Quantity >= prodShelfLeftToFillCount) {
+						return -1;
+					} else if (yStorageSlot.Quantity >= prodShelfLeftToFillCount) {
 						return 1;
-					} else if (prodShelfLeftToFillCount < x.Quantity && prodShelfLeftToFillCount >= y.Quantity) {
-						return 0;
-					} else if (prodShelfLeftToFillCount <= x.Quantity && prodShelfLeftToFillCount <= y.Quantity) {
-						return CompareShelfDistance(x, y);
 					}
 				}
 
 				//None of the boxes had enough to fill the shelf. Prioritize based on quantity and distance differences.
-
-				if (x.Quantity == y.Quantity) {
-					//Fast return to avoid expensive calculations.
-					return CompareShelfDistance(x, y);
-				}
-
-				//Find the precalculated threshold at which shelf distance difference
-				//	has more priority than the current quantity difference.
-				float boxQuantityDiff = Math.Abs(x.Quantity - y.Quantity);
-				float distDiffPriorityThreshold = quantVsDistPriorityThreshold.Evaluate(boxQuantityDiff);
-
-				//Get relative distance difference.
-				float xShelfDistance = (x.Position - shelfPosition).sqrMagnitude;
-				float yShelfDistance = (y.Position - shelfPosition).sqrMagnitude;
-				float distRelativeDiff = xShelfDistance < yShelfDistance ? 
-					xShelfDistance / yShelfDistance : yShelfDistance / xShelfDistance;
-
-				//Compare distance against threshold
-				if (distRelativeDiff < distDiffPriorityThreshold) {
-					return CompareShelfDistance(x, y);
-				} else {
-					if (x.Quantity <= y.Quantity) {
-						return 1;
-					} else {
-						return -1;
-					}
-				}
+				return CompareDistanceVsQuantity(xStorageSlot, yStorageSlot);
 			}
 
-			private int CompareShelfDistance(ShelfSlotData x, ShelfSlotData y) {
-				return (x.Position - shelfPosition).sqrMagnitude > (y.Position - shelfPosition).sqrMagnitude ? 1 : -1;
-			}
+			private int CompareDistanceVsQuantity(ShelfSlotData xStorageSlot, ShelfSlotData yStorageSlot) {
+                //Find the precalculated threshold at which shelf distance difference
+                //	has more priority than the current quantity difference.
+                float boxQuantityDiff = Math.Abs(xStorageSlot.Quantity - yStorageSlot.Quantity);
+                float distDiffPriorityThreshold = quantVsDistPriorityThreshold.Evaluate(boxQuantityDiff);
+
+                //Get relative distance difference.
+                float xShelfDistance = (xStorageSlot.Position - shelfPosition).sqrMagnitude;
+                float yShelfDistance = (yStorageSlot.Position - shelfPosition).sqrMagnitude;
+                float distRelativeDiff = xShelfDistance < yShelfDistance ?
+                    xShelfDistance / yShelfDistance : yShelfDistance / xShelfDistance;
+
+                //Compare distance against threshold
+                if (distRelativeDiff < distDiffPriorityThreshold) {
+                    return CompareShelfDistance(xShelfDistance, yShelfDistance);
+                } else {
+                    if (xStorageSlot.Quantity <= yStorageSlot.Quantity) {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                }
+            }
+
+            private int CompareShelfDistance(ShelfSlotData xStorageSlot, ShelfSlotData yStorageSlot) {
+                float xShelfDistance = (xStorageSlot.Position - shelfPosition).sqrMagnitude;
+                float yShelfDistance = (yStorageSlot.Position - shelfPosition).sqrMagnitude;
+
+				return CompareShelfDistance(xShelfDistance, yShelfDistance);
+            }
+
+            private static int CompareShelfDistance(float xShelfDistance, float yShelfDistance) {
+				if (Math.Abs(xShelfDistance - yShelfDistance) < Mathf.Epsilon) {
+					return 0;
+				}
+
+                return xShelfDistance.CompareTo(yShelfDistance);
+            }
 
 		}
 

@@ -1,63 +1,61 @@
 ﻿using Damntry.Utils.Logging;
 using HutongGames.PlayMaker;
+using Mirror;
+using Steamworks;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SuperQoLity.SuperMarket.ModUtils {
 
-	public enum DataContainerType {
-		ProductShelf = 0,
-		StorageShelf = 1,
-		Checkout = 2,
-		SelfCheckout = 3,
-		Unknown = 4,
-	}
+    public static class Tags {
+        public static string Interactable { get; } = "Interactable";
+        public static string Movable { get; } = "Movable";
+        public static string Decoration { get; } = "Decoration";
+    }
 
-	public static class AuxUtils {
+    /// <summary>
+    /// Here goes the stuff I dont know where to put yet.
+    /// </summary>
+    public static class AuxUtils {
 
-		public static bool IsKeypressed(KeyCode key, bool onlyWhileChatClosed = true) =>
+		private static readonly uint CoolPackSteamID = 3146530;
+
+
+        public static IEnumerable<GameObject> GetRemotePlayerObjects() {
+            if (WorldState.CurrentGameWorldState == GameWorldEvent.QuitOrMenu) {
+                yield break;
+            }
+
+            foreach (var rootObj in SceneManager.GetActiveScene().GetRootGameObjects()) {
+                if (rootObj.name.StartsWith("Player_PREFAB")) {
+                    yield return rootObj;
+                }
+            }
+        }
+
+        public static bool IsPlayerHoldingBox(out int productId) {
+            PlayerNetwork pNetwork = SMTInstances.LocalPlayerNetwork();
+            if (!pNetwork) {
+				TimeLogger.Logger.LogError($"The {nameof(PlayerNetwork)} instance couldnt be found." +
+					$"Most probably the base code has changed or this has been called on the main menu.", 
+					LogCategories.Vanilla);
+            }
+
+            productId = pNetwork.extraParameter1;
+            return pNetwork.equippedItem == 1;
+        }
+
+        public static bool IsKeypressed(KeyCode key, bool onlyWhileChatClosed = true) =>
 			(!onlyWhileChatClosed || onlyWhileChatClosed && IsChatOpen()) && Input.GetKeyDown(key);
+
 
 		public static bool IsChatOpen() => FsmVariables.GlobalVariables.GetFsmBool("InChat").Value;
 
+        public static bool IsMainMenuOpen() => FsmVariables.GlobalVariables.FindFsmBool("InOptions").Value;
 
-		public static DataContainerType GetContainerType(int containerID, out int parentIndex) {
-			parentIndex = -1;
-			if (GameData.Instance == null) {
-				TimeLogger.Logger.LogTimeError($"The GameData.Instance is null.", LogCategories.Other);
-				return DataContainerType.Unknown;
-			}
-			if (!GameData.Instance.TryGetComponent(out NetworkSpawner networkSpawner)) {
-				TimeLogger.Logger.LogTimeError($"There is no NetworkSpawner Component in GameData.", LogCategories.Other);
-				return DataContainerType.Unknown;
-			}
-			if (networkSpawner.buildables.Length < containerID) {
-				TimeLogger.Logger.LogTimeError($"The containerId {containerID} is out of bounds for " +
-					$"the length ({networkSpawner.buildables.Length}) of networkSpawner.buildables.", LogCategories.Other);
-				return DataContainerType.Unknown;
-			}
-
-			GameObject buildable = networkSpawner.buildables[containerID];
-
-			if (buildable.TryGetComponent(out Data_Container dataContainer)) {
-				parentIndex = dataContainer.parentIndex;
-				return dataContainer.GetContainerType();
-			}
-
-			TimeLogger.Logger.LogTimeError($"There is no Data_Container Component in " +
-				$"the buildable for containerId {containerID}.", LogCategories.Other);
-
-			return DataContainerType.Unknown;
-		}
-
-		public static DataContainerType GetContainerType(this Data_Container dataContainer) {
-			if (dataContainer.parentIndex >= 0 && dataContainer.parentIndex < 4) {
-				return (DataContainerType)dataContainer.parentIndex;
-			} else {
-				TimeLogger.Logger.LogTimeWarning($"Returned unknown parentIndex type with " +
-					$"value {dataContainer.parentIndex} for Data_Container.", LogCategories.Other);
-				return DataContainerType.Unknown;
-			}
-		}
+		public static bool IsDLCSubscribed() => SteamManager.Initialized && 
+			SteamApps.BIsSubscribedApp((AppId_t)CoolPackSteamID);
 
 	}
 }
