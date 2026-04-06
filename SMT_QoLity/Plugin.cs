@@ -4,7 +4,7 @@ using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Damntry.UtilsBepInEx.Logging;
-using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
+using Damntry.UtilsMirror.Helpers;
 using Damntry.UtilsUnity.Components.InputManagement;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
@@ -59,8 +59,6 @@ namespace SuperQoLity {
 
 
         public void Awake() {
-            AssemblyResolver.Init();
-
             //Init logger
             TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(
 				GameNotifications.RemoveSpecialNotifNewLinesForLog, false, MyPluginInfo.PLUGIN_NAME);

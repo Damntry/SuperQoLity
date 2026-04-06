@@ -1,5 +1,5 @@
 ﻿using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.MirrorNetwork.SyncVar;
+using Damntry.UtilsMirror.SyncVar;
 using Damntry.UtilsUnity.ExtensionMethods;
 using HutongGames.PlayMaker;
 using SuperQoLity.SuperMarket.ModUtils;

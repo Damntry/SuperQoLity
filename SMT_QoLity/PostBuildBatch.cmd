@@ -90,9 +90,13 @@ md "%TempSmtTargetPath%"
 copy "%TargetPath%" "%TempSmtTargetPath%"\%TargetName%-%Configuration%%TargetExt%
 copy "%TargetDir%\Damntry.Globals*.dll" "%TempSmtTargetPath%"
 
+
 :: Copy external dependencies
 copy "%TargetDir%\UniTask*.dll" "%TempSmtTargetPath%"
+copy "%TargetDir%\Microsoft.Bcl.HashCode.dll" "%TempSmtTargetPath%"
 copy "%TargetDir%\LeanTween*.dll" "%TempSmtTargetPath%"
+
+
 md "%TempSmtTargetPath%\%AssetsPath%"
 
 xcopy "%TargetDir%\%AssetsPath%\*.*" "%TempSmtTargetPath%\%AssetsPath%" /Y /I /E
@@ -174,7 +178,7 @@ if "%ConfigurationName%" EQU "Release" (
     copy "%changelogSource%" "%ZipTempTSPath%"
     copy "%DocsFolder%\icon_256.png" "%ZipTempTSPath%\icon.png"
     copy "%DocsFolder%\manifest.json" "%ZipTempTSPath%"
-    copy "%TempSmtTargetPath%" "%ZipTempTSModPath%"
+    xcopy "%TempSmtTargetPath%\*.*" "%ZipTempTSModPath%" /Y /I /E
     tar -a -cf "%ZipFileNameThunderStore%" -C "%ZipTempTSPath%" "*.*"
     rmdir /S /Q "%ZipTempTSPath%"
 )

@@ -3,6 +3,7 @@ using System;
 using System.Reflection;
 
 namespace SuperQoLity {
+    /* Removed and added the dll manually so it passes thunderstore filters
     public static class AssemblyResolver {
 
         public static void Init() {
@@ -18,4 +19,5 @@ namespace SuperQoLity {
         }
 
     }
+    */
 }

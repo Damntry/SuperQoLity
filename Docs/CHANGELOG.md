@@ -1,4 +1,6 @@
 ## Changelog
+### 1.0.1.0
+	Fucked up the Thunderstore release and there were missing files. The Nexusmods and GitHub releases are fine.
 ### 1.0.0.0
 	IMPORTANT: Many existing settings have changed and will be disabled. You have to set them up again.
 

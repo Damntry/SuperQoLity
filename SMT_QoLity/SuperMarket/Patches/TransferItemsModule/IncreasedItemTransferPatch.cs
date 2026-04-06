@@ -1,7 +1,7 @@
 ﻿using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
 using Damntry.UtilsBepInEx.IL;
-using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
+using Damntry.UtilsMirror.Helpers;
 using HarmonyLib;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;

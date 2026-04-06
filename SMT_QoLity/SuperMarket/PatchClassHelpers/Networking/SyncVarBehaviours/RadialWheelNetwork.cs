@@ -1,6 +1,6 @@
-﻿using Damntry.UtilsBepInEx.MirrorNetwork.Attributes;
-using Damntry.UtilsBepInEx.MirrorNetwork.Components;
-using Damntry.UtilsBepInEx.MirrorNetwork.SyncVar;
+﻿using Damntry.UtilsMirror.Attributes;
+using Damntry.UtilsMirror.Components;
+using Damntry.UtilsMirror.SyncVar;
 using SuperQoLity.SuperMarket.ModUtils;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours {

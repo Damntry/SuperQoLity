@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Damntry.Utils.ExtensionMethods;
 using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.MirrorNetwork.SyncVar;
+using Damntry.UtilsMirror.SyncVar;
 using Damntry.UtilsUnity.Components.InputManagement;
 using Rito.RadialMenu_v3;
 using StarterAssets;

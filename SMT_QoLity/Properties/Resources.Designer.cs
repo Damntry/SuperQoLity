@@ -59,15 +59,5 @@ namespace SuperQoLity.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] Microsoft_Bcl_HashCode {
-            get {
-                object obj = ResourceManager.GetObject("Microsoft.Bcl.HashCode", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

@@ -1,8 +1,8 @@
-﻿using Damntry.UtilsBepInEx.MirrorNetwork.Components;
-using Damntry.UtilsBepInEx.MirrorNetwork.Attributes;
+﻿using Damntry.UtilsMirror.Components;
+using Damntry.UtilsMirror.Attributes;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
-using Damntry.UtilsBepInEx.MirrorNetwork.SyncVar;
+using Damntry.UtilsMirror.SyncVar;
 using SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule;
 
 namespace SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours {

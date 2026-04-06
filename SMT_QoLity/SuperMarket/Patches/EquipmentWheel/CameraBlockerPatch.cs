@@ -1,5 +1,5 @@
 ﻿using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
-using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
+using Damntry.UtilsMirror.Helpers;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Equipment.RadialWheel;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Networking.SyncVarBehaviours;

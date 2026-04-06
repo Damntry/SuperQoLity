@@ -1,8 +1,8 @@
 ﻿using Damntry.Utils.Logging;
-using Damntry.UtilsBepInEx.MirrorNetwork.Attributes;
-using Damntry.UtilsBepInEx.MirrorNetwork.Components;
-using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
-using Damntry.UtilsBepInEx.MirrorNetwork.SyncVar;
+using Damntry.UtilsMirror.Attributes;
+using Damntry.UtilsMirror.Components;
+using Damntry.UtilsMirror.Helpers;
+using Damntry.UtilsMirror.SyncVar;
 using Mirror;
 using Mirror.RemoteCalls;
 using SuperQoLity.SuperMarket.ModUtils;

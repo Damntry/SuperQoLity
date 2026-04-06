@@ -3,7 +3,7 @@ using Damntry.Utils.Logging;
 using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching.BaseClasses.Inheritable;
 using Damntry.UtilsBepInEx.HarmonyPatching.Exceptions;
 using Damntry.UtilsBepInEx.IL;
-using Damntry.UtilsBepInEx.MirrorNetwork.Helpers;
+using Damntry.UtilsMirror.Helpers;
 using Damntry.UtilsUnity.Components.InputManagement;
 using HarmonyLib;
 using SuperQoLity.SuperMarket.ModUtils;
