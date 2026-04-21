@@ -138,7 +138,8 @@ if "%ConfigurationName%" EQU "Debug" (
     :: I would need to execute a powershell .ps1 file from msbuild, move all logic from PostBuildBatch.cmd
     :: to the .ps1 file, and for the dedicated file copy logic I would use Start-Process
     :: which theoretically should actually be launched as a new separate process.
-    ECHO *** Launching new process to copy the files to dedicated server
+    ECHO *** Launching new process to copy files to dedicated server
+    :: To avoid the console closing, change "cmd /c" to "cmd /k"
     start "" cmd /c "echo *** Attempting to copy files to dedicated server from path "%TempDedicatedSmtTargetPath%\*.*" && xcopy "%TempDedicatedSmtTargetPath%\*.*" "%DedicatedServerPluginsFolder%" /Y /I /E && echo *** Deleting temp folder to clean up && rmdir /S /Q "%TempDedicatedSmtTargetPath%""
 )
 
@@ -185,6 +186,5 @@ if "%ConfigurationName%" EQU "Release" (
 
 ECHO *** Deleting temp folders to clean up
 rmdir /S /Q "%TempSmtTargetPath%"
-rmdir /S /Q "%TempDedicatedSmtTargetPath%"
 
 ECHO *** FINISHED

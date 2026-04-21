@@ -180,7 +180,7 @@ namespace SuperQoLity.SuperMarket.Patches.BroomShotgun {
         }
 
 
-        //TODO 1 - Reduce player animation time when shot by shotgun, but not when whacked by the broom.
+        //TODO 0 - Reduce player animation time when shot by shotgun, but not when whacked by the broom.
         //  This is for PVP so the player has time to recover from being shot while the other player is still reloading.
         //  This transpiler below (untested) should work but more needs to be done:
         //      - Recovery time should be reduced to 0.75f ONLY when its from being shot, and not every push source.
@@ -189,12 +189,15 @@ namespace SuperQoLity.SuperMarket.Patches.BroomShotgun {
         //      - Add a new condition in UserCode_RpcPushPlayer__Vector3 so not only it checks
         //          isBeingPushed, but also a new var I would create that would stay true for 1.5
         //          seconds to keep the original invulnerability time.
+
+        //  Another complicated thing is that I need to know what playernetwork got hit, since there are multiple.
+        //  It could be a hit to the local player, it could be a hit to some other player. So its not just 
+        //  "this is a shotgun hit", its "This playernetwork got a shotgun hit."
         /*
         [HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.PushCoroutine), MethodType.Enumerator)]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> PushCoroutineTranspiler(
                 IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
-
 
             ///Old C#
             ///     yield return new WaitForSeconds(1.5f);
@@ -225,6 +228,62 @@ namespace SuperQoLity.SuperMarket.Patches.BroomShotgun {
                 .Operand = 0.75f;
 
             return matcher.InstructionEnumeration();
+        }
+        
+
+        [HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.UserCode_RpcPushPlayer__Vector3))]
+        [HarmonyTranspiler]
+        public static IEnumerable<CodeInstruction> PushPlayerTranspiler(
+                IEnumerable<CodeInstruction> instructions, ILGenerator generator) {
+
+
+            ///Old C#
+            ///     ...    
+            ///     val.GetComponent<Animator>().Play("Animation");
+            ///
+            ///New C#w
+            ///     ...
+            ///     SetAnimationSpeedFromHit(this)
+            ///     val.GetComponent<Animator>().Play("Animation");
+
+
+
+            CodeMatcher matcher = new(instructions, generator);
+            
+            MethodInfo setFloatMethod = AccessTools.Method(typeof(Animator), nameof(Animator.SetFloat));
+            if (setFloatMethod == null) {
+                TimeLogger.Logger.LogError($"The method {nameof(Animator)}.{nameof(Animator.SetFloat)} " +
+                    $"couldnt be found.", LogCategories.Other);
+                return instructions;
+            }
+
+            matcher.MatchForward(useEnd: true,
+                new CodeMatch(c => c.LoadsConstant()),
+                new CodeMatch(c => c.Calls(setFloatMethod))
+            );
+
+            if (matcher.IsInvalid) {
+                TimeLogger.Logger.LogError($"The IL line calling the method {setFloatMethod.DeclaringType}." +
+                    $"{setFloatMethod.Name} couldnt be found.", LogCategories.Other);
+                return instructions;
+            }
+
+            matcher
+                .Advance(1)
+                .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))
+                .Insert(Transpilers.EmitDelegate(SetAnimationSpeedFromHit));
+
+            return matcher.InstructionEnumeration();
+        }
+
+        private static void SetAnimationSpeedFromHit(PlayerNetwork instance) {
+            //TODO 0 - Now here I need to read whatever to know if the hit was from a shotgun or a broom
+            float defaultAnimSpeed = 1f;
+            if (wasShotgunHit) {
+                defaultAnimSpeed = 2f;
+            }
+            GameObject charObj = instance.transform.Find("Character").gameObject;
+            charObj.GetComponent<Animator>().speed = defaultAnimSpeed;
         }
         */
 

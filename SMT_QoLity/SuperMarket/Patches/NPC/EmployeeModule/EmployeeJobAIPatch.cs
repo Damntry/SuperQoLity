@@ -11,10 +11,8 @@ using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch;
-using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Component;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking;
-using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.JobScheduler;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Movement;
 using SuperQoLity.SuperMarket.Patches.TransferItemsModule;
 using System;
@@ -107,8 +105,6 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 
         /// <summary>False if the new security pick up system failed to start.</summary>
         private static bool newProdPickUpWorking;
-
-        private float destroyCounter;
 
 
 		private static Queue<StolenProductSpawn> stolenProdPickups;
@@ -1952,24 +1948,17 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 
 			do {
                 if (stolenProdPickups.Count > 0) {
-                    destroyCounter = Math.Min(MaxStolenProdRemoval, stolenProdPickups.Count);
+                    float destroyCounter = Math.Min(MaxStolenProdRemoval, stolenProdPickups.Count);
                     while (destroyCounter >= 1) {
 						if (stolenProdPickups.TryDequeue(out StolenProductSpawn stolenProdPickup)) {
 							NetworkServer.UnSpawn(stolenProdPickup.gameObject);
 
-                            //TODO 2 - I made a mistake and had the destroyCounter adding and accumulating 5
-							//	stolen products every frame, no matter what.
-                            //	Now it will only do so when there is something in stolenProdPickups, and it
-							//	wont accumulate. Not sure if this could have been the cause of the bug where
-							//	rarely a product would get picked up in the host, but the client still has it.
-                            //	Old comment: Add the unspawned to another different list and make yet another 
-                            //	coroutine to call the Destroy on the list, but with a much slower rate.
+                            //TODO 2 - Add the objects to be unspawned to another different list and make
+							//	yet another coroutine to call the Destroy on the list, but with a much slower rate.
                             //NetworkServer.Destroy(stolenProdPickup.gameObject);
                         }
                         destroyCounter--;
                     }
-				} else {
-					break;
 				}
 
 				yield return null;
@@ -1979,7 +1968,7 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 		}
 
 
-		private static bool TryMoveToClosestBale(NPC_Manager __instance, NPC_Info employee, GameObject employeeObj, EmployeeNPC employeeSQoL) {
+        private static bool TryMoveToClosestBale(NPC_Manager __instance, NPC_Info employee, GameObject employeeObj, EmployeeNPC employeeSQoL) {
 			GameObject closestBale = __instance.GetClosestBale(employeeObj);
 			if (closestBale) {
 				if (NavMesh.SamplePosition(new Vector3(closestBale.transform.position.x, 0f, 
