@@ -1,4 +1,6 @@
 ## Changelog
+### 1.0.2.0
+	Fixed: When using the improved security employees. they were not picking up dropped stolen products on the client side 
 ### 1.0.1.0
 	Fucked up the Thunderstore release and there were missing files. The Nexusmods and GitHub releases are fine.
 ### 1.0.0.0
