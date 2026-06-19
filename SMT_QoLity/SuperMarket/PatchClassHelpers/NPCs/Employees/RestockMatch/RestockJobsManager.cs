@@ -40,26 +40,36 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch 
 
 		private static RestockJob<RestockJobInfo> availableRestockJobs;
 
+		private static bool initialized;
+
 		public static void Initialize() {
 			availableRestockJobs = new();
-		}
+			initialized = true;
+        }
 
 
 		public static int JobCount => availableRestockJobs.Count;
 
 
-		public enum JobFindStatus {
+		private enum JobFindStatus {
 			FoundJob,
 			JobNotValid,
 			NoMoreJobs
 		}
 
+
 		public static bool GetAvailableRestockJob(NPC_Manager __instance, out RestockJobInfo restockJob) {
-			//Performance.Start("GetAvailableRestockJob");
 			restockJob = RestockJobInfo.Default;
 			JobFindStatus jobFindStatus;
 
-			do {
+            if (!initialized) {
+                TimeLogger.Logger.LogWarning("An available restock job was requested but " +
+					"RestockJobsManager was not yet initialized.", LogCategories.AI);
+                return false;
+            }
+
+            //Performance.Start("GetAvailableRestockJob");
+            do {
 				if (availableRestockJobs.TryExtractPriorityJob(out RestockJobInfo possibleRestockJob, out _)) {
 					//Check that both product shelf and storageSlotData slots are not in use by
 					//	another employee, and that their contents are still valid.

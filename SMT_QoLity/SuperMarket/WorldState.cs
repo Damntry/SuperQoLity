@@ -52,7 +52,7 @@ namespace SuperQoLity.SuperMarket {
 			/// use OnBoxEquippedNonLocalPlayer.
 			/// Parameters: Box Transform, ProductId
 			/// </summary>
-            public static Action<Transform, int> OnBoxEquippedOrUpdatedLocalPlayer;
+            public static Action<Transform, int, bool> OnBoxEquippedOrUpdatedLocalPlayer;
             /// <summary>
 			/// Triggers when a box is picked up by an employee or remote player, but cant detect
 			/// the case where a box is emptied and then filled with a different product.

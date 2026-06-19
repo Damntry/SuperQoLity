@@ -1,6 +1,20 @@
 ## Changelog
+### 1.1.0.0
+	* Fixed: 
+		- In some PCs, restockers did not work, or could suddenly stop working because of a multithreaded condition.
+		- Exception that made highlighting boxes not work.
+		- Bugs after the Plaza game update:
+			- Some tools of the equipment wheel where not being equipped anymore.
+			- Shotgun shells being ejected were pink
+			- Updated npc walkable limits to account for new store layout.
+			- Invisible wall colliders were changed and the shotgun couldnt shoot past them anymore.
+			There is probably some more things I missed. Report anything you find.
+	* New:
+		- Setting "Use new restock job finder". Instead of the old vanilla "threshold" system, it searches all possible restock jobs, gives a small priority bonus to shelves with low capacity products (toilet paper for ex.), and sorts them by score. This helps avoid shelves from going empty.
+	* Changes:
+		- The setting "Customers dont buy all unlocked products", now also applies to online orders.
 ### 1.0.2.0
-	Fixed: When using the improved security employees. they were not picking up dropped stolen products on the client side 
+	Fixed: When using the improved security employees, they were not picking up dropped stolen products on the client side 
 ### 1.0.1.0
 	Fucked up the Thunderstore release and there were missing files. The Nexusmods and GitHub releases are fine.
 ### 1.0.0.0

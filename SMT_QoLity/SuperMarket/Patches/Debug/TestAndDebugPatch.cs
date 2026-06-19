@@ -114,7 +114,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
                         InputManagerSMT.Instance.RemoveHotkey("PlaceDuck");
 					};
 				}
-				WorldState.OnWorldLoaded += () => {
+				WorldState.OnFPControllerStarted += () => {
 					if (WorldState.CurrentOnlineMode == GameOnlineMode.Host) {
                         //Left Control + Left Alt + Scroll to change
                         TimeScaleDebug.Initialize<TimeScaleMethods>(SMTInstances.FirstPersonController().GameObject(),
@@ -402,8 +402,7 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 
 					if (spawnCustomers) {
 						for (int i = 0; i < count; i++) {
-							IEnumerator enumCust = NPC_Manager.Instance.SpawnCustomerNPC();
-							while (enumCust.MoveNext()) ;
+                            while (NPC_Manager.Instance.SpawnCustomerNPC().MoveNext());
 						}
 						TimeLogger.Logger.LogWarning($"Total customers on map: {NPC_Manager.Instance.customersnpcParentOBJ.transform.childCount}",
 							LogCategories.TempTest);
@@ -411,6 +410,34 @@ namespace SuperQoLity.SuperMarket.Patches.Debug {
 				}
 			}
 		}
+
+        [HarmonyPatch(typeof(GameData), "Update")]
+        [HarmonyPostfix]
+        private static void UpdatePatch(GameData __instance) {
+            if (NetworkServer.active) {
+                bool spawnCustomers = false;
+                int count = 0;
+
+                if (Input.GetKeyDown(KeyCode.J)) {
+                    spawnCustomers = true;
+                    count = 25;
+                }
+                if (Input.GetKeyDown(KeyCode.K)) {
+                    spawnCustomers = true;
+                    count = 100;
+                }
+                if (Input.GetKeyDown(KeyCode.L)) {
+                    spawnCustomers = true;
+                    count = 500;
+                }
+
+                if (spawnCustomers) {
+                    for (int i = 0; i < count; i++) {
+                        while (NPC_Manager.Instance.SpawnCustomerNPC().MoveNext());
+                    }
+                }
+            }
+        }
 
 		public class IncreaseMaxEmployees() {
 

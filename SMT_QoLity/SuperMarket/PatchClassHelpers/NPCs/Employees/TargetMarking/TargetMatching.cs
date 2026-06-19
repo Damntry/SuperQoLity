@@ -1,4 +1,5 @@
 ﻿using System;
+using Damntry.Utils.Logging;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Models;
 using UnityEngine;
@@ -74,19 +75,41 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.TargetMarking
 			return match;
 		}
 
-		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, GenericShelfSlotInfo slotInfoBase, out int currentTargetQuantity, TargetType targetType) {
-			//Check that the saved target values still match the current content of the product shelf/storage slot.
-			if (gameObjectShelf.transform.childCount <= slotInfoBase.ShelfIndex) {
+		private static bool ContentsMatchOrValid(GameObject gameObjectShelf, 
+				GenericShelfSlotInfo slotInfoBase, out int currentTargetQuantity, TargetType targetType) {
+
+            currentTargetQuantity = -1;
+
+            if (!gameObjectShelf) {
+				TimeLogger.Logger.LogError("The parent shelf object is null.", LogCategories.Other);
+				return false;
+			}
+            if (slotInfoBase == null) {
+                TimeLogger.Logger.LogError("The slotInfoBase object is null.", LogCategories.Other);
+                return false;
+            }
+            if (slotInfoBase.ExtraData == null) {
+                TimeLogger.Logger.LogError("The slotInfoBase.ExtraData object is null.", LogCategories.Other);
+                return false;
+            }
+
+            //Check that the saved target values still match the current content of the product shelf/storage slot.
+            if (gameObjectShelf.transform.childCount <= slotInfoBase.ShelfIndex) {
 				//Can happen when shelves get deleted in the middle of a job
-				currentTargetQuantity = -1;
                 return false;
 			}
+            
+			Data_Container dataContainer = gameObjectShelf.transform
+				.GetChild(slotInfoBase.ShelfIndex).GetComponent<Data_Container>();
 
-            int[] productInfoArray = gameObjectShelf.transform.GetChild(slotInfoBase.ShelfIndex)
-				.GetComponent<Data_Container>().productInfoArray;
+            if (!dataContainer) {
+                TimeLogger.Logger.LogError($"The Data_Container from target type '{targetType}' " +
+					$"with index {slotInfoBase.ShelfIndex} is null.", LogCategories.Other);
+                return false;
+            }
 
-			int productId = productInfoArray[slotInfoBase.SlotIndex * 2];
-			currentTargetQuantity = productInfoArray[slotInfoBase.SlotIndex * 2 + 1];
+			int productId = dataContainer.productInfoArray[slotInfoBase.SlotIndex * 2];
+			currentTargetQuantity = dataContainer.productInfoArray[slotInfoBase.SlotIndex * 2 + 1];
 
 			if (productId == slotInfoBase.ExtraData.ProductId) {
 				if (targetType == TargetType.StorageSlot) {

@@ -25,7 +25,7 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 
 		public class PopulateCacheOnBuilderInitialization {
 
-			[HarmonyPatch(typeof(Builder_Main), "RetrieveInitialBehaviours")]
+			[HarmonyPatch(typeof(Builder_Main), nameof(Builder_Main.RetrieveInitialBehaviours))]
 			[HarmonyPostfix]
 			public static IEnumerator WaitEndOfIEnumerable(IEnumerator result) {
 				while (result.MoveNext()) {
@@ -33,7 +33,7 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 				}
 
 				PopulateMaxProductsPerRowCache();
-			}
+            }
 		}
 
 		private static void PopulateMaxProductsPerRowCache() {
@@ -41,7 +41,6 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 				return;
 			}
 
-			//Builder_Main builderMain = GameCanvas.Instance.GetComponent<Builder_Main>();
 			GameObject[] buildables = SMTInstances.NetworkSpawner().buildables;
 
 			foreach (GameObject buildable in buildables) {
@@ -107,16 +106,19 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 		/// <param name="shelfIndex">Index of the shelf. This is only used in case of failure.</param>
 		public static int GetMaxProductsPerRowCached(NPC_Manager __instance, 
 				Data_Container dataContainer, int shelfProductId, int shelfIndex, bool isThreaded) {
-			bool exists = false;
+
 			int maxProductsPerRow = 0;
 
-			if (cachePopulated) {
-				exists = maxProductsPerRowCache.TryGetValue((dataContainer.containerClass, dataContainer.containerID, shelfProductId), out maxProductsPerRow);
-			} else {
+			if (!cachePopulated) {
 				TimeLogger.Logger.LogWarning("MaxProductsPerRow has been requested from the cache, " +
-					"but it hasnt been populated yet.", LogCategories.Cache);
-			}
-			if (!exists) {
+					"but it hasnt been populated yet. Populating it now forcefully.", LogCategories.Cache);
+
+				PopulateMaxProductsPerRowCache();
+            }
+
+            bool exists = maxProductsPerRowCache.TryGetValue((dataContainer.containerClass, dataContainer.containerID, shelfProductId), out maxProductsPerRow);
+
+            if (!exists) {
 				//This case shouldnt currently happen, but keep as a safety net against future codebase changes.
 				TimeLogger.Logger.LogWarning($"A maxProductsPerRow cache entry doesnt exist for containerID: {dataContainer.containerID} " +
 					$"and productId: {shelfProductId}. Attempting to obtain it manually.", LogCategories.Loading);
@@ -132,7 +134,17 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 						$"and the value could not be obtained manually.", LogCategories.Loading);
 				}
 
-				maxProductsPerRowCache.Add((dataContainer.containerClass, dataContainer.containerID, shelfProductId), maxProductsPerRow);
+				if (maxProductsPerRow <= 0) {
+                    TimeLogger.Logger.LogWarning($"maxProductsPerRow for containerID: " +
+						$"{dataContainer.containerID} returned {maxProductsPerRow}.", LogCategories.Loading);
+                }
+
+				try {
+                    maxProductsPerRowCache.Add((dataContainer.containerClass, dataContainer.containerID, shelfProductId), maxProductsPerRow);
+                }catch (System.Exception ex) {
+					TimeLogger.Logger.LogExceptionWithMessage("Error while adding product to maxProductsPerRowCache with data: ", ex, LogCategories.Loading);
+				}
+				
 			}
 
 			return maxProductsPerRow;

@@ -32,21 +32,24 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting.Definitions {
             (parentContainerType switch {
                 ParentContainerType.ProductDisplay => NPC_Manager.Instance?.shelvesOBJ.transform.Cast<Transform>(),
                 ParentContainerType.Storage => NPC_Manager.Instance?.storageOBJ.transform.Cast<Transform>(),
-                ParentContainerType.GroundBox => GetExistingParentedBoxes(),
+                ParentContainerType.GroundBox => GetExistingParentedBoxes(withManufacturing: false),
                 _ => throw new NotImplementedException($"The container type '{parentContainerType}' is not implemented."),
             }).ToArray();
 
-        public static Transform[] GetExistingParentedBoxes() {
+        public static Transform[] GetExistingParentedBoxes(bool withManufacturing) {
             ManagerBlackboard managerBBrd = SMTInstances.ManagerBlackboard();
 
-            return NPC_Manager.Instance?.boxesOBJ.transform
+            var boxes = NPC_Manager.Instance?.boxesOBJ.transform
                 .Cast<Transform>()
                 .Concat(managerBBrd.boxParent   //This one is not being used anymore but just to be safe.
                     .Cast<Transform>()
-                    .Concat(managerBBrd.manufacturingBoxParent
-                        .Cast<Transform>()
-                    )
-                ).ToArray();
+                );
+            if (withManufacturing) {
+                boxes = boxes.Concat(managerBBrd.manufacturingBoxParent
+                    .Cast<Transform>());
+            }
+
+            return boxes.ToArray();
         }
 
 

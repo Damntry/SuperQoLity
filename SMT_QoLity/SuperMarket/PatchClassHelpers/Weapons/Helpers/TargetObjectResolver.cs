@@ -90,7 +90,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Weapons.Helpers {
                 }
             } else if (targetType == TargetType.Trash) {
                 if (!parentTrashObj) {
-                    parentTrashObj = GameObject.Find("Level_SupermarketProps/Trash/");
+                    parentTrashObj = GameObject.Find(GameObjectPaths.Trash);
                 }
                 targetObj = FindNpcInParentByNetid(parentTrashObj, targetNetid);
             } else {

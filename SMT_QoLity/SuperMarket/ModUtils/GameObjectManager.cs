@@ -99,9 +99,6 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				TimeLogger.Logger.LogError($"The GameObject for target " +
 					$"\"{targetObject}\" ({targetObject.GetDescription()}) could not be retrieved. Maybe you need " +
 					$"to do this it at a later point?", LogCategories.Other);
-
-				TimeLogger.Logger.LogError($"On the other hand, the GameObject.Find is null? " +
-					$"{GameObject.Find(targetObject.GetDescription()) == null}", LogCategories.TempTest);
 			}
 
 			return gameObject != null;

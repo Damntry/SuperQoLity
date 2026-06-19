@@ -50,15 +50,20 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 			Exit = 3
 		}
 
+        private enum ProductShelfType {
+            ProductShelf,
+            ManufacturingShelf
+        }
 
-		/// <summary>Defines the parameters available in the lambda to find storage slots.</summary>
-		/// <param name="storageIndex">Child index of the current storage shelf.</param>
-		/// <param name="slotIndex">Child index of current storage slot.</param>
-		/// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
-		/// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
-		/// <param name="storageObjT">The storage object transform.</param>
-		/// <returns>The <see cref="LoopStorageAction"/> to perform in the current loop. </returns>
-		public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity, Transform storageObjT);
+
+        /// <summary>Defines the parameters available in the lambda to find storage slots.</summary>
+        /// <param name="storageIndex">Child index of the current storage shelf.</param>
+        /// <param name="slotIndex">Child index of current storage slot.</param>
+        /// <param name="productId">Product ID of the current storage slot. Can be -1 if unassigned or empty. 0 is a valid product.</param>
+        /// <param name="quantity">Quantity of the product in the current storage slot. Can be -1 if empty.</param>
+        /// <param name="storageObjT">The storage object transform.</param>
+        /// <returns>The <see cref="LoopStorageAction"/> to perform in the current loop. </returns>
+        public delegate LoopStorageAction StorageSlotFunction(int storageIndex, int slotIndex, int productId, int quantity, Transform storageObjT);
 
 		/// <summary>Defines the parameters available in the lambda to iterate through storage slots.</summary>
 		/// <param name="storageIndex">Child index of the current storage shelf.</param>
@@ -151,29 +156,47 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		/// <param name="prodShelfSlotLambda">The ProdShelfLoopFunction search lambda. See <see cref="ProdShelfLoopFunction"/> for more information.</param>
 		/// <returns></returns>
 		public static void ForEachProductShelfSlotLambda(NPC_Manager __instance, bool checkNPCProdShelfTarget, ProdShelfLoopFunction prodShelfSlotLambda) {
-			for (int i = 0; i < __instance.shelvesOBJ.transform.childCount; i++) {
-				Transform prodShelfObjT = __instance.shelvesOBJ.transform.GetChild(i);
-				int[] productInfoArray = prodShelfObjT.GetComponent<Data_Container>().productInfoArray;
-				int num = productInfoArray.Length / 2;
-				for (int j = 0; j < num; j++) {
-					//Check if this product shelf slot is already in use by another NPC
-					if (checkNPCProdShelfTarget && EmployeeTargetReservation.IsProductShelfSlotTargeted(i, j)) {
-						continue;
-					}
-					int prodShelfProductId = productInfoArray[j * 2];
-					int quantity = productInfoArray[j * 2 + 1];
+			ForEachProductShelfSlotLambda(__instance, ProductShelfType.ProductShelf, checkNPCProdShelfTarget, prodShelfSlotLambda);
+        }
 
-					if (prodShelfSlotLambda(i, j, prodShelfProductId, quantity, prodShelfObjT) == LoopAction.Exit) {
-						return;
-					}
-				}
-			}
-		}
+        public static void ForEachManufactProdShelfSlotLambda(NPC_Manager __instance, bool checkNPCProdShelfTarget, ProdShelfLoopFunction prodShelfSlotLambda) {
+            ForEachProductShelfSlotLambda(__instance, ProductShelfType.ManufacturingShelf, checkNPCProdShelfTarget, prodShelfSlotLambda);
+        }
+
+        private static void ForEachProductShelfSlotLambda(NPC_Manager __instance, ProductShelfType prodShelfType, bool checkNPCProdShelfTarget, ProdShelfLoopFunction prodShelfSlotLambda) {
+			GameObject parentShelvObj = prodShelfType == ProductShelfType.ProductShelf ? 
+				__instance.shelvesOBJ : __instance.manufacturingShelvesOBJ;
+
+            for (int i = 0; i < parentShelvObj.transform.childCount; i++) {
+                Transform prodShelfObjT = parentShelvObj.transform.GetChild(i);
+
+				int[] productInfoArray;
+                if (prodShelfType == ProductShelfType.ProductShelf) {
+                    productInfoArray = prodShelfObjT.GetComponent<Data_Container>().productInfoArray;
+                } else {
+                    productInfoArray = prodShelfObjT.GetComponent<ManufacturingContainer>().productInfoArray;
+                }
+
+                int num = productInfoArray.Length / 2;
+                for (int j = 0; j < num; j++) {
+                    //Check if this product shelf slot is already in use by another NPC
+                    if (checkNPCProdShelfTarget && EmployeeTargetReservation.IsProductShelfSlotTargeted(i, j)) {
+                        continue;
+                    }
+                    int prodShelfProductId = productInfoArray[j * 2];
+                    int quantity = productInfoArray[j * 2 + 1];
+
+                    if (prodShelfSlotLambda(i, j, prodShelfProductId, quantity, prodShelfObjT) == LoopAction.Exit) {
+                        return;
+                    }
+                }
+            }
+        }
 
 
 
 
-		/* TODO 4 - Look into replacing ForEachStorageSlotLambda and ForEachProductShelfSlotLambda 
+        /* TODO 4 - Look into replacing ForEachStorageSlotLambda and ForEachProductShelfSlotLambda 
 		 * with this generic implementation.
 		
 		public static void ForEachProductShelfSlotLambdaNew(NPC_Manager __instance, ShelfSearchOptions searchOptions, ShelfSlotLoopFunction shelfSlotLambda) {
@@ -227,7 +250,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 		}
 		*/
 
-		public delegate LoopAction ShelfLoopFunction(int shelfIndex, int[] productInfoArray, Data_Container dataContainer, Vector3 position);
+        public delegate LoopAction ShelfLoopFunction(int shelfIndex, int[] productInfoArray, Data_Container dataContainer, Vector3 position);
 		public delegate LoopAction SlotLoopFunction(int slotIndex, int productId, int quantity);
 
 		/// <summary>

@@ -28,16 +28,19 @@ namespace SuperQoLity.SuperMarket.ModUtils {
         /// work right. Instead we just assign this shader.
         /// </summary>
         private static Shader GetGameShader() {
+            return Shader.Find("Universal Render Pipeline/Lit");
+            /*
             if (GameData.Instance == null) {
                 TimeLogger.Logger.LogWarning("GameData instance null", LogCategories.Visuals);
                 return null;
             }
 
-            return GameObject.Find("Level_SupermarketProps/UsableProps")
+            return GameObject.Find(GameObjectPaths.UsableProps2)
                 .NullableObject()?.transform
                 .GetChild(0)
                 .GetComponent<MeshRenderer>()
                 .material.shader;
+            */
         }
 
     }

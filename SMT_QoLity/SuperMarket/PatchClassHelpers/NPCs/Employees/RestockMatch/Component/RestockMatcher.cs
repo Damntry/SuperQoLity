@@ -2,8 +2,8 @@
 using Damntry.Utils.Logging;
 using Damntry.Utils.Tasks;
 using Damntry.Utils.Tasks.AsyncDelay;
-using Damntry.UtilsBepInEx.HarmonyPatching.AutoPatching;
 using Mirror;
+using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.ShelfSlotInfo;
 using SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.Helpers;
@@ -25,20 +25,14 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 
 		private Task restockTask;
 
-		private static float currentRestockProcessInterval;
+        private static AllowDuplicatesComparer AllowDupsComparer = new();
+
+        private static float currentRestockProcessInterval;
 
 
-		public static void Enable() {
-			WorldState.OnWorldLoaded += SetupRestockMatcher;
-		}
-
-        public static void Disable() {
-            WorldState.OnWorldLoaded -= SetupRestockMatcher;
-        }
-
-        private static void SetupRestockMatcher() {
-            NPC_Manager.Instance.gameObject.AddComponent<RestockMatcher>();
+        public static void SetupRestockMatcher() {
             RestockJobsManager.Initialize();
+            NPC_Manager.Instance.gameObject.AddComponent<RestockMatcher>();
         }
 
 		public void Awake() {
@@ -47,9 +41,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			currentRestockProcessInterval = RestockJobsManager.RestockProcessNotPossibleInterval;
 		}
 
-		public void FixedUpdate() {
-			bool shouldRun = restockTask == null || restockTask.IsTaskEnded() &&
-				(lastTimeCheck == -1 || lastTimeCheck + currentRestockProcessInterval < Time.fixedUnscaledTime);
+		public void Update() {
+			bool shouldRun = Time.timeScale > 0 && (restockTask == null || restockTask.IsTaskEnded()) &&
+                (lastTimeCheck == -1 || lastTimeCheck + currentRestockProcessInterval < Time.unscaledTime);
+
 			if (shouldRun) {
 				if (IsRestockPossible(NPC_Manager.Instance)) {
 					GenerateAvailableRestockProducts(NPC_Manager.Instance);
@@ -60,7 +55,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 					currentRestockProcessInterval = RestockJobsManager.RestockProcessNotPossibleInterval;
 				}
 
-				lastTimeCheck = Time.fixedUnscaledTime;
+                //Use unscaled time so speeding up the game with the clock wont make it do too many checks and tank performance.
+                lastTimeCheck = Time.unscaledTime;
 			}
 		}
 
@@ -72,12 +68,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 
 
 		public void GenerateAvailableRestockProducts(NPC_Manager __instance) {
-			//If we reach this point the task has ended, but if there was an exception it would be still waiting to
-			// throw it. We dont want any errors of the previous run to ruin the current one,
-			//	so we just await and catch any exceptions without blocking.
-			//	Hopefully, whatever started failing doesnt happen every time.
-			restockTask?.FireAndForgetCancels(LogCategories.JobSched);
-
 			//Performance.Start("0. GenerateInitialCollections");
 			List<ShelfData> listStorageShelf = GetInitialShelfList(__instance, ShelfType.StorageSlot);
 			List<ShelfData> listProdShelf = GetInitialShelfList(__instance, ShelfType.ProdShelfSlot);
@@ -86,14 +76,16 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			LOG.TEMPDEBUG_FUNC(() => $"{RestockJobsManager.JobCount} jobs are going to be cleared.", EmployeeJobAIPatch.LogEmployeeActions);
 			RestockJobsManager.ClearJobs();
 			
-
 			int maxJobsRestockCycle = CalculateMaxQueuedJobsForCycle(__instance);
 
-			restockTask = restockJobGen.StartAwaitableThreadedTaskAsync(
+            //Start an awaitable task so we can check its ongoing state with restockTask.
+            restockTask = restockJobGen.StartAwaitableThreadedTaskAsync(
 				() => RestockJobGeneration(maxJobsRestockCycle, listStorageShelf, listProdShelf),
 				"Restock job generation",
 				false
 			);
+
+            restockTask.FireAndForgetCancels(LogCategories.AI);
 		}
 
 		//This is a piece of shit. I should redo how I calculate this some day in the far far future.
@@ -107,17 +99,26 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 				RestockJobsManager.ExtraQueuedJobsBuffer;
 		}
 
-		private static Task RestockJobGeneration(int maxJobsRestockCycle,
+
+        private static Task RestockJobGeneration(int maxJobsRestockCycle,
 				List<ShelfData> listStorageShelf, List<ShelfData> listProdShelf) {
 
-			int jobsPerPriority = (int)Math.Ceiling(maxJobsRestockCycle * RestockJobsManager.NonCriticalJobsPerPriorityMultiplier);
+            int jobsPerPriority = (int)Math.Ceiling(maxJobsRestockCycle * RestockJobsManager.NonCriticalJobsPerPriorityMultiplier);
 			RestockJob<ProductShelfInfo> possibleRestockJobs = new();
+            SortedDictionary<float, ProductShelfInfo> sortedShelfStocking = null;
+			bool sortAllShelves = ModConfig.Instance.UseNewRestockJobFinder.Value;
+			
+            if (sortAllShelves) {
+				//This will make it so lookups by key wont work, but we are not going to use them.
+                sortedShelfStocking = new(AllowDupsComparer);
+            }
 
-			//Performance.Start"2. GenerateStorageSlotDictionary");
-			Dictionary<int, List<ShelfSlotData>> dictStorageSlot = GenerateStorageSlotDictionary(listStorageShelf);
+            //Performance.Start"2. GenerateStorageSlotDictionary");
+            Dictionary<int, List<ShelfSlotData>> dictStorageSlot = GenerateStorageSlotDictionary(listStorageShelf);
 			//Performance.StopAndLog("2. GenerateStorageSlotDictionary");
 
-			//Performance.Start("3. productsThresholdArray (minus GenerateStorageSlotDictionary)");
+			//string perfStringMeasure = $"3. productsThresholdArray (minus GenerateStorageSlotDictionary) with sortAllShelves = {sortAllShelves}";
+            //Performance.Start(perfStringMeasure);
 
 			foreach (ShelfData prodShelfData in listProdShelf) {
 				foreach (ShelfSlotData prodShelfSlotData in GetProductShelfSlotList(prodShelfData)) {
@@ -126,58 +127,99 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 					}
 
 					int maxProductsPerRow = -1;
-					RestockPriority restockPriority = prodShelfSlotData.Quantity == 0 ? RestockPriority.Critical : RestockPriority.ShelfFull;
 
-					bool shouldBeRestocked = prodShelfSlotData.Quantity == 0;   //Cheap pre-check
-					if (!shouldBeRestocked) {
-						//Check if shelf product quantity is below current priority priority.
-						maxProductsPerRow = PerformanceCachingPatch.GetMaxProductsPerRowCachedThreaded(
-							prodShelfSlotData.DataContainer,
-							prodShelfSlotData.ProductId, prodShelfSlotData.ShelfIndex);
+					bool isEmptyShelf = prodShelfSlotData.Quantity == 0;
 
-						shouldBeRestocked = ThresholdHelper.IsShelfNotFull(prodShelfSlotData.Quantity, maxProductsPerRow,
-							out restockPriority);
-					}
+                    if (sortAllShelves) {
+						float score = 0;
+						if (!isEmptyShelf) {
+                            maxProductsPerRow = PerformanceCachingPatch.GetMaxProductsPerRowCachedThreaded(
+                                    prodShelfSlotData.DataContainer,
+                                    prodShelfSlotData.ProductId, prodShelfSlotData.ShelfIndex);
 
-					if (restockPriority != RestockPriority.Critical) {
+							//If we just use the Quantity to sort, it would give too much preference to restocking
+							//	big products like toilet paper while most other shelves seem half empty, but if
+							//	we only use the fill ratio, toilet paper shelves and the like could get ignored
+							//	a bit too easily as it already happens when restockers are struggling.
+							//To combat this, we create an hybrid score system. The lower the score, the higher the
+							//	restock priority, from 0 (empty, high priority), to 1 (full).
+							//The score is the fill ratio, with some extra prioritization the less items the
+							//	product shelf can fit, up to 25 items.
+							//This gives us a good balance between restocking shelves with very low max number
+							//	of products, without ignoring high volume materials as they start getting low.
+							float totalSizeBonus = Math.Min(1f, maxProductsPerRow / 25f);
+							//Apply a reduction to the bonus from low size
+                            score = (prodShelfSlotData.Quantity / (float)maxProductsPerRow) * (1f - (totalSizeBonus * 0.2f));
+                            
+                        }
+						
+						sortedShelfStocking.Add(score, new ProductShelfInfo(prodShelfSlotData, maxProductsPerRow));
+                    } else {
+                        RestockPriority restockPriority;
 
-						if (restockPriority != RestockPriority.ShelfFull) {
-							//Save shelf to be processed later as a job. It wont get added if there are enough jobs for this restockPriority.
-							//Performance.Start("PossibleJobs");
-							possibleRestockJobs.TryAddJob(restockPriority, new ProductShelfInfo(prodShelfSlotData, maxProductsPerRow));
-							//Performance.Stop("PossibleJobs");
-						}
-						continue;
-					}
+						if (isEmptyShelf) {
+							restockPriority = RestockPriority.Critical;
+                        } else { 
+							//Check if shelf product quantity is below current priority.
+							maxProductsPerRow = PerformanceCachingPatch.GetMaxProductsPerRowCachedThreaded(
+								prodShelfSlotData.DataContainer,
+								prodShelfSlotData.ProductId, prodShelfSlotData.ShelfIndex);
 
-					//Find storage shelf from where to restock
-					if (GetStorageForProdShelf(dictStorageSlot, prodShelfSlotData, 
-							maxProductsPerRow, out List<ShelfSlotData> listNonEmptyStorageSlots)) {
+                            ThresholdHelper.IsShelfNotFull(prodShelfSlotData.Quantity, maxProductsPerRow, out restockPriority);
+                        }
 
-						AddAvailableJobs(listNonEmptyStorageSlots, maxJobsRestockCycle, 
-							restockPriority, prodShelfSlotData, maxProductsPerRow);
-					}
+                        if (restockPriority != RestockPriority.Critical) {
 
-					if (RestockJobsManager.JobCount >= maxJobsRestockCycle) {
+                            if (restockPriority != RestockPriority.ShelfFull) {
+                                //Save shelf to be processed later as a job. It wont get added if there are enough jobs for this restockPriority.
+                                //Performance.Start("PossibleJobs");
+                                possibleRestockJobs.TryAddJob(restockPriority, new ProductShelfInfo(prodShelfSlotData, maxProductsPerRow));
+                                //Performance.Stop("PossibleJobs");
+                            }
+                            continue;
+                        }
+
+                        //Find storage shelf from where to restock
+                        if (GetStorageForProdShelf(dictStorageSlot, prodShelfSlotData,
+                                maxProductsPerRow, out List<ShelfSlotData> listNonEmptyStorageSlots)) {
+
+                            AddAvailableJobs(listNonEmptyStorageSlots, maxJobsRestockCycle,
+                                restockPriority, prodShelfSlotData, maxProductsPerRow);
+                        }
+                    }
+
+					if (!sortAllShelves && RestockJobsManager.JobCount >= maxJobsRestockCycle) {
 						break;
 					}
 				}
 			}
 
-            //If there is still space left to fill the job queue, process the saved jobs that had a lower priority
-            while (RestockJobsManager.JobCount < maxJobsRestockCycle && possibleRestockJobs.HasJobsLeft &&
-					possibleRestockJobs.TryExtractPriorityJob(out ProductShelfInfo prodShelf, out RestockPriority priority)) {
+			Queue<ProductShelfInfo> shelfJobQueue = null;
+			if (sortAllShelves) {
+				shelfJobQueue = new(sortedShelfStocking.Count);
 
-				//Find storage shelf from where to restock
-				if (GetStorageForProdShelf(dictStorageSlot, prodShelf.ShelfSlotData,
-						prodShelf.MaxProductsPerRow, out List<ShelfSlotData> listNonEmptyStorageSlots)) {
-
-					AddAvailableJobs(listNonEmptyStorageSlots, maxJobsRestockCycle,
-						priority, prodShelf.ShelfSlotData, prodShelf.MaxProductsPerRow);
-				}
+                foreach (var shelfSlot in sortedShelfStocking) {
+					shelfJobQueue.Enqueue(shelfSlot.Value);
+                }
 			}
 
-			//Performance.StopAndLog("3. productsThresholdArray (minus GenerateStorageSlotDictionary)");
+            //If there is still space left to fill the job queue, process the saved jobs that had a lower priority
+            RestockPriority priority = RestockPriority.Critical;	//Critical by default when sorting all shelves
+            ProductShelfInfo prodShelf;
+            while (RestockJobsManager.JobCount < maxJobsRestockCycle && 
+					(possibleRestockJobs.HasJobsLeft && possibleRestockJobs.TryExtractPriorityJob(out prodShelf, out priority)) ||
+                    sortAllShelves && shelfJobQueue.TryDequeue(out prodShelf)) {
+
+                //Find storage shelf from where to restock
+                if (GetStorageForProdShelf(dictStorageSlot, prodShelf.ShelfSlotData,
+                        prodShelf.MaxProductsPerRow, out List<ShelfSlotData> listNonEmptyStorageSlots)) {
+
+                    AddAvailableJobs(listNonEmptyStorageSlots, maxJobsRestockCycle,
+                        priority, prodShelf.ShelfSlotData, prodShelf.MaxProductsPerRow);
+                }
+            }
+
+			//Performance.StopAndLog(perfStringMeasure);
 			//Performance.StopAndLog("PossibleJobs");
 			LOG.TEMPDEBUG_FUNC(() => $"{RestockJobsManager.JobCount} jobs available after generation.", EmployeeJobAIPatch.LogEmployeeActions);
 
@@ -224,17 +266,21 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.NPCs.Employees.RestockMatch.
 			}
 		}
 
-		private class RestockStorageComparer : IComparer<ShelfSlotData> {
+        private class AllowDuplicatesComparer : IComparer<float> {
+            public int Compare(float x, float y) => y > x ? -1 : 1;
+        }
+
+        private class RestockStorageComparer : IComparer<ShelfSlotData> {
 
 			
-			private Vector3 shelfPosition;
+			private readonly int prodShelfLeftToFillCount;
 
-			private int prodShelfLeftToFillCount;
+			private readonly bool useSimpleBoxQuantityComparison;
 
-			private bool useSimpleBoxQuantityComparison;
+            private Vector3 shelfPosition;
 
 
-			private AnimationCurve quantVsDistPriorityThreshold;
+            private AnimationCurve quantVsDistPriorityThreshold;
 
 			private static readonly float quantityPriorityPercent = 0.85f;
 

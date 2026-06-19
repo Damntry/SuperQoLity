@@ -324,8 +324,20 @@ namespace SuperQoLity.SuperMarket.Patches {
                 //  I cant see an easy way to detect this specific case, so we ll use this event for
                 //  anything host related, and OnBoxEquipped for more specific cases.
                 EventMethods.TryTriggerEvents(WorldState.ContainerEvents.OnBoxEquippedOrUpdatedLocalPlayer, 
-                    __instance.instantiatedOBJ.transform, productIndex);
+                    __instance.instantiatedOBJ.transform, productIndex, false);
             }
+
+            [HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.UpdateManufacturingBoxContents))]
+            [HarmonyPostfix]
+            private static void ManufBoxPickUpOrUpdatedLocalPlayerPatch(PlayerNetwork __instance, int productIndex) {
+                //This only triggers on the local player, but its the most complete since it also
+                //  triggers when the box is updated (when it goes empty and then filled with a different productId).
+                //  I cant see an easy way to detect this specific case, so we ll use this event for
+                //  anything host related, and OnBoxEquipped for more specific cases.
+                EventMethods.TryTriggerEvents(WorldState.ContainerEvents.OnBoxEquippedOrUpdatedLocalPlayer,
+                    __instance.instantiatedOBJ.transform, productIndex, true);
+            }
+
 
             private static Transform droppedInstantiatedObject;
             [HarmonyPatch(typeof(PlayerNetwork), nameof(PlayerNetwork.OnChangeEquipment))]

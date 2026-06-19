@@ -25,7 +25,7 @@
  - Configurable, faster shelf product placing, for players and/or employees.
  - Broom shotgun!
  - Quickly equip any tool using a visual equipment wheel and optional hotkeys. Tools wont cheat themselves in, there must be a free one on the map or organizer.
- - Restrict customers to only shop for products that had been assigned to shelves, instead of every unlocked product. 
+ - Restrict customers and online orders to only shop for products that had been assigned to shelves, instead of every unlocked product. 
 	- Enables shop specialization, and customers will still complain if the assigned product runs out of stock.
  - Security employee improvements:
 	 - They can pick up multiple dropped products in an area around them, as they level up.
@@ -44,6 +44,8 @@
  - Setting to increase the limit of buildables and decorations that the game can load, from 5000 to 100000.
  - Customers wont complain when doubling the market price with the pricing gun (Check 0.8.2 changelog for why I see this as a bug).
  - And tons of my own bugs that I missed and you ll learn to love.
+ <br><br>
+ ### <p align="center"> SuperQoLity can be safely added and removed from an existing save at any time.</p>
 
 ---
 

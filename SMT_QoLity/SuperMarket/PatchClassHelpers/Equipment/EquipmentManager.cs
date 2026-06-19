@@ -1,9 +1,11 @@
-﻿using Damntry.Utils.Logging;
+﻿using Crosstales;
+using Damntry.Utils.Logging;
 using StarterAssets;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Equipment.RadialWheel;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Equipment.RadialWheel.Model;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -119,8 +121,8 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Equipment {
                 return false;
             }
 
-            if (PropsCache.UsablePropsObjReference) {
-                foreach (Transform freePropT in PropsCache.UsablePropsObjReference.transform) {
+            if (PropsCache.UsablePropsObjReference.Count > 0) {
+                foreach (Transform freePropT in PropsCache.UsablePropsObjReference) {
                     if (freePropT && freePropT.gameObject.activeSelf && freePropT.name.Contains(toolGameobjectName)) {
                         foundTool = true;
                         foundObj = freePropT.gameObject;
@@ -270,18 +272,34 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Equipment {
         private class PropsCache {
 
             private static GameObject usablePropsObjCache;
+            private static GameObject usableProps2ObjCache;
             private static GameObject decoPropsObjCache;
+            
 
-            private static readonly string usablePropsPath = "Level_SupermarketProps/UsableProps";
-            private static readonly string decorationPropsPath = "Level_SupermarketProps/DecorationProps";
+            public static List<Transform> UsablePropsObjReference => GetUsableGameObjectReferences();
 
-
-            public static GameObject UsablePropsObjReference => GeGameObjectReference(ref usablePropsObjCache, usablePropsPath);
-
-            public static GameObject DecoPropsObjCache => GeGameObjectReference(ref decoPropsObjCache, decorationPropsPath);
+            public static GameObject DecoPropsObjCache => GetGameObjectReference(
+                ref decoPropsObjCache, GameObjectPaths.DecorationProps);
 
 
-            private static GameObject GeGameObjectReference(ref GameObject propsObjCache, string propsPath) {
+            private static List<Transform> GetUsableGameObjectReferences() {
+                List<Transform> childList = new();
+
+                if (GetGameObjectReference(ref usablePropsObjCache, GameObjectPaths.UsableProps)) {
+                    foreach (Transform item in usablePropsObjCache.transform) {
+                        childList.Add(item);
+                    }
+                }
+                if (GetGameObjectReference(ref usableProps2ObjCache, GameObjectPaths.UsableProps2)) {
+                    foreach (Transform item in usableProps2ObjCache.transform) {
+                        childList.Add(item);
+                    }
+                }
+
+                return childList;
+            }
+
+            private static GameObject GetGameObjectReference(ref GameObject propsObjCache, string propsPath) {
                 if (!propsObjCache) {
                     propsObjCache = GameObject.Find(propsPath);
 

@@ -430,7 +430,10 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 			int taskPriority = employee.taskPriority;
 			if (taskPriority == 4 && state == 2) {
 				if (employee.currentChasedThiefOBJ) {
-					if (employee.currentChasedThiefOBJ.transform.position.x < -15f || employee.currentChasedThiefOBJ.transform.position.x > 38f || employee.currentChasedThiefOBJ.GetComponent<NPC_Info>().productsIDCarrying.Count == 0) {
+					if (employee.currentChasedThiefOBJ.transform.position.x < __instance.securityChaseXLimits.x || 
+							employee.currentChasedThiefOBJ.transform.position.x > __instance.securityChaseXLimits.y || 
+							employee.currentChasedThiefOBJ.GetComponent<NPC_Info>().productsIDCarrying.Count == 0) {
+
 						employee.state = 0;
 						return true;
 					}
@@ -1845,7 +1848,7 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 			return false;
 		}
 
-
+		/*
         private static List<EmployeeJob> taskPriorities;
 
 		private static int currentTaskIndex;
@@ -1869,6 +1872,7 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 				employee.taskPriority = currentTaskIndex;
 			}
 		}
+		*/
 
 		private static bool DoSecurityAreaPickUp(NPC_Manager __instance, EnumSecurityPickUp pickUpmode, 
 				GameObject employeeObj, NPC_Info employee, float stoppingDistance) {
@@ -2072,7 +2076,9 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 			foreach (Transform customer in __instance.customersnpcParentOBJ.transform) {
 				NPC_Info component = customer.GetComponent<NPC_Info>();
 				if (component.isAThief && component.thiefFleeing && component.productsIDCarrying.Count > 0 && 
-						customer.position.z < -3f && customer.position.x > -15f && customer.position.x < 38f) {
+						customer.position.z < __instance.securityChaseZLimits.x && 
+						customer.position.x > __instance.securityChaseXLimits.x && 
+						customer.position.x < __instance.securityChaseXLimits.y) {
 
 					__instance.thievesList.Add(customer.gameObject);
 					if (!component.thiefAssignedChaser) {
@@ -2083,9 +2089,9 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 				}
 			}
 
-			//If thieves were found but all are already being chased,
-			//	check how to proceed depending on user settings.
-			if (targetThief == null && __instance.thievesList.Count > 0) {
+            //If thieves were found but all are already being chased,
+            //	check how to proceed depending on user settings.
+            if (targetThief == null && __instance.thievesList.Count > 0) {
 
 				switch (ModConfig.Instance.SecurityThiefChaseMode.Value) {
 					case EnumSecurityEmployeeThiefChase.Disabled:

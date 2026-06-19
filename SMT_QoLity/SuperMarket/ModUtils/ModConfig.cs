@@ -43,6 +43,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
         public ConfigEntry<float> EmployeeNextActionWait { get; private set; }
 		public ConfigEntry<EnumSecurityPickUp> ImprovedSecurityPickUpMode { get; private set; }
 		public ConfigEntry<EnumSecurityEmployeeThiefChase> SecurityThiefChaseMode { get; private set; }
+        public ConfigEntry<bool> UseNewRestockJobFinder { get; private set; }
         public ConfigEntry<EnumFreeStoragePriority> FreeStoragePriority { get; private set; }
 
         //*** CUSTOMERS ***
@@ -212,7 +213,7 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 			//	https://github.com/BepInEx/BepInEx.ConfigurationManager/issues/22#issuecomment-807431539
 			//	Its not an option for me since changing setting order in the future would make them loose its saved value and I dont think its worth it.
 			//	BepInEx would need to add support for a different way of setting configs order in the future, preferably
-			//	reading the HotkeyContext tag value as ConfigManager already does.
+			//	reading the Category tag value as ConfigManager already does.
 
 			configManagerControl.AddSectionNote(
 				sectionText: $"· Settings with a {RequiresRestartSymbol} symbol require " +
@@ -293,7 +294,22 @@ namespace SuperQoLity.SuperMarket.ModUtils {
 				patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
 				modInstallSide: MultiplayerModInstallSide.HostSideOnly
 			);
-            
+
+            UseNewRestockJobFinder = configManagerControl.AddConfig(
+                sectionName: EmployeeJobModuleText,
+                key: "Use new restock job finder",
+                defaultValue: false,
+                description: "Restock jobs will be prioritized by a hybrid score of how filled the shelf is, and how many " +
+				"items it has left.\nThis will make it so shelf spaces with products like toilet paper, that can hold very " +
+				"few units, are prioritized slightly more compared to shelves than can hold more items and are easier to " +
+				"restock in mass.\nAdditionally, the old '10%/33%/66% filled capacity' threshold system will be ignored " +
+				"and, instead, every shelf will be checked so they can be fully sorted by score and prioritized. " +
+				"This will use some more CPU resources, but since in SuperQoLity the job finder works on a separate core " +
+				"thread, this setting should be enabled unless you are playing on a toaster.",
+                patchInstanceDependency: Container<EmployeeJobAIPatch>.Instance,
+                modInstallSide: MultiplayerModInstallSide.HostSideOnly
+            );
+
             FreeStoragePriority = configManagerControl.AddConfigWithAcceptableValues(
 				sectionName: EmployeeJobModuleText,
 				key: "Employee storage shelf priority",

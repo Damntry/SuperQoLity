@@ -78,7 +78,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting {
             }
 
             //Ground boxes
-            foreach (Transform box in ContainerHighlightData.GetExistingParentedBoxes()) {  //NPC_Manager.Instance.boxesOBJ.transform) {
+            foreach (Transform box in ContainerHighlightData.GetExistingParentedBoxes(withManufacturing: true)) {
                 Transform highlightsObj = box.Find(ContainerHighlightData.GroundBox.SQoLName);
                 if (highlightsObj) {
                     ReinitializeSingleTransformHighlightProperties(highlightsObj, ContainerType.GroundBox);

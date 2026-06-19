@@ -105,7 +105,8 @@ namespace SuperQoLity.SuperMarket.Patches.Highlighting {
 				}
 			}
             
-			public static void BoxEquippedOrUpdatedLocalPlayer(Transform transform, int productIndex) {
+			public static void BoxEquippedOrUpdatedLocalPlayer(Transform transform, 
+                    int productIndex, bool isManufBox) {
                 //TODO 2 - As a client, when I pick up a box from storage, the storage slot from where
                 //  I picked it up doesnt highlight at all, and when I put it back, the storage highlights, and
                 //  then immediately fades out.
@@ -114,7 +115,13 @@ namespace SuperQoLity.SuperMarket.Patches.Highlighting {
                 //  into storage call order also being reversed for host/client, which causes the strange fade out.
                 //There isnt much I can do about this without heavy messy patching for a relatively niche case, so
                 //  Im going to leave this as a casualty of war for now.
-                ContainerHighlightManager.HighlightContainersByProduct(productIndex);
+
+                //TODO 1 Remove isManufBox condition when I add support for manufactured boxes highlighting.
+                if (!isManufBox) {
+                    ContainerHighlightManager.HighlightContainersByProduct(productIndex);
+                } else {
+                    ContainerHighlightManager.ClearHighlightedContainers(clearProductIdFlag: true);
+                }
 			}
 
             public static void BoxEquippedRemotePlayerOrEmployee(Transform charTransform, Transform boxTransform, int productIdBox, CharacterSourceType charSource) {

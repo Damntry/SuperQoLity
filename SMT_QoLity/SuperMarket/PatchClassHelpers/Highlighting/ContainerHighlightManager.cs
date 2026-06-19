@@ -4,12 +4,14 @@ using Damntry.UtilsBepInEx.Configuration.ConfigurationManager;
 using HighlightPlus;
 using SuperQoLity.SuperMarket.ModUtils;
 using SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Equipment;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting.Caching;
 using SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting.Definitions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -104,13 +106,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting {
             WorldState.OnFPControllerStarted += () => HighlightInitialization.PopulateNonParentedBoxes();
 
             BoxPrefabPatching.PrepareBoxPrefabPatching();
-            var a = GameObject.FindObjectsByType<Material>(FindObjectsSortMode.None);
-            foreach (var mat in a) {
-                if (mat.name == "Back3 (Instance)") {
-                    mat.shader = Shader.Find("Universal Render Pipeline/Lit");
-                    break;
-                }
-            }
         }
 
 
@@ -176,9 +171,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting {
             bool wasSomethingHighlighted = IsAnyContainerHighlighted();
             ClearHighlightedContainers(clearProductIdFlag: true);
 
-            int targetedProductId = pNetwork.oldCanvasProductID;
-            if (targetedProductId >= 0 || IsGroundBoxOnCrosshair(pNetwork, out targetedProductId)) {
-                HighlightContainersByProduct(targetedProductId);
+            if (GetBoxOnCrosshair(pNetwork, out CrosshairBoxData boxData)) {
+                if (!boxData.IsManufacturingBox) {  //Not supported yet
+                    HighlightContainersByProduct(boxData.ProductId);
+                }
             } else if (!wasSomethingHighlighted && AuxUtils.IsPlayerHoldingBox(out int productId)) {
                 //If there was no highlight showing and there is a box in your hands,
                 //  highlight the box product. Basically a toggle when not looking at anything.
@@ -188,24 +184,47 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting {
             }
         }
 
-        private static bool IsGroundBoxOnCrosshair(PlayerNetwork pNetwork, out int targetedProductId) {
-            targetedProductId = -1;
+        private static bool GetBoxOnCrosshair(PlayerNetwork pNetwork, out CrosshairBoxData crossBoxData) {
+            bool found = false;
+            bool isGroundBox = false;
+            bool isManufacturingBox = false;
+            int targetedProductId = -1;
 
             if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, 
                     out var hitInfo3, 4f, pNetwork.interactableMask)) {
 
-                if (hitInfo3.transform.TryGetComponent(out BoxData boxData)) {
-                    int productId = boxData.productID;
-
-                    if (productId >= 0) {
-                        targetedProductId = productId;
-                        return true;
+                ManufacturingBoxData manufBoxData = null;
+                if (hitInfo3.transform.GetComponent<InteractableContainer>()) {
+                    if (hitInfo3.transform.parent.transform.parent.TryGetComponent(out Data_Container dataContainer)) {
+                        targetedProductId = pNetwork.oldCanvasProductID;
+                    } else if (hitInfo3.transform.parent.transform.parent.GetComponent<ManufacturingContainer>()) {
+                        isManufacturingBox = true;
+                        targetedProductId = pNetwork.oldCanvasProductID;
                     }
+                } else if (hitInfo3.transform.TryGetComponent(out BoxData boxData) ||
+                        hitInfo3.transform.TryGetComponent(out manufBoxData)) {
+
+                    isGroundBox = true;
+
+                    if (boxData) {
+                        targetedProductId = boxData.productID;
+                    } else if (manufBoxData) {
+                        isManufacturingBox = true;
+                        targetedProductId = manufBoxData.manufacturedProductIndex;
+                    }   
+                }
+
+                if (targetedProductId >= 0) {
+                    found = true;
                 }
             }
 
-            return false;
+            crossBoxData = new(targetedProductId, isGroundBox, isManufacturingBox);
+
+            return found;
         }
+
+        private record struct CrosshairBoxData (int ProductId, bool IsGroundBox, bool IsManufacturingBox);
 
         public static void UpdateHighlightColorsFromSettings(ContainerTypeFlags containerTypeFlags) {
             if (GetCurrentHighlightMode() == HighlightMode.Disabled) {
@@ -323,7 +342,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Highlighting {
 
         private static void UpdateContainerHighlighting(Transform container, int productID, ParentContainerType parentContainerType) {
             if (parentContainerType == ParentContainerType.GroundBox) {
-                bool enableBoxHighlight = productID >= 0 && container.GetComponent<BoxData>().productID == productID;
+                bool enableBoxHighlight = productID >= 0 && container.GetComponent<global::BoxData>().productID == productID;
 
                 GroundBoxHighlightData boxHighlightData = ContainerHighlightData.GroundBox;
                 Transform highlightsMarker = container.Find(boxHighlightData.SQoLName);

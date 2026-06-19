@@ -47,6 +47,10 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.ContainerEntities.Search {
 				pickableGroundBoxes = GetEmptyGroundBoxList(untargetedGroundBoxes);
 			}
 
+			//TODO 0 - Do an alternative version, as an extra setting, that prioritizes taking the box that has
+			//	less products in storage, or if that would be too slow, just the oldest one spawned since some
+			//	people tend to order the important stuff first
+
 			return GetClosestGroundBox(pickableGroundBoxes, employeeT.position);
 		}
 

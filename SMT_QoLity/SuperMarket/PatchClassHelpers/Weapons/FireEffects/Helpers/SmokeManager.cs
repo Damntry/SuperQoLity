@@ -53,30 +53,6 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Weapons.FireEffects.Helpers 
         }
 
 
-        private async void StartLoggingMaxParticleCount() {
-#if DEBUG
-            await UniTask.DelayFrame(1);
-
-            int maxParticleCount = 0;
-            UnityTimeStopwatch sw = UnityTimeStopwatch.StartNew();
-
-            while (Active && partSystem) {
-                maxParticleCount = System.Math.Max(maxParticleCount, partSystem.particleCount);
-
-                if (sw.ElapsedSeconds >= 1) {
-                    if (maxParticleCount > 0) {
-                        LOG.TEMPWARNING($"Max particle count in the last period: {maxParticleCount}");
-                    }
-
-                    maxParticleCount = 0;
-                    sw.Restart();
-                }
-
-                await UniTask.DelayFrame(1);
-            }
-#endif
-        }
-
         public void Destroy() {
             Active = false;
             interpolationCache.Destroy();
@@ -351,6 +327,33 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Weapons.FireEffects.Helpers 
             }
 
         }
+
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private async void StartLoggingMaxParticleCount() {
+#if DEBUG
+            await UniTask.DelayFrame(1);
+
+            int maxParticleCount = 0;
+            UnityTimeStopwatch sw = UnityTimeStopwatch.StartNew();
+
+            while (Active && partSystem) {
+                maxParticleCount = System.Math.Max(maxParticleCount, partSystem.particleCount);
+
+                if (sw.ElapsedSeconds >= 1) {
+                    if (maxParticleCount > 0) {
+                        LOG.TEMPWARNING($"Max particle count in the last period: {maxParticleCount}");
+                    }
+
+                    maxParticleCount = 0;
+                    sw.Restart();
+                }
+
+                await UniTask.DelayFrame(1);
+            }
+#endif
+        }
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
     }
 

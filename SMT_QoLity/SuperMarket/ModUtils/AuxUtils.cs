@@ -2,6 +2,7 @@
 using HutongGames.PlayMaker;
 using Mirror;
 using Steamworks;
+using SuperQoLity.SuperMarket.PatchClassHelpers.Equipment;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -43,8 +44,13 @@ namespace SuperQoLity.SuperMarket.ModUtils {
             }
 
             productId = pNetwork.extraParameter1;
-            return pNetwork.equippedItem == 1;
+
+            return IsBoxEquipped(pNetwork);
         }
+
+        public static bool IsBoxEquipped(PlayerNetwork pNetwork) =>
+            //TODO 1 - For manufacturing, I would need to add && pNetwork.equippedItem == 16
+            pNetwork.equippedItem == (int)ToolIndexes.Box; //|| pNetwork.equippedItem == 16;
 
         public static bool IsKeypressed(KeyCode key, bool onlyWhileChatClosed = true) =>
 			(!onlyWhileChatClosed || onlyWhileChatClosed && IsChatOpen()) && Input.GetKeyDown(key);

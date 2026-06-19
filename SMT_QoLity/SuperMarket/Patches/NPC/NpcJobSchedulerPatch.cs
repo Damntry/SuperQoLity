@@ -34,11 +34,13 @@ namespace SuperQoLity.SuperMarket.Patches.NPC {
         //      code will run instead to do the npc work. Since, without the transpile, the flag is not set
         //      anywhere else, the intrinsically false value will conveniently avoid executing the modded process earlier.
         //
-        //Using the modded process is not equal to using the automated part of the job scheduler. All modded processes will use
-        //  the job scheduler, though it ll be a very reduced version if the performance system is Disabled.
+        //Using the modded process is not equal to using the automated performance mode of the job scheduler.
+        //  All modded processes will use the job scheduler, though it ll be a very reduced version if
+        //  the performance system is Disabled.
         private static bool canEmployeesDoSomething;
         private static bool canCustomersDoSomething;
 
+        private static bool EmployeeModuleEnabled;
 
         public override void OnPatchFinishedVirtual(bool IsActive) {
             if (!IsActive) {
@@ -57,12 +59,9 @@ namespace SuperQoLity.SuperMarket.Patches.NPC {
 
                 JobSchedulerManager.InitializeJobSchedulerEvents();
 
-                if (ModConfig.Instance.EnableEmployeeChanges.Value) {
-                    RestockMatcher.Enable();
-                }
+                EmployeeModuleEnabled = ModConfig.Instance.EnableEmployeeChanges.Value;
             } catch {
                 JobSchedulerManager.DisableJobScheduler();
-                RestockMatcher.Disable();
 
                 Container<NpcJobSchedulerPatch>.Instance.UnpatchInstance();
 
@@ -70,6 +69,14 @@ namespace SuperQoLity.SuperMarket.Patches.NPC {
             }
         }
 
+
+        [HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.Awake))]
+        [HarmonyPostfix]
+        public static void StartRestockMatcher(NPC_Manager __instance) {
+            if (EmployeeModuleEnabled) {
+                RestockMatcher.SetupRestockMatcher();
+            }
+        }
 
         [HarmonyPatch(typeof(NPC_Manager), nameof(NPC_Manager.FixedUpdate))]
         [HarmonyPrefix]

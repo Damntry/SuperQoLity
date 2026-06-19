@@ -116,7 +116,7 @@ namespace SuperQoLity.SuperMarket.PatchClassHelpers.Weapons {
         }
 
         private void RemoveBaseCollidersRaycast() {
-            GameObject baseColliders = GameObject.Find("Level_Exterior/Colliders");
+            GameObject baseColliders = GameObject.Find("Colliders");
             if (!baseColliders) {
                 TimeLogger.Logger.LogError("The base collider object couldnt be found. Shotgun " +
                     "pellets will stop at the invisible wall.", LogCategories.Other);
