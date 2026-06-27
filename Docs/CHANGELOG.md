@@ -1,4 +1,7 @@
 ## Changelog
+### 1.1.1.0
+	* Fixed
+		- Security employees stopped chasing thieves after last base game hotfix.
 ### 1.1.0.0
 	* Fixed: 
 		- In some PCs, restockers did not work, or could suddenly stop working because of a multithreaded condition.

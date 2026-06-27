@@ -58,6 +58,25 @@ namespace SuperQoLity {
 		public static bool IsSolutionInDebugMode { get; private set; } = false;
 
 
+        /*  TODO Code to load a specific save file. This is from Mitche s idea of a store teleport, so 
+         		you can press something from a HUD or whatever, where each something is a specific save,
+				and move between stores more or less seamessly.
+				His idea went further, with money and progress shared across all saves, but that might be too much.
+
+			string saveFileNameWithExtension = "StoreFile0.es3";
+
+			FsmVariables.GlobalVariables.FindFsmString("CurrentFilename").Value = saveFileNameWithExtension;
+
+			CheckIfAutosaveExists autoSaveExist = new();
+			autoSaveExist.savefile = saveFileNameWithExtension;
+			autoSaveExist.fileDay = Somehow get day from saveFileNameWithExtension;
+			autoSaveExist.autosaveExistsDisclaimerOBJ = new();
+
+			FsmVariables.GlobalVariables.FindFsmBool("LoadingFromAutosave").Value = autoSaveExist.RecentAutosaveExists();
+
+			NetworkManager.singleton.ServerChangeScene(SceneManager.GetActiveScene().name);
+		 */
+
         public void Awake() {
             //Init logger
             TimeLogger.InitializeTimeLogger<BepInExTimeLogger>(

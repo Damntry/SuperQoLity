@@ -430,8 +430,8 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 			int taskPriority = employee.taskPriority;
 			if (taskPriority == 4 && state == 2) {
 				if (employee.currentChasedThiefOBJ) {
-					if (employee.currentChasedThiefOBJ.transform.position.x < __instance.securityChaseXLimits.x || 
-							employee.currentChasedThiefOBJ.transform.position.x > __instance.securityChaseXLimits.y || 
+					if (employee.currentChasedThiefOBJ.transform.position.x > __instance.securityChaseXLimits.y || 
+							employee.currentChasedThiefOBJ.transform.position.x < __instance.securityChaseXLimits.x || 
 							employee.currentChasedThiefOBJ.GetComponent<NPC_Info>().productsIDCarrying.Count == 0) {
 
 						employee.state = 0;
@@ -2075,10 +2075,12 @@ namespace SuperQoLity.SuperMarket.Patches.NPC.EmployeeModule {
 
 			foreach (Transform customer in __instance.customersnpcParentOBJ.transform) {
 				NPC_Info component = customer.GetComponent<NPC_Info>();
-				if (component.isAThief && component.thiefFleeing && component.productsIDCarrying.Count > 0 && 
-						customer.position.z < __instance.securityChaseZLimits.x && 
-						customer.position.x > __instance.securityChaseXLimits.x && 
-						customer.position.x < __instance.securityChaseXLimits.y) {
+				if (component.isAThief && component.thiefCanBeHitBySecurity && 
+						component.productsIDCarrying.Count > 0 && 
+						customer.position.z > __instance.securityChaseZLimits.x &&
+                        customer.position.z < __instance.securityChaseZLimits.y &&
+                        customer.position.x > __instance.securityChaseXLimits.x &&
+                        customer.position.x < __instance.securityChaseXLimits.y) {
 
 					__instance.thievesList.Add(customer.gameObject);
 					if (!component.thiefAssignedChaser) {
